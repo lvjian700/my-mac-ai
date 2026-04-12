@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>NSCalendarsUsageDescription</key>
+    <string>ical needs access to read and write calendar events.</string>
+    <key>NSCalendarsFullAccessUsageDescription</key>
+    <string>ical needs full access to read and write calendar events.</string>
+</dict>
+</plist>
