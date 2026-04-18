@@ -32,16 +32,19 @@ struct DateParser {
 struct OutputFormatter {
     // MARK: - Calendars
 
-    static func printCalendars(_ calendars: [EKCalendar], format: OutputFormat) {
+    static func printCalendarsGrouped(_ groups: [CalendarGroup], format: OutputFormat) {
         switch format {
         case .text:
-            printLine("TITLE", width: 30, "TYPE", width: 12, "ID")
-            print(String(repeating: "─", count: 74))
-            for cal in calendars {
-                printLine(cal.title, width: 30, calendarTypeString(cal.type), width: 12, cal.calendarIdentifier)
+            for group in groups {
+                print(group.accountName)
+                for cal in group.calendars {
+                    print("  \(cal.title)")
+                }
             }
         case .json:
-            let dicts = calendars.map { ["title": $0.title, "type": calendarTypeString($0.type), "id": $0.calendarIdentifier] }
+            let dicts = groups.flatMap { group in
+                group.calendars.map { ["account": group.accountName, "title": $0.title] }
+            }
             printJSON(dicts)
         }
     }
@@ -91,17 +94,6 @@ struct OutputFormatter {
 
     private static func truncpad(_ s: String, _ width: Int) -> String {
         s.count > width ? String(s.prefix(width - 1)) + "…" : s.padding(toLength: width, withPad: " ", startingAt: 0)
-    }
-
-    private static func calendarTypeString(_ type: EKCalendarType) -> String {
-        switch type {
-        case .local: return "Local"
-        case .calDAV: return "CalDAV"
-        case .exchange: return "Exchange"
-        case .subscription: return "Subscribed"
-        case .birthday: return "Birthday"
-        @unknown default: return "Unknown"
-        }
     }
 
     private static func formatDate(_ date: Date) -> String {

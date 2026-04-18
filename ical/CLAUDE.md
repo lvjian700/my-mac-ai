@@ -12,6 +12,14 @@ swift run ical list            # list calendars
 swift test                     # run tests
 ```
 
+## Release & Install
+
+```bash
+make install                   # build release binary and install to /usr/local/bin
+make uninstall                 # remove installed binary
+PREFIX=~/.local make install   # install to a custom prefix
+```
+
 ## Architecture
 
 **Tech stack:** Swift 6 (strict concurrency), EventKit, swift-argument-parser, macOS 14+.
@@ -35,10 +43,12 @@ Follow the kanban workflow defined in [kanban/CLAUDE.md](kanban/CLAUDE.md) to ma
 
 ## Implementation Status
 
-- `ical list` — fully implemented
-- `ical events` — declared in `IcalCommand.swift` but **not yet implemented** (see `kanban/todo/list-events-command.md`)
-- `ical add` — declared in `IcalCommand.swift` but **not yet implemented** (see `kanban/todo/add-event-command.md`)
+All commands fully implemented.
+
+- `ical list` — list calendars (text/JSON)
+- `ical events` — list events with `--from`, `--to`, `--calendar`, `--format`
+- `ical add` — add event with `--start`, `--end`, `--calendar`, `--location`, `--notes`, `--all-day`
 
 ## Notes
 
-- Reminders support is explicitly out of scope (`Commands/Reminders/` is a placeholder only)
+- Reminders support is explicitly out of scope

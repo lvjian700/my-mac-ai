@@ -16,11 +16,9 @@ let package = Package(
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ],
             path: "Sources/ical",
-            resources: [
-                .process("Resources/Info.plist")
-            ],
             linkerSettings: [
                 .linkedFramework("EventKit"),
+                .unsafeFlags(["-Xlinker", "-sectcreate", "-Xlinker", "__TEXT", "-Xlinker", "__info_plist", "-Xlinker", "Sources/ical/Resources/Info.plist"]),
             ]
         ),
         .testTarget(
