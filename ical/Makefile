@@ -1,4 +1,4 @@
-PREFIX ?= /usr/local
+PREFIX ?= ~/.local
 
 .PHONY: build install uninstall
 
