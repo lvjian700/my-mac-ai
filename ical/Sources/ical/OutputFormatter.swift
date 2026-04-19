@@ -20,9 +20,11 @@ struct DateParser {
             break
         }
         let iso = ISO8601DateFormatter()
+        iso.timeZone = TimeZone.current
         if let d = iso.date(from: string) { return d }
         let df = DateFormatter()
         df.locale = Locale(identifier: "en_US_POSIX")
+        df.timeZone = TimeZone.current
         df.dateFormat = "yyyy-MM-dd"
         if let d = df.date(from: string) { return d }
         throw IcalError.invalidDate(string: string)
@@ -52,56 +54,109 @@ struct OutputFormatter {
     // MARK: - Events
 
     static func printEvents(_ events: [EKEvent], format: OutputFormat) {
-        let df = ISO8601DateFormatter()
         switch format {
         case .text:
-            if events.isEmpty { print("No events found."); return }
-            printLine("START", width: 22, "TITLE", width: 36, "CALENDAR")
-            print(String(repeating: "─", count: 74))
-            for e in events {
-                let start = e.isAllDay ? formatDate(e.startDate) : df.string(from: e.startDate)
-                printLine(start, width: 22, e.title ?? "(no title)", width: 36, e.calendar?.title ?? "")
-            }
+            printEventsText(events)
         case .json:
-            let dicts = events.map { e -> [String: String] in
-                var d: [String: String] = [
-                    "id": e.eventIdentifier ?? "",
-                    "title": e.title ?? "",
-                    "start": df.string(from: e.startDate),
-                    "end": df.string(from: e.endDate),
-                    "allDay": e.isAllDay ? "true" : "false",
-                    "calendar": e.calendar?.title ?? "",
-                ]
-                if let loc = e.location { d["location"] = loc }
-                if let notes = e.notes { d["notes"] = notes }
-                return d
-            }
-            printJSON(dicts)
+            printEventsJSON(events)
         }
     }
 
+    private static func printEventsText(_ events: [EKEvent]) {
+        if events.isEmpty { print("No events found."); return }
+
+        let cal = Calendar.current
+
+        let headerFmt = DateFormatter()
+        headerFmt.dateFormat = "EEE, d MMM yyyy"
+
+        let timeFmt = DateFormatter()
+        timeFmt.dateStyle = .none
+        timeFmt.timeStyle = .short
+
+        let grouped = Dictionary(grouping: events) { cal.startOfDay(for: $0.startDate) }
+        let sortedDays = grouped.keys.sorted()
+
+        for (i, day) in sortedDays.enumerated() {
+            if i > 0 { print("") }
+            print(headerFmt.string(from: day))
+            let dayEvents = (grouped[day] ?? []).sorted { $0.startDate < $1.startDate }
+            for e in dayEvents {
+                let title = e.title ?? "(no title)"
+                let calName = e.calendar?.title ?? ""
+                if e.isAllDay {
+                    print("  • \(title) (\(calName))")
+                } else {
+                    let time = timeFmt.string(from: e.startDate)
+                    print("  • \(time) \(title) (\(calName))")
+                }
+            }
+        }
+    }
+
+    private static func printEventsJSON(_ events: [EKEvent]) {
+        let isoFmt = ISO8601DateFormatter()
+        isoFmt.timeZone = TimeZone.current
+
+        let dateFmt = DateFormatter()
+        dateFmt.locale = Locale(identifier: "en_US_POSIX")
+        dateFmt.timeZone = TimeZone.current
+        dateFmt.dateFormat = "yyyy-MM-dd"
+
+        let dayOfWeekFmt = DateFormatter()
+        dayOfWeekFmt.dateFormat = "EEEE"
+        dayOfWeekFmt.timeZone = TimeZone.current
+
+        let hmFmt = DateFormatter()
+        hmFmt.locale = Locale(identifier: "en_US_POSIX")
+        hmFmt.timeZone = TimeZone.current
+        hmFmt.dateFormat = "HH:mm"
+
+        struct TimeRange: Encodable {
+            let start: String
+            let end: String
+        }
+
+        struct EventJSON: Encodable {
+            let id: String
+            let title: String
+            let calendar: String
+            let allDay: Bool
+            let start: String
+            let end: String
+            let date: String
+            let dayOfWeek: String
+            let time: TimeRange?
+            let location: String?
+            let notes: String?
+        }
+
+        let items = events.map { e -> EventJSON in
+            let isAllDay = e.isAllDay
+            let start = isAllDay ? dateFmt.string(from: e.startDate) : isoFmt.string(from: e.startDate)
+            let end = isAllDay ? dateFmt.string(from: e.endDate) : isoFmt.string(from: e.endDate)
+            let timeRange = isAllDay ? nil : TimeRange(
+                start: hmFmt.string(from: e.startDate),
+                end: hmFmt.string(from: e.endDate)
+            )
+            return EventJSON(
+                id: e.eventIdentifier ?? "",
+                title: e.title ?? "",
+                calendar: e.calendar?.title ?? "",
+                allDay: isAllDay,
+                start: start,
+                end: end,
+                date: dateFmt.string(from: e.startDate),
+                dayOfWeek: dayOfWeekFmt.string(from: e.startDate),
+                time: timeRange,
+                location: e.location,
+                notes: e.notes
+            )
+        }
+        printJSON(items)
+    }
+
     // MARK: - Helpers
-
-    private static func printLine(
-        _ c1: String, width w1: Int,
-        _ c2: String, width w2: Int,
-        _ c3: String
-    ) {
-        let col1 = truncpad(c1, w1)
-        let col2 = truncpad(c2, w2)
-        print("\(col1)\(col2)\(c3)")
-    }
-
-    private static func truncpad(_ s: String, _ width: Int) -> String {
-        s.count > width ? String(s.prefix(width - 1)) + "…" : s.padding(toLength: width, withPad: " ", startingAt: 0)
-    }
-
-    private static func formatDate(_ date: Date) -> String {
-        let df = DateFormatter()
-        df.dateStyle = .short
-        df.timeStyle = .none
-        return df.string(from: date)
-    }
 
     private static func printJSON<T: Encodable>(_ value: T) {
         let encoder = JSONEncoder()
