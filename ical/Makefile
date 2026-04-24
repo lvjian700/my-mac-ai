@@ -1,12 +1,15 @@
 PREFIX ?= ~/.local
 SKILL_DEST := ~/.claude/skills/ical
 
-.PHONY: build install uninstall install-skill uninstall-skill
+.PHONY: build test install uninstall install-skill uninstall-skill
 
 build:
 	swift build -c release
 
-install: build
+test:
+	swift test
+
+install: test build
 	cp .build/release/ical $(PREFIX)/bin/ical
 
 uninstall:
