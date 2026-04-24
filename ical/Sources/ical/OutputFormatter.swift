@@ -22,6 +22,11 @@ struct DateParser {
         let iso = ISO8601DateFormatter()
         iso.timeZone = TimeZone.current
         if let d = iso.date(from: string) { return d }
+        let dtf = DateFormatter()
+        dtf.locale = Locale(identifier: "en_US_POSIX")
+        dtf.timeZone = TimeZone.current
+        dtf.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        if let d = dtf.date(from: string) { return d }
         let df = DateFormatter()
         df.locale = Locale(identifier: "en_US_POSIX")
         df.timeZone = TimeZone.current

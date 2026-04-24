@@ -36,11 +36,18 @@ Workflow
 
 ### Add an event
 ```sh
-ical add "<title>" --start <datetime> --end <datetime> \
+ical add "<title>" --start <datetime> \
+     [--short | --normal | --long | --end <datetime>] \
      [--calendar <name>] [--location <loc>] [--notes <text>] [--all-day] \
      --format json
 ```
-- `--start` and `--end` required; use ISO-8601 (`2026-04-19T14:00:00`)
+- `--start` required; use ISO-8601 (`2026-04-19T14:00:00`)
+- Duration flags (mutually exclusive, take priority over `--end`):
+  - `--short` — 15 minutes
+  - `--normal` — 30 minutes
+  - `--long` — 45 minutes
+- `--end` — explicit end datetime; use ISO-8601
+- If none provided, defaults to 30 minutes (`--normal` behaviour)
 
 ## Workflow
 
