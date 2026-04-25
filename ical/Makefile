@@ -7,7 +7,7 @@ build:
 	swift build -c release
 
 test:
-	swift test
+	swift test --parallel -q
 
 install: test build
 	cp .build/release/ical $(PREFIX)/bin/ical
