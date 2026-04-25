@@ -3,15 +3,17 @@ name: ical
 description: >
   Read and write Apple Calendar events using the local `ical` CLI.
   TRIGGER when: user asks about their schedule, upcoming events, "what's on my
-  calendar", "am I free on …", "add an event", "create a meeting", or any
+  calendar", "am I free on …", "add an event", "create a meeting", "reschedule",
+  "move my meeting", "push back the standup", "what do I have going on",
+  "how busy am I this week", "block time", "find a free slot", or any
   calendar-related query.
   DO NOT TRIGGER when: user is discussing the ical source code or building the binary.
-allowed-tools: Bash(ical *),Bash(date +%Z)
+allowed-tools: Bash(ical *) Bash(date +%Z)
 ---
 
 # ical — Apple Calendar Skill
 
-Use the `ical`, to answer calendar questions.
+Use the `ical` CLI to answer calendar questions.
 Always use `--format json` so output is structured.
 Always use user's local timezone for date and time. 
 Run `date +%Z` to get the local timezone if you don't know.
