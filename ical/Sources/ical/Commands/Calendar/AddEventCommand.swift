@@ -1,6 +1,22 @@
 import ArgumentParser
 import Foundation
 
+/// Resolves an end date from duration flags or an explicit end string.
+/// Returns nil if none of the flags/string are provided — caller handles the fallback.
+func resolveFlaggedEndDate(
+  from start: Date,
+  short: Bool,
+  long: Bool,
+  normal: Bool,
+  endStr: String?
+) throws -> Date? {
+  if short  { return start.addingTimeInterval(15 * 60) }
+  if long   { return start.addingTimeInterval(45 * 60) }
+  if normal { return start.addingTimeInterval(30 * 60) }
+  if let endStr { return try DateParser.parse(endStr) }
+  return nil
+}
+
 struct AddEventCommand: AsyncParsableCommand {
   static let configuration = CommandConfiguration(
     commandName: "add",
@@ -46,16 +62,17 @@ struct AddEventCommand: AsyncParsableCommand {
   var format: OutputFormat = .text
 
   func resolveEndDate(from startDate: Date) throws -> Date {
-    if short { return startDate.addingTimeInterval(15 * 60) }
-    if long  { return startDate.addingTimeInterval(45 * 60) }
-    if let endStr = end { return try DateParser.parse(endStr) }
-    return startDate.addingTimeInterval(30 * 60)
+    return try resolveFlaggedEndDate(from: startDate, short: short, long: long, normal: normal, endStr: end)
+      ?? startDate.addingTimeInterval(30 * 60)
   }
 
   @MainActor
   func run() async throws {
     let startDate = try DateParser.parse(start)
     let endDate = try resolveEndDate(from: startDate)
+    guard endDate > startDate else {
+      throw IcalError.invalidDate(string: "end date must be after start date")
+    }
     let svc = EventKitService.shared
     try await svc.requestAccess()
     let event = try svc.addEvent(

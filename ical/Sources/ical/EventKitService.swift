@@ -7,6 +7,7 @@ enum IcalError: LocalizedError {
     case accountNotFound(name: String)
     case noDefaultCalendar
     case invalidDate(string: String)
+    case eventNotFound(id: String)
 
     var errorDescription: String? {
         switch self {
@@ -20,6 +21,8 @@ enum IcalError: LocalizedError {
             return "No default calendar found. Specify one with --calendar."
         case .invalidDate(let s):
             return "Cannot parse date '\(s)'. Use ISO-8601 (e.g. 2026-04-15T14:00:00) or 'today'/'tomorrow'."
+        case .eventNotFound(let id):
+            return "Event '\(id)' not found. Use `ical events --format json` to see event IDs."
         }
     }
 }
@@ -97,6 +100,32 @@ final class EventKitService {
         event.location = location
         event.notes = notes
         event.calendar = try resolveTargetCalendar(named: calendarName, account: account)
+        try store.save(event, span: .thisEvent)
+        return event
+    }
+
+    func fetchEvent(byId id: String) throws -> EKEvent {
+        guard let event = store.event(withIdentifier: id) else {
+            throw IcalError.eventNotFound(id: id)
+        }
+        return event
+    }
+
+    func updateEvent(
+        id: String,
+        title: String?,
+        startDate: Date?,
+        endDate: Date?,
+        calendarName: String?,
+        account: String?
+    ) throws -> EKEvent {
+        let event = try fetchEvent(byId: id)
+        if let title     { event.title     = title }
+        if let startDate { event.startDate = startDate }
+        if let endDate   { event.endDate   = endDate }
+        if calendarName != nil || account != nil {
+            event.calendar = try resolveTargetCalendar(named: calendarName, account: account)
+        }
         try store.save(event, span: .thisEvent)
         return event
     }

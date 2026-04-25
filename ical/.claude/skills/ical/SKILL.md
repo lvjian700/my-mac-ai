@@ -6,14 +6,15 @@ description: >
   calendar", "am I free on …", "add an event", "create a meeting", or any
   calendar-related query.
   DO NOT TRIGGER when: user is discussing the ical source code or building the binary.
-allowed-tools: Bash(ical *),Bash(~/.local/bin/ical *)
+allowed-tools: Bash(ical *),Bash(date +%Z)
 ---
 
 # ical — Apple Calendar Skill
 
-Use the `ical` binary (installed at `~/.local/bin/ical`) to answer calendar questions.
+Use the `ical`, to answer calendar questions.
 Always use `--format json` so output is structured.
-Alwasy use user's local timezone for date and time.
+Always use user's local timezone for date and time. 
+Run `date +%Z` to get the local timezone if you don't know.
 
 ## Commands
 
@@ -48,6 +49,20 @@ ical add "<title>" --start <datetime> \
   - `--long` — 45 minutes
 - `--end` — explicit end datetime; use ISO-8601
 - If none provided, defaults to 30 minutes (`--normal` behaviour)
+
+### Update an event
+```sh
+ical update <event-id> \
+     [--title "<new title>"] \
+     [--start <datetime>] \
+     [--short | --normal | --long | --end <datetime>] \
+     [--calendar <name>] [--account <account>] \
+     --format json
+```
+- Get `<event-id>` from `ical events --format json` (the `id` field)
+- All options are optional; only provided fields are changed
+- `--start` alone (no duration flag): moves the event, preserving its original duration
+- Duration flags and `--end` work the same as `add`
 
 ## Workflow
 
