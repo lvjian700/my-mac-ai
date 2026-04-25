@@ -25,7 +25,7 @@
 
 1. Start a new planning, write the file in todo/ folder, auto naming the file {plan title}.md
 2. Move the plan to doing when start working on it, keep context in same plan file, don't auto mark it as done.
-3. Move to done when user prompt the feature is done, auto increase patch version, e.g: `0.0.1 -> 0.0.2`
+3. Move to done when user prompt the feature is done, auto increase patch version, e.g: `0.0.1 -> 0.0.2`. DO NOT move to done folder if user mark the plan not a feature.
 
 ### Auto increase patch version
 
