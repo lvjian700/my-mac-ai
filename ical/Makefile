@@ -23,9 +23,8 @@ install-skills:
 	mkdir -p "$(HOME)/.claude/skills" "$(HOME)/.codex/skills"
 	rm -rf "$(CLAUDE_SKILL_DEST)" "$(CODEX_SKILL_DEST)"
 	ln -s "$(SKILL_SRC)" "$(CLAUDE_SKILL_DEST)"
-	ln -s "$(SKILL_SRC)" "$(CODEX_SKILL_DEST)"
 
 uninstall-skill: uninstall-skills
 
 uninstall-skills:
-	rm -rf "$(CLAUDE_SKILL_DEST)" "$(CODEX_SKILL_DEST)"
+	rm -rf "$(CLAUDE_SKILL_DEST)"
