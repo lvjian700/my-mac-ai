@@ -3,7 +3,7 @@ name: ical
 description: >
   Read and write Apple Calendar events using the local `ical` CLI.
   TRIGGER when: user asks about their schedule, upcoming events, "what's on my
-  calendar", "am I free on …", "add an event", "create a meeting", "reschedule",
+  calendar", "am I free on ...", "add an event", "create a meeting", "reschedule",
   "move my meeting", "push back the standup", "what do I have going on",
   "how busy am I this week", "block time", "find a free slot", or any
   calendar-related query.
@@ -11,9 +11,9 @@ description: >
 allowed-tools: Bash(ical *) Bash(date +%Z)
 ---
 
-# ical — Apple Calendar Skill
+# ical - Apple Calendar Skill
 
-Use the `ical` CLI to answer calendar questions.
+Use the `ical` CLI(installed at ~/local/bin/ical) to answer calendar questions.
 Always use `--format json` so output is structured.
 Always use user's local timezone for date and time. 
 Run `date +%Z` to get the local timezone if you don't know.
@@ -46,10 +46,10 @@ ical add "<title>" --start <datetime> \
 ```
 - `--start` required; use ISO-8601 (`2026-04-19T14:00:00`)
 - Duration flags (mutually exclusive, take priority over `--end`):
-  - `--short` — 15 minutes
-  - `--normal` — 30 minutes
-  - `--long` — 45 minutes
-- `--end` — explicit end datetime; use ISO-8601
+  - `--short` - 15 minutes
+  - `--normal` - 30 minutes
+  - `--long` - 45 minutes
+- `--end` - explicit end datetime; use ISO-8601
 - If none provided, defaults to 30 minutes (`--normal` behaviour)
 
 ### Update an event

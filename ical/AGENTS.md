@@ -41,6 +41,12 @@ PREFIX=~/.local make install   # install to a custom prefix
 
 Follow the kanban workflow defined in [kanban/AGENTS.md](kanban/AGENTS.md) to manage all tasks and features.
 
+## Local Skill
+
+The Apple Calendar skill lives at `.claude/skills/ical/SKILL.md`. Keep that as the canonical copy. `.codex/skills/ical` is a symlink to the same skill directory so Claude Code and Codex read one shared skill definition.
+
+Claude Code reads the `allowed-tools` frontmatter. Codex reads the same `name` and `description` fields and ignores Claude-specific metadata. For Codex environments that only load global skills, link `$CODEX_HOME/skills/ical` to this same `.claude/skills/ical` directory.
+
 ## Implementation Status
 
 All commands fully implemented.

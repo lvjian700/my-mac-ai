@@ -1,7 +1,9 @@
 PREFIX ?= ~/.local
-SKILL_DEST := ~/.claude/skills/ical
+SKILL_SRC := $(CURDIR)/.claude/skills/ical
+CLAUDE_SKILL_DEST := $(HOME)/.claude/skills/ical
+CODEX_SKILL_DEST := $(HOME)/.codex/skills/ical
 
-.PHONY: build test install uninstall install-skill uninstall-skill
+.PHONY: build test install uninstall install-skill install-skills uninstall-skill uninstall-skills
 
 build:
 	swift build -c release
@@ -15,9 +17,15 @@ install: test build
 uninstall:
 	rm -f $(PREFIX)/bin/ical
 
-install-skill:
-	mkdir -p $(SKILL_DEST)
-	cp .claude/skills/ical/SKILL.md $(SKILL_DEST)/SKILL.md
+install-skill: install-skills
 
-uninstall-skill:
-	rm -rf $(SKILL_DEST)
+install-skills:
+	mkdir -p "$(HOME)/.claude/skills" "$(HOME)/.codex/skills"
+	rm -rf "$(CLAUDE_SKILL_DEST)" "$(CODEX_SKILL_DEST)"
+	ln -s "$(SKILL_SRC)" "$(CLAUDE_SKILL_DEST)"
+	ln -s "$(SKILL_SRC)" "$(CODEX_SKILL_DEST)"
+
+uninstall-skill: uninstall-skills
+
+uninstall-skills:
+	rm -rf "$(CLAUDE_SKILL_DEST)" "$(CODEX_SKILL_DEST)"
