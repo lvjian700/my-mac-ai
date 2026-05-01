@@ -66,6 +66,11 @@ ical update <event-id> \
 - `--start` alone (no duration flag): moves the event, preserving its original duration
 - Duration flags and `--end` work the same as `add`
 
+### Reference: default calendar config
+
+For uncommon requests to view or set default account/calendar values for future
+`ical add` commands, read [references/config.md](references/config.md).
+
 ## Workflow
 
 1. Run the minimal `ical` call that answers the question.
