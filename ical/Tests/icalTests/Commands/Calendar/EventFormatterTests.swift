@@ -2,16 +2,11 @@ import Testing
 @preconcurrency import EventKit
 @testable import ical
 
-/// All tests run on the main actor so we can use EKEventStore and captureStdout safely.
 @MainActor
-struct OutputFormatterTests {
+struct EventFormatterTests {
 
-    // Shared store — no calendar access needed just to create EKEvent objects.
     let store = EKEventStore()
 
-    // Fixed dates used across tests:
-    //   day1 = 2026-04-20 (Monday)
-    //   day2 = 2026-04-21 (Tuesday)
     let day1Start = makeDate(year: 2026, month: 4, day: 20, hour: 9,  minute: 0)
     let day1End   = makeDate(year: 2026, month: 4, day: 20, hour: 10, minute: 0)
     let day2Start = makeDate(year: 2026, month: 4, day: 21, hour: 14, minute: 30)
@@ -30,7 +25,6 @@ struct OutputFormatterTests {
             OutputFormatter.printEvents([event], format: .text)
         }
 
-        // Header should match "Mon, 20 Apr 2026"
         #expect(output.contains("Mon, 20 Apr 2026"),
                 "Expected date header 'Mon, 20 Apr 2026' in:\n\(output)")
     }
@@ -46,17 +40,13 @@ struct OutputFormatterTests {
             OutputFormatter.printEvents([event], format: .text)
         }
 
-        // Timed bullet starts with "  • " followed by a time string then the title
         #expect(output.contains("  • ") && output.contains("Morning Standup"),
                 "Expected timed bullet with title in:\n\(output)")
-        // Should NOT be an all-day format (no "()" right after title without time prefix)
         let lines = output.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
         let bulletLines = lines.filter { $0.hasPrefix("  • ") }
         #expect(!bulletLines.isEmpty, "Expected at least one bullet line")
-        // A timed event bullet should contain digits (the time)
         let hasTimed = bulletLines.contains { line in
-            line.contains("Morning Standup") &&
-            line.contains(":") // time contains colon
+            line.contains("Morning Standup") && line.contains(":")
         }
         #expect(hasTimed, "Expected time prefix in timed bullet in:\n\(output)")
     }
@@ -72,7 +62,6 @@ struct OutputFormatterTests {
             OutputFormatter.printEvents([event], format: .text)
         }
 
-        // All-day bullet: "  • All Day Event ()"  (calendar is nil → empty string)
         #expect(output.contains("  • All Day Event ()"),
                 "Expected all-day bullet '  • All Day Event ()' in:\n\(output)")
     }
@@ -94,8 +83,6 @@ struct OutputFormatterTests {
             OutputFormatter.printEvents([event1, event2], format: .text)
         }
 
-        // There should be a blank line between the two day groups.
-        // "print("")" emits "\n", so we expect "\n\n" somewhere in the output.
         #expect(output.contains("\n\n"),
                 "Expected blank separator line between day groups in:\n\(output)")
     }
@@ -106,24 +93,6 @@ struct OutputFormatterTests {
         }
         #expect(output.contains("No events found."),
                 "Expected 'No events found.' for empty list in:\n\(output)")
-    }
-
-    @Test func configTextOutputAbbreviatesUserHomePath() {
-        let userPath = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".my-mac-ai/ical/config.json")
-        let snapshot = IcalConfigSnapshot(
-            userPath: userPath,
-            user: IcalConfigFile(add: AddCommandConfig(account: "iCloud", calendar: "Work")),
-            localPath: nil,
-            local: IcalConfigFile()
-        )
-
-        let output = captureStdout {
-            OutputFormatter.printConfig(snapshot, format: .text)
-        }
-
-        #expect(output.contains("user: ~/.my-mac-ai/ical/config.json"),
-                "Expected abbreviated user path in:\n\(output)")
     }
 
     // MARK: - JSON format
@@ -144,11 +113,9 @@ struct OutputFormatterTests {
 
         let item = items[0]
 
-        // allDay should be Bool true
         let allDay = item["allDay"] as? Bool
         #expect(allDay == true, "Expected allDay=true, got \(String(describing: item["allDay"]))")
 
-        // start should be date-only (yyyy-MM-dd), no 'T'
         let start = item["start"] as? String
         #expect(start != nil, "Expected 'start' key")
         #expect(start?.contains("T") == false,
@@ -156,10 +123,7 @@ struct OutputFormatterTests {
         #expect(start?.hasPrefix("2026-04-20") == true,
                 "Expected start '2026-04-20', got \(start ?? "nil")")
 
-        // Should NOT have a 'time' key
         #expect(item["time"] == nil, "All-day event should not have 'time' key")
-
-        // date and dayOfWeek must be present
         #expect(item["date"] != nil, "Expected 'date' key")
         #expect(item["dayOfWeek"] != nil, "Expected 'dayOfWeek' key")
     }
@@ -167,8 +131,8 @@ struct OutputFormatterTests {
     @Test func jsonOutputTimedEvent() throws {
         let event = EKEvent(eventStore: store)
         event.title     = "Morning Standup"
-        event.startDate = day1Start   // 2026-04-20 09:00
-        event.endDate   = day1End     // 2026-04-20 10:00
+        event.startDate = day1Start
+        event.endDate   = day1End
         event.isAllDay  = false
 
         let output = captureStdout {
@@ -180,23 +144,19 @@ struct OutputFormatterTests {
 
         let item = items[0]
 
-        // allDay should be Bool false
         let allDay = item["allDay"] as? Bool
         #expect(allDay == false, "Expected allDay=false, got \(String(describing: item["allDay"]))")
 
-        // start should be ISO datetime with 'T'
         let start = item["start"] as? String
         #expect(start != nil, "Expected 'start' key")
         #expect(start?.contains("T") == true,
                 "Timed start should contain 'T', got \(start ?? "nil")")
 
-        // time dictionary with start and end keys
         let timeDict = item["time"] as? [String: Any]
         #expect(timeDict != nil, "Expected 'time' dictionary for timed event")
         #expect(timeDict?["start"] != nil, "Expected 'time.start' key")
         #expect(timeDict?["end"] != nil, "Expected 'time.end' key")
 
-        // date and dayOfWeek must be present
         #expect(item["date"] != nil, "Expected 'date' key")
         #expect(item["dayOfWeek"] != nil, "Expected 'dayOfWeek' key")
     }
@@ -221,14 +181,12 @@ struct OutputFormatterTests {
         let items = try parseJSONOutput(output)
         #expect(items.count == 2, "Expected 2 JSON items")
 
-        // Find by title
         let allDayItem = items.first { $0["title"] as? String == "Holiday" }
         let timedItem  = items.first { $0["title"] as? String == "Meeting" }
 
         #expect(allDayItem != nil, "Expected Holiday item")
         #expect(timedItem  != nil, "Expected Meeting item")
 
-        // allDay field must be actual Bool, not a string
         let allDayBool = allDayItem?["allDay"]
         let timedBool  = timedItem?["allDay"]
         #expect(allDayBool is Bool, "allDay must be Bool type, got \(type(of: allDayBool))")
