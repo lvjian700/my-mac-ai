@@ -28,7 +28,7 @@ PREFIX=~/.local make install   # install to a custom prefix
 
 **Key layers:**
 
-- `IcalCommand.swift` - root command; registers `list`, `events`, `add` subcommands; default is `events`
+- `IcalCommand.swift` - root command; registers `list`, `events`, `add`, `update`, `config` subcommands; default is `events`
 - `EventKitService.swift` - `@MainActor` singleton wrapping EventKit; handles permission requests, calendar enumeration, event queries, and event creation
 - `OutputFormatter.swift` - text table and JSON rendering; `DateParser` handles "today"/"tomorrow" keywords, ISO-8601, and YYYY-MM-DD
 - `Commands/Calendar/` - one file per subcommand implementation
@@ -54,6 +54,7 @@ All commands fully implemented.
 - `ical list` - list calendars (text/JSON)
 - `ical events` - list events with `--from`, `--to`, `--calendar`, `--format`
 - `ical add` - add event with `--start`, `--end`, `--calendar`, `--location`, `--notes`, `--all-day`
+- `ical config` - view user/local/effective config; `ical config add` views or sets defaults for `ical add`
 
 ## Notes
 

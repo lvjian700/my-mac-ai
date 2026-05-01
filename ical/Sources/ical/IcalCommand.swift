@@ -6,7 +6,13 @@ struct IcalCommand: AsyncParsableCommand {
     commandName: "ical",
     abstract: "Apple Calendar from the command line.",
     version: "0.1.0",
-    subcommands: [ListCalendarsCommand.self, ListEventsCommand.self, AddEventCommand.self, UpdateEventCommand.self],
+    subcommands: [
+      ListCalendarsCommand.self,
+      ListEventsCommand.self,
+      AddEventCommand.self,
+      UpdateEventCommand.self,
+      ConfigCommand.self,
+    ],
     defaultSubcommand: ListEventsCommand.self
   )
 }

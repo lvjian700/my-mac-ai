@@ -66,6 +66,13 @@ struct AddEventCommand: AsyncParsableCommand {
       ?? startDate.addingTimeInterval(30 * 60)
   }
 
+  func resolvedAddConfig(from config: AddCommandConfig) -> AddCommandConfig {
+    AddCommandConfig(
+      account: account ?? config.account,
+      calendar: calendar ?? config.calendar
+    )
+  }
+
   @MainActor
   func run() async throws {
     let startDate = try DateParser.parse(start)
@@ -73,14 +80,15 @@ struct AddEventCommand: AsyncParsableCommand {
     guard endDate > startDate else {
       throw IcalError.invalidDate(string: "end date must be after start date")
     }
+    let config = try resolvedAddConfig(from: ConfigStore().effectiveAddConfig())
     let svc = EventKitService.shared
     try await svc.requestAccess()
     let event = try svc.addEvent(
       title: title,
       startDate: startDate,
       endDate: endDate,
-      calendarName: calendar,
-      account: account,
+      calendarName: config.calendar,
+      account: config.account,
       location: location,
       notes: notes,
       allDay: allDay
