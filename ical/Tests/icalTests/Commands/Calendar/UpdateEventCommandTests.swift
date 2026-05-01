@@ -11,7 +11,7 @@ struct UpdateEventCommandTests {
         try UpdateEventCommand.parse(args)
     }
 
-    @Test func noOptions_parsesWithAllNilFields() throws {
+    @Test func updateEvent_withNoOptions_allFieldsAreUnset() throws {
         let c = try cmd(["fake-id"])
         #expect(c.title    == nil)
         #expect(c.start    == nil)
@@ -23,19 +23,19 @@ struct UpdateEventCommandTests {
         #expect(c.account  == nil)
     }
 
-    @Test func shortFlag_15min() throws {
+    @Test func updateEvent_shortDurationFlag_ends15MinutesAfterStart() throws {
         let c = try cmd(["fake-id", "--start", "2026-04-24T10:00:00", "--short"])
         let end = try c.resolveEndDate(effectiveStart: base, existingStart: base, existingEnd: baseEnd)
         #expect(end == base.addingTimeInterval(15 * 60))
     }
 
-    @Test func longFlag_45min() throws {
+    @Test func updateEvent_longDurationFlag_ends45MinutesAfterStart() throws {
         let c = try cmd(["fake-id", "--start", "2026-04-24T10:00:00", "--long"])
         let end = try c.resolveEndDate(effectiveStart: base, existingStart: base, existingEnd: baseEnd)
         #expect(end == base.addingTimeInterval(45 * 60))
     }
 
-    @Test func normalFlag_30min() throws {
+    @Test func updateEvent_normalDurationFlag_ends30MinutesAfterStart() throws {
         let c = try cmd(["fake-id", "--start", "2026-04-24T10:00:00", "--normal"])
         let end = try c.resolveEndDate(effectiveStart: base, existingStart: base, existingEnd: baseEnd)
         #expect(end == base.addingTimeInterval(30 * 60))
@@ -57,30 +57,30 @@ struct UpdateEventCommandTests {
         #expect(end == expected)
     }
 
-    @Test func shortFlag_overridesExplicitEnd() throws {
+    @Test func updateEvent_durationFlagOverridesExplicitEndTime() throws {
         let c = try cmd(["fake-id", "--start", "2026-04-24T10:00:00",
                          "--end", "2026-04-24T12:00:00", "--short"])
         let end = try c.resolveEndDate(effectiveStart: base, existingStart: base, existingEnd: baseEnd)
         #expect(end == base.addingTimeInterval(15 * 60))
     }
 
-    @Test func defaultFormat_isText() throws {
+    @Test func updateEvent_outputFormat_defaultsToText() throws {
         let c = try cmd(["fake-id", "--title", "New Title"])
         #expect(c.format == .text)
     }
 
-    @Test func jsonFormat_parsed() throws {
+    @Test func updateEvent_outputFormat_canBeSetToJson() throws {
         let c = try cmd(["fake-id", "--title", "New Title", "--format", "json"])
         #expect(c.format == .json)
     }
 
-    @Test func eventNotFoundError_hasCorrectMessage() {
+    @Test func updateEvent_whenEventNotFound_errorMessageContainsIdAndCommand() {
         let err = IcalError.eventNotFound(id: "abc-123")
         #expect(err.errorDescription?.contains("abc-123") == true)
         #expect(err.errorDescription?.contains("ical events --format json") == true)
     }
 
-    @Test func noFlags_noStart_returnsNil() throws {
+    @Test func updateEvent_withNoStartOrDurationFlags_endDateIsUnchanged() throws {
         let c = try cmd(["fake-id"])
         let end = try c.resolveEndDate(effectiveStart: base, existingStart: base, existingEnd: baseEnd)
         #expect(end == nil)
