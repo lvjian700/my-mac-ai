@@ -13,7 +13,7 @@ allowed-tools: Bash(ical *) Bash(date +%Z)
 
 # ical - Apple Calendar Skill
 
-Use the `ical` CLI(installed at ~/local/bin/ical) to answer calendar questions.
+Use the `ical` CLI to answer calendar questions.
 Always use `--format json` so output is structured.
 Always use user's local timezone for date and time. 
 Run `date +%Z` to get the local timezone if you don't know.
