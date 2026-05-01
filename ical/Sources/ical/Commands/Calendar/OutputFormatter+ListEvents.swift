@@ -33,7 +33,7 @@ extension OutputFormatter {
             print(headerFmt.string(from: day))
             let dayEvents = (grouped[day] ?? []).sorted { $0.startDate < $1.startDate }
             for e in dayEvents {
-                let title = e.title ?? "(no title)"
+                let title = e.title.flatMap { $0.isEmpty ? nil : $0 } ?? "(no title)"
                 let calName = e.calendar?.title ?? ""
                 if e.isAllDay {
                     print("  • \(title) (\(calName))")

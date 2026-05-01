@@ -195,6 +195,40 @@ struct EventFormatterTests {
         #expect((timedBool  as? Bool) == false, "Meeting allDay should be false")
     }
 
+    @Test func textOutput_eventWithNilTitle_showsNoTitlePlaceholder() {
+        let event = EKEvent(eventStore: store)
+        // title intentionally left nil
+        event.startDate = day1Start
+        event.endDate   = day1End
+        event.isAllDay  = false
+
+        let output = captureStdout {
+            OutputFormatter.printEvents([event], format: .text)
+        }
+
+        #expect(output.contains("(no title)"),
+                "Expected '(no title)' placeholder when event title is nil in:\n\(output)")
+    }
+
+    @Test func textOutput_showsCalendarNameInParentheses() {
+        let cal = EKCalendar(for: .event, eventStore: store)
+        cal.title = "Work"
+
+        let event = EKEvent(eventStore: store)
+        event.title     = "Team Sync"
+        event.startDate = day1Start
+        event.endDate   = day1End
+        event.isAllDay  = false
+        event.calendar  = cal
+
+        let output = captureStdout {
+            OutputFormatter.printEvents([event], format: .text)
+        }
+
+        #expect(output.contains("Team Sync ("),
+                "Expected 'Title (' pattern in:\n\(output)")
+    }
+
     @Test func jsonOutputMultipleEvents() throws {
         let event1 = EKEvent(eventStore: store)
         event1.title     = "Event A"
