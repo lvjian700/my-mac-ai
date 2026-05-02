@@ -13,10 +13,15 @@ allowed-tools: Bash(ical *) Bash(date +%Z) Bash(scripts/ical-memory) Bash(script
 
 # ical - Apple Calendar Skill
 
-Use the `ical` CLI to answer calendar questions.
+Use the `ical` CLI to answer calendar questions, DO NOT search other place for `ical` binary.
 Always use `--format json` so output is structured.
 Always use user's local timezone for date and time.
 Run `date +%Z` to get the local timezone if you don't know.
+
+## Display
+
+Highlight time with **bold text**.
+Using markdown for output.
 
 ## Commands
 
@@ -84,4 +89,4 @@ and run `scripts/ical-memory` to load saved rules.
 1. Load memory (see above).
 2. Run the minimal `ical` call that answers the question.
 3. Match returned events against loaded rules and apply them.
-4. Present a clean human-readable summary. Highlight every time/time range in green.
+4. Present a clean human-readable summary. Do not explain which rules were applied.

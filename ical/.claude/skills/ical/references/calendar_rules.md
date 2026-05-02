@@ -57,8 +57,10 @@ Confirm to the user: "Got it — I'll book time for prep and review around inter
 For every schedule or event-query response:
 
 1. Run `scripts/ical-memory` to load rules.
+2. Only apply rule for upcoming events, DO NOT evaluate past events.
 2. Compare each returned event against every rule's `match` field.
 3. When a rule matches, apply its `behavior` immediately — create the blocks, update the event, or take whatever action the behavior describes.
+4. If rule is already satisfied skip it.
 4. Report what was done inline with the event summary. Keep it brief.
 
 **Example** — rule matched on `9:00AM-9:45AM B3 Java Backend Interview`:
