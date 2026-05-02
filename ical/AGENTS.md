@@ -37,15 +37,11 @@ PREFIX=~/.local make install   # install to a custom prefix
 
 **Permissions:** `Resources/Info.plist` declares `NSCalendarsUsageDescription` and `NSCalendarsFullAccessUsageDescription`; `Package.swift` embeds it with linker `-sectcreate __TEXT __info_plist` flags.
 
-## Task Management
-
-Follow the kanban workflow defined in [kanban/AGENTS.md](kanban/AGENTS.md) to manage all tasks and features.
-
 ## Local Skill
 
-The Apple Calendar skill lives at `.claude/skills/ical/SKILL.md`. Keep that as the canonical copy. `.codex/skills/ical` is a symlink to the same skill directory so Claude Code and Codex read one shared skill definition.
+The Apple Calendar skill lives at `.claude/skills/ical/SKILL.md`. Keep that as the canonical copy.
 
-Claude Code reads the `allowed-tools` frontmatter. Codex reads the same `name` and `description` fields and ignores Claude-specific metadata. For Codex environments that only load global skills, link `$CODEX_HOME/skills/ical` to this same `.claude/skills/ical` directory.
+This is a Claude Code skill. Keep helper paths such as `scripts/ical-memory` skill-relative so Claude Code resolves them from the skill directory.
 
 ## Implementation Status
 
