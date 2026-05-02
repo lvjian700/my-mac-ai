@@ -24,7 +24,7 @@ struct ListEventsCommand: AsyncParsableCommand {
     @MainActor
     func run() async throws {
         let startDate = try DateParser.parse(from)
-        let endDate = try DateParser.parse(to)
+        let endDate = try DateParser.parse(to, endOfDay: true)
         let svc = EventKitService.shared
         try await svc.requestAccess()
         let events = try svc.listEvents(from: startDate, to: endDate, calendars: calendar, account: account)
