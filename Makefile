@@ -1,4 +1,4 @@
-.PHONY: build test install uninstall
+.PHONY: build test install uninstall install-skills uninstall-skills
 
-build test install uninstall:
+build test install uninstall install-skills uninstall-skills:
 	$(MAKE) -C ical $@
