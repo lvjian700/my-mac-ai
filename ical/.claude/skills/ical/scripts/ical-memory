@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+user_memory="${HOME}/.my-mac-ai/ical/memory.yaml"
+
+if [[ -f "${user_memory}" ]]; then
+  echo "# memory: ${user_memory}"
+  cat "${user_memory}"
+else
+  echo "# no ical memory found"
+fi

@@ -2,20 +2,20 @@
 name: ical
 description: >
   Read and write Apple Calendar events using the local `ical` CLI.
-  TRIGGER when: user asks about their schedule, upcoming events, "what's on my
-  calendar", "am I free on ...", "add an event", "create a meeting", "reschedule",
-  "move my meeting", "push back the standup", "what do I have going on",
-  "how busy am I this week", "block time", "find a free slot", or any
-  calendar-related query.
+  TRIGGER when: user asks about their schedule, upcoming events, calendar habits,
+  calendar memory/rules, "what's on my calendar", "am I free on ...", "add an
+  event", "create a meeting", "reschedule", "move my meeting", "push back the
+  standup", "what do I have going on", "how busy am I this week", "block time",
+  "find a free slot", or any calendar-related query.
   DO NOT TRIGGER when: user is discussing the ical source code or building the binary.
-allowed-tools: Bash(ical *) Bash(date +%Z)
+allowed-tools: Bash(ical *) Bash(date +%Z) Bash(scripts/ical-memory) Bash(scripts/ical-memory *)
 ---
 
 # ical - Apple Calendar Skill
 
 Use the `ical` CLI to answer calendar questions.
 Always use `--format json` so output is structured.
-Always use user's local timezone for date and time. 
+Always use user's local timezone for date and time.
 Run `date +%Z` to get the local timezone if you don't know.
 
 ## Commands
@@ -71,8 +71,17 @@ ical update <event-id> \
 For uncommon requests to view or set default account/calendar values for future
 `ical add` commands, read [references/config.md](references/config.md).
 
+## Memory
+
+On skill load, read [references/calendar_rules.md](references/calendar_rules.md)
+and run `scripts/ical-memory` to load saved rules.
+
+- **Capture**: when the user describes a calendar habit or preference, save it as a rule.
+- **Apply**: after every event query, match events against rules and act.
+
 ## Workflow
 
-1. Run the minimal `ical` call that answers the question.
-2. Parse JSON and present a clean human-readable summary.
-3. If the binary is missing, tell the user to run `make install` inside `ical/`.
+1. Load memory (see above).
+2. Run the minimal `ical` call that answers the question.
+3. Match returned events against loaded rules and apply them.
+4. Present a clean human-readable summary. Highlight every time/time range in green.
