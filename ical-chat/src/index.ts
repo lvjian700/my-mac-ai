@@ -40,8 +40,9 @@ async function runAgentTurn(
     }
 
     const results: Anthropic.ToolResultBlockParam[] = toolCalls.map((call) => {
-      const input = call.input as Record<string, string>;
-      const label = call.name === "ical" ? `ical ${input.args}` : call.name;
+      const input = call.input as Parameters<typeof executeTool>[1];
+      const args = Array.isArray(input.args) ? input.args : [];
+      const label = call.name === "ical" ? `ical ${args.join(" ")}` : call.name;
       process.stdout.write(`\x1b[2m  ${label}\x1b[0m\n`);
       return {
         type: "tool_result" as const,
@@ -76,6 +77,7 @@ async function main() {
         return;
       }
 
+      const checkpoint = history.length;
       history.push({ role: "user", content: input });
 
       try {
@@ -84,8 +86,7 @@ async function main() {
         process.stdout.write(
           `\x1b[31merror: ${err instanceof Error ? err.message : err}\x1b[0m\n`
         );
-        // Remove the failed user turn so history stays consistent
-        history.pop();
+        history.length = checkpoint;
       }
 
       loop();

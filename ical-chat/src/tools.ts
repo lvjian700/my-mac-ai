@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import { writeFileSync, mkdirSync } from "fs";
 import { dirname } from "path";
 import { homedir } from "os";
@@ -15,9 +15,10 @@ export const tools: Anthropic.Tool[] = [
       type: "object" as const,
       properties: {
         args: {
-          type: "string",
+          type: "array",
+          items: { type: "string" },
           description:
-            "Arguments for the ical command, e.g. 'events --from today --to tomorrow --format json'",
+            "Arguments for the ical command, e.g. ['events', '--from', 'today', '--to', 'tomorrow', '--format', 'json']",
         },
       },
       required: ["args"],
@@ -40,10 +41,16 @@ export const tools: Anthropic.Tool[] = [
   },
 ];
 
-export function executeTool(name: string, input: Record<string, string>): string {
+type ToolInput = {
+  args?: string[];
+  content?: string;
+};
+
+export function executeTool(name: string, input: ToolInput): string {
   if (name === "ical") {
     try {
-      return execSync(`ical ${input.args}`, {
+      const args = input.args ?? [];
+      return execFileSync("ical", args, {
         encoding: "utf-8",
         timeout: 10_000,
       });
@@ -56,7 +63,7 @@ export function executeTool(name: string, input: Record<string, string>): string
   if (name === "write_memory") {
     try {
       mkdirSync(dirname(MEMORY_PATH), { recursive: true });
-      writeFileSync(MEMORY_PATH, input.content, "utf-8");
+      writeFileSync(MEMORY_PATH, input.content ?? "", "utf-8");
       return `Saved to ${MEMORY_PATH}`;
     } catch (err) {
       return `Error: ${err instanceof Error ? err.message : err}`;
