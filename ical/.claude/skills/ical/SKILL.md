@@ -8,7 +8,7 @@ description: >
   standup", "what do I have going on", "how busy am I this week", "block time",
   "find a free slot", or any calendar-related query.
   DO NOT TRIGGER when: user is discussing the ical source code or building the binary.
-allowed-tools: Bash(ical *) Bash(date +%Z) Bash(scripts/ical-memory) Bash(scripts/ical-memory *)
+allowed-tools: Bash(ical *) Bash(date +%Z) Bash(scripts/ical-memory)
 ---
 
 # ical - Apple Calendar Skill
@@ -16,7 +16,6 @@ allowed-tools: Bash(ical *) Bash(date +%Z) Bash(scripts/ical-memory) Bash(script
 Use the `ical` CLI to answer calendar questions, DO NOT search other place for `ical` binary.
 Always use `--format json` so output is structured.
 Always use user's local timezone for date and time.
-Run `date +%Z` to get the local timezone if you don't know.
 
 ## Display
 
@@ -36,11 +35,13 @@ Use this first if the user mentions a calendar name you haven't seen before.
 ical events --from <date> --to <date> [--calendar <name>] --format json
 ```
 - `<date>`: `today`, `tomorrow`, `YYYY-MM-DD`, or `YYYY-MM-DDThh:mm:ss`
+- When `--to` uses a relative day (`today`, `tomorrow`, a named weekday, etc.), resolve it
+  to the **last second of that day** (`YYYY-MM-DDT23:59:59`) so all events on that day are included.
 - Repeat `--calendar` to filter multiple calendars
 
 Workflow
-- By default, reading events from today to the end of week
-- When user mention a date or a range, auto resolve the `--from <date> --to <date>`
+- By default, read events from today to the end of the current week (Sunday)
+- When user mentions a date or a range, auto-resolve `--from`/`--to`
 
 ### Add an event
 ```sh
@@ -78,7 +79,7 @@ For uncommon requests to view or set default account/calendar values for future
 
 ## Memory
 
-On skill load, read [references/calendar_rules.md](references/calendar_rules.md)
+At the start of any calendar request, read [references/calendar_rules.md](references/calendar_rules.md)
 and run `scripts/ical-memory` to load saved rules.
 
 - **Capture**: when the user describes a calendar habit or preference, save it as a rule.
@@ -86,7 +87,7 @@ and run `scripts/ical-memory` to load saved rules.
 
 ## Workflow
 
-1. Load memory (see above).
+1. Load memory (see above). Run `date +%Z` to get the local timezone if not already known.
 2. Run the minimal `ical` call that answers the question.
 3. Match returned events against loaded rules and apply them.
 4. Present a clean human-readable summary. Do not explain which rules were applied.
