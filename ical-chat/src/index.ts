@@ -26,6 +26,7 @@ marked.use(markedTerminal({
 const DIM = "\x1b[2m";
 const RST = "\x1b[0m";
 const ITALIC = "\x1b[3m";
+const IS_DEV = process.env.NODE_ENV !== "production";
 
 const WRITE_OPS = new Set([
   "add",
@@ -38,27 +39,13 @@ const WRITE_OPS = new Set([
 ]);
 
 function renderToolCall(name: string, args: string[]): string {
-  const isWrite = name === "ical" && WRITE_OPS.has(args[0] ?? "");
-  const icon = isWrite ? chalk.hex("#d2a8ff")("✦") : chalk.dim("⬡");
-  const CMD = isWrite ? chalk.hex("#d2a8ff") : chalk.hex("#79c0ff");
-  const FLAG = chalk.hex("#a5d6ff");
-  const VAL = chalk.hex("#ffa657");
-
-  const parts: string[] = [icon + " " + CMD(name)];
-  let i = 0;
-  while (i < args.length) {
-    const a = args[i];
-    if (a.startsWith("--")) {
-      parts.push(FLAG(a));
-      if (i + 1 < args.length && !args[i + 1].startsWith("--")) {
-        parts.push(VAL(args[++i]));
-      }
-    } else {
-      parts.push(CMD(a));
-    }
-    i++;
+  const gray = chalk.gray.bind(chalk);
+  const icon = gray("◦");
+  const parts: string[] = [icon + " " + gray(name)];
+  for (const a of args) {
+    parts.push(gray(a));
   }
-  return parts.join(" ");
+  return DIM + parts.join(" ") + RST;
 }
 
 function renderListInlineMarkdown(line: string): string {
@@ -137,10 +124,12 @@ async function runAgentTurn(
       process.stdout.write(`${DIM}${ITALIC}${narration}${RST}\n`);
     }
 
-    for (const call of toolCalls) {
-      const input = call.input as Parameters<typeof executeTool>[1];
-      const args = Array.isArray(input.args) ? input.args : [];
-      process.stdout.write(renderToolCall(call.name, args) + "\n");
+    if (IS_DEV) {
+      for (const call of toolCalls) {
+        const input = call.input as Parameters<typeof executeTool>[1];
+        const args = Array.isArray(input.args) ? input.args : [];
+        process.stdout.write(renderToolCall(call.name, args) + "\n");
+      }
     }
     totalTools += toolCalls.length;
 
