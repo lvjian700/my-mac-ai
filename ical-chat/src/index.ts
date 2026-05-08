@@ -1,10 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
-import * as readline from "readline";
 import chalk from "chalk";
 import { marked } from "marked";
 import { markedTerminal } from "marked-terminal";
 import { buildSystemPrompt } from "./session.js";
 import { tools, executeTool } from "./tools.js";
+import { startPrompt } from "./prompt.js";
 
 const client = new Anthropic();
 const MODEL = "claude-sonnet-4-6";
@@ -13,30 +13,22 @@ const EM_STYLE = chalk.hex("#565f89").italic;
 
 // Tokyo Night theme for markdown responses
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-marked.use(markedTerminal({
-  heading: chalk.hex("#7aa2f7").bold,
-  firstHeading: chalk.hex("#7aa2f7").bold,
-  strong: STRONG_STYLE,
-  em: EM_STYLE,
-  codespan: chalk.hex("#e0af68"),
-  showSectionPrefix: false,
-  width: process.stdout.columns ?? 100,
-}) as any);
+marked.use(
+  markedTerminal({
+    heading: chalk.hex("#7aa2f7").bold,
+    firstHeading: chalk.hex("#7aa2f7").bold,
+    strong: STRONG_STYLE,
+    em: EM_STYLE,
+    codespan: chalk.hex("#e0af68"),
+    showSectionPrefix: false,
+    width: process.stdout.columns ?? 100,
+  }) as any,
+);
 
 const DIM = "\x1b[2m";
 const RST = "\x1b[0m";
 const ITALIC = "\x1b[3m";
 const IS_DEV = process.env.NODE_ENV !== "production";
-
-const WRITE_OPS = new Set([
-  "add",
-  "delete",
-  "remove",
-  "modify",
-  "reschedule",
-  "update",
-  "create",
-]);
 
 function renderToolCall(name: string, args: string[]): string {
   const gray = chalk.gray.bind(chalk);
@@ -52,11 +44,11 @@ function renderListInlineMarkdown(line: string): string {
   return line
     .replace(
       /(^|[^*])\*\*((?=\S)(?:[^*\n]*?\S))\*\*/g,
-      (_match, prefix: string, text: string) => prefix + STRONG_STYLE(text)
+      (_match, prefix: string, text: string) => prefix + STRONG_STYLE(text),
     )
     .replace(
       /(^|[^*])\*((?=\S)(?:[^*\n]*?\S))\*/g,
-      (_match, prefix: string, text: string) => prefix + EM_STYLE(text)
+      (_match, prefix: string, text: string) => prefix + EM_STYLE(text),
     );
 }
 
@@ -68,14 +60,14 @@ function renderMarkdown(text: string): string {
   return rendered
     .split("\n")
     .map((line) =>
-      /^\s+(?:\*|\d+\.)\s/.test(line) ? renderListInlineMarkdown(line) : line
+      /^\s+(?:\*|\d+\.)\s/.test(line) ? renderListInlineMarkdown(line) : line,
     )
     .join("\n");
 }
 
 async function runAgentTurn(
   systemPrompt: string,
-  history: Anthropic.MessageParam[]
+  history: Anthropic.MessageParam[],
 ): Promise<void> {
   let totalTools = 0;
   const t0 = Date.now();
@@ -97,13 +89,15 @@ async function runAgentTurn(
       messages: history,
     });
 
-    stream.on("text", (t) => { collectedText += t; });
+    stream.on("text", (t) => {
+      collectedText += t;
+    });
 
     const response = await stream.finalMessage();
     history.push({ role: "assistant", content: response.content });
 
     const toolCalls = response.content.filter(
-      (b): b is Anthropic.ToolUseBlock => b.type === "tool_use"
+      (b): b is Anthropic.ToolUseBlock => b.type === "tool_use",
     );
 
     if (toolCalls.length === 0) {
@@ -113,7 +107,7 @@ async function runAgentTurn(
       const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
       const n = totalTools;
       process.stdout.write(
-        `${chalk.hex("#9ece6a")("◆")} ${DIM}~${elapsed}s · ${n} tool call${n !== 1 ? "s" : ""}${RST}\n`
+        `${chalk.hex("#9ece6a")("◆")} ${DIM}~${elapsed}s · ${n} tool call${n !== 1 ? "s" : ""}${RST}\n`,
       );
       break;
     }
@@ -149,50 +143,41 @@ async function runAgentTurn(
 async function main() {
   process.stdout.write("Loading session...\n");
   const systemPrompt = buildSystemPrompt();
-
   const history: Anthropic.MessageParam[] = [];
-
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-    terminal: process.stdin.isTTY,
-  });
 
   process.stdout.write("ical chat  —  Ctrl-D to exit\n");
 
-  const loop = () => {
-    process.stdout.write(`\n${DIM}USER${RST}\n`);
-    rl.question(chalk.hex("#9ece6a")("›") + " ", async (line) => {
-      const input = line.trim();
-      if (!input) {
-        loop();
-        return;
-      }
+  const prompt = startPrompt(async (input) => {
+    const checkpoint = history.length;
+    history.push({ role: "user", content: input });
+    process.stdout.write(`\n${DIM}AGENT${RST}\n`);
 
-      const checkpoint = history.length;
-      history.push({ role: "user", content: input });
-
-      process.stdout.write(`\n${DIM}AGENT${RST}\n`);
-
-      try {
-        await runAgentTurn(systemPrompt, history);
-      } catch (err) {
-        process.stdout.write(
-          `\x1b[31merror: ${err instanceof Error ? err.message : err}\x1b[0m\n`
-        );
-        history.length = checkpoint;
-      }
-
-      loop();
-    });
-  };
-
-  rl.on("close", () => {
-    process.stdout.write("\nBye!\n");
-    process.exit(0);
+    try {
+      await runAgentTurn(systemPrompt, history);
+    } catch (err) {
+      process.stdout.write(
+        `\x1b[31merror: ${err instanceof Error ? err.message : err}\x1b[0m\n`,
+      );
+      history.length = checkpoint;
+    }
   });
 
-  loop();
+  prompt.registerSlashCommand({
+    name: "clear",
+    description: "Clear session history",
+    action: () => {
+      history.length = 0;
+      process.stdout.write(`${DIM}Session cleared.${RST}\n`);
+    },
+  });
+
+  const exit = () => {
+    process.stdout.write("\nBye!\n");
+    process.exit(0);
+  };
+
+  prompt.registerSlashCommand({ name: "exit", description: "Exit", action: exit });
+  prompt.registerSlashCommand({ name: "q", description: "Exit (shortcut)", action: exit });
 }
 
 main();
