@@ -1,40 +1,43 @@
-import chalk from "chalk";
+import chalk from 'chalk';
 
-const ORANGE = chalk.hex("#e0af68");
-const DIM_COLOR = chalk.hex("#565f89");
+const caliColor = chalk.rgb(240, 160, 112);
 
-const ROBOT = [
-  "  ★     ",
-  " ┌────┐ ",
-  " │ ·· │ ",
-  " └────┘ ",
-  "   ╷╷   ",
-  " ──┘└── ",
+const avatar = [
+  '  ★',
+  '╭─────╮',
+  '│ · · │',
+  '│  ‿  │',
+  '╰──┬──╯',
+  '  ─┴─',
 ];
 
-// Pre-composed "Cali" ASCII art — C + a + l + i (26 chars per row)
-const CALI = [
-  " /─────╮           │   ·  ",
-  " │        ╭────╮   │   │  ",
-  " │        ╰────┤   │   │  ",
-  " │              │  │   │  ",
-  " │        ╰────╯   │   ╰─ ",
-  " ╰─────╯            ╰──   ",
+const wordmark = [
+  '   ____      _ _     ',
+  '  / ___|__ _| (_)    ',
+  ' | |   / _` | | |   ',
+  ' | |__| (_| | | |   ',
+  '  \\____\\__,_|_|_|   ',
 ];
 
-export function printWelcome(): void {
-  for (let i = 0; i < ROBOT.length; i++) {
-    console.log(ORANGE(ROBOT[i] + "  " + CALI[i]));
+export function printWelcome() {
+  const lines = Math.max(avatar.length, wordmark.length);
+
+  for (let i = 0; i < lines; i++) {
+    const left  = (avatar[i]   ?? '').padEnd(10);
+    const right = wordmark[i] ?? '';
+    console.log(caliColor(left + '  ' + right));
   }
+
   console.log();
-  const badge = DIM_COLOR("[ ") + "calendar bestie" + DIM_COLOR(" ]");
-  console.log("  your calendar has a " + ORANGE.bold("brain") + " now  ·  " + badge);
   console.log(
-    "  looks after your time, your focus, " +
-      ORANGE.bold("and you") +
-      "  ·  " +
-      DIM_COLOR("v0.1.0"),
+    caliColor.bold('your calendar has a brain now') +
+    chalk.hex('#333333')(' · ') +
+    chalk.bgHex('#1e1208').hex('#f0a070')(' calendar bestie ')
+  );
+  console.log(
+    chalk.hex('#555555')(`looks after your time, your focus, `) +
+    caliColor('and you') +
+    chalk.hex('#555555')('  ·  v0.1.0')
   );
   console.log();
-  console.log(DIM_COLOR("─".repeat(process.stdout.columns ?? 80)));
 }
