@@ -35,15 +35,16 @@ export function printWelcome() {
     caliColor.dim(']');
 
   console.log();
+  const indent = ' '.repeat(12);
   console.log(
-    chalk.bold('  your calendar has a ') +
+    chalk.bold(indent + 'your calendar has a ') +
     caliColor.bold('brain') +
     chalk.bold(' now') +
     chalk.hex('#888888')('  ·  ') +
     badge
   );
   console.log(
-    chalk.hex('#555555')('  looks after your time, your focus, ') +
+    chalk.hex('#555555')(indent + 'looks after your time, your focus, ') +
     caliColor('and you') +
     chalk.hex('#555555')('  ·  v0.1.0')
   );
