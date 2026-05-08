@@ -7,7 +7,7 @@ import { marked } from "marked";
 import { markedTerminal } from "marked-terminal";
 import { buildSystemPrompt } from "./session.js";
 import { tools, executeTool } from "./tools.js";
-import { startPrompt } from "./prompt.js";
+import { startPrompt, type Prompt } from "./ui.js";
 
 const client = new Anthropic();
 const MODEL = "claude-sonnet-4-6";
@@ -108,11 +108,11 @@ async function runAgentTurn(
     if (toolCalls.length === 0) {
       // Final turn: render the full buffered text through marked (gives correct
       // multi-block parsing), then append the stats line.
-      process.stdout.write(renderMarkdown(collectedText));
+      console.log(renderMarkdown(collectedText).trimEnd());
       const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
       const n = totalTools;
-      process.stdout.write(
-        `${chalk.hex("#9ece6a")("◆")} ${DIM}~${elapsed}s · ${n} tool call${n !== 1 ? "s" : ""}${RST}\n`,
+      console.log(
+        `${chalk.hex("#9ece6a")("◆")} ${DIM}~${elapsed}s · ${n} tool call${n !== 1 ? "s" : ""}${RST}`,
       );
       break;
     }
@@ -120,14 +120,14 @@ async function runAgentTurn(
     // Intermediate turn: show narration in dim italic, then tool calls.
     const narration = collectedText.trim();
     if (narration) {
-      process.stdout.write(`${DIM}${ITALIC}${narration}${RST}\n`);
+      console.log(`${DIM}${ITALIC}${narration}${RST}`);
     }
 
     if (IS_DEV) {
       for (const call of toolCalls) {
         const input = call.input as Parameters<typeof executeTool>[1];
         const args = Array.isArray(input.args) ? input.args : [];
-        process.stdout.write(renderToolCall(call.name, args) + "\n");
+        console.log(renderToolCall(call.name, args));
       }
     }
     totalTools += toolCalls.length;
@@ -145,32 +145,29 @@ async function runAgentTurn(
   }
 }
 
-function openInEditor(filePath: string): void {
+function openInEditor(filePath: string, prompt: Prompt): void {
   const editor = process.env.EDITOR || process.env.VISUAL || "vi";
-  process.stdout.write("\r\x1b[J");
-  if (process.stdin.isTTY) process.stdin.setRawMode(false);
+  prompt.pause();
   spawnSync(editor, [filePath], { stdio: "inherit" });
-  if (process.stdin.isTTY) process.stdin.setRawMode(true);
+  prompt.resume();
 }
 
 async function main() {
-  process.stdout.write("Loading session...\n");
+  console.log("Loading session...");
   const systemPrompt = buildSystemPrompt(userName);
   const history: Anthropic.MessageParam[] = [];
 
-  process.stdout.write("ical chat  —  Ctrl-D to exit\n");
+  console.log("ical chat  —  Ctrl-D to exit");
 
   const prompt = startPrompt(async (input) => {
     const checkpoint = history.length;
     history.push({ role: "user", content: input });
-    process.stdout.write(`\n${CALI_LABEL}\n`);
+    console.log(`\n${CALI_LABEL}`);
 
     try {
       await runAgentTurn(systemPrompt, history);
     } catch (err) {
-      process.stdout.write(
-        `\x1b[31merror: ${err instanceof Error ? err.message : err}\x1b[0m\n`,
-      );
+      console.log(`\x1b[31merror: ${err instanceof Error ? err.message : err}\x1b[0m`);
       history.length = checkpoint;
     }
   }, { userName });
@@ -180,7 +177,7 @@ async function main() {
     description: "Clear session history",
     action: () => {
       history.length = 0;
-      process.stdout.write(`${DIM}Session cleared.${RST}\n`);
+      console.log(`${DIM}Session cleared.${RST}`);
     },
   });
 
@@ -193,12 +190,12 @@ async function main() {
         os.homedir(),
         ".my-mac-ai/ical/memory.yaml",
       );
-      openInEditor(memoryPath);
+      openInEditor(memoryPath, prompt);
     },
   });
 
   const exit = () => {
-    process.stdout.write("\nBye!\n");
+    console.log("\nBye!");
     process.exit(0);
   };
 

@@ -14,13 +14,14 @@ Requires `ANTHROPIC_API_KEY` in the environment.
 
 ## Architecture
 
-**Tech stack:** TypeScript, Node.js 23+, `@anthropic-ai/sdk`, `readline`.
+**Tech stack:** TypeScript, Node.js 23+, `@anthropic-ai/sdk`, `ink` (React for CLIs).
 
 **Data flow:** user input → Anthropic API (claude-sonnet-4-6) → tool calls → `ical` binary → tool results → API → streamed text response → repeat.
 
 **Key files:**
 
-- `src/index.ts` — entry point; readline REPL loop; agentic turn runner
+- `src/index.ts` — entry point; agentic turn runner; markdown rendering
+- `src/ui.tsx` — Ink-based interactive prompt: input buffer, slash command popup, keyboard handling
 - `src/session.ts` — builds the system prompt from SKILL.md + calendar_rules.md + ical-memory output + date/TZ; runs once at startup
 - `src/tools.ts` — defines `ical` and `write_memory` tools; executes them directly via `execSync`
 
