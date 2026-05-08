@@ -1,10 +1,23 @@
 import * as readline from "readline";
 import chalk from "chalk";
 
+export interface KeyShortcut {
+  ctrl?: boolean;
+  meta?: boolean;
+  name: string;
+}
+
 export interface SlashCommand {
   name: string;
   description: string;
+  shortcut?: KeyShortcut;
   action: () => void | Promise<void>;
+}
+
+function formatShortcut(s: KeyShortcut): string {
+  if (s.ctrl) return "^" + s.name.toUpperCase();
+  if (s.meta) return "M-" + s.name;
+  return s.name;
 }
 
 export interface Prompt {
@@ -55,13 +68,18 @@ export function startPrompt(
         const { name, description } = popupItems[i];
         const sel = i === popupIndex;
         const cmd = `${trigger}${name}`.padEnd(trigger.length + colWidth);
+        const hint = popupItems[i].shortcut
+          ? `  ${formatShortcut(popupItems[i].shortcut!)}`
+          : "";
         const line = sel
           ? " " +
             chalk.bgHex("#1e2030").hex("#7aa2f7").bold(cmd) +
-            chalk.bgHex("#1e2030").dim(`  ${description} `)
+            chalk.bgHex("#1e2030").dim(`  ${description}`) +
+            chalk.bgHex("#1e2030").hex("#565f89")(hint + " ")
           : " " +
             chalk.dim(cmd) +
-            chalk.dim(`  ${description}`);
+            chalk.dim(`  ${description}`) +
+            chalk.hex("#565f89").dim(hint);
         process.stdout.write(`\r\n${line}`);
       }
       // Move cursor back up to prompt line
@@ -98,6 +116,32 @@ export function startPrompt(
       ) {
         process.stdout.write("\nBye!\n");
         process.exit(0);
+      }
+
+      // Keyboard shortcut — run matching command immediately
+      const shortcutCmd = commands.find(
+        (c) =>
+          c.shortcut &&
+          c.shortcut.name === key.name &&
+          !!c.shortcut.ctrl === !!key.ctrl &&
+          !!c.shortcut.meta === !!key.meta,
+      );
+      if (shortcutCmd) {
+        const hint = formatShortcut(shortcutCmd.shortcut!);
+        process.stdout.write(
+          `\r\x1b[J${GREEN_PROMPT}${hint} (${shortcutCmd.name})\n`,
+        );
+        inputBuffer = "";
+        popupVisible = false;
+        popupItems = [];
+        isProcessing = true;
+        try {
+          await shortcutCmd.action();
+        } finally {
+          isProcessing = false;
+        }
+        showPrompt();
+        return;
       }
 
       if (key.name === "return") {

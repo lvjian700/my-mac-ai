@@ -1,4 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { spawnSync } from "child_process";
+import * as os from "os";
+import * as path from "path";
 import chalk from "chalk";
 import { marked } from "marked";
 import { markedTerminal } from "marked-terminal";
@@ -140,6 +143,14 @@ async function runAgentTurn(
   }
 }
 
+function openInEditor(filePath: string): void {
+  const editor = process.env.EDITOR || process.env.VISUAL || "vi";
+  process.stdout.write("\r\x1b[J");
+  if (process.stdin.isTTY) process.stdin.setRawMode(false);
+  spawnSync(editor, [filePath], { stdio: "inherit" });
+  if (process.stdin.isTTY) process.stdin.setRawMode(true);
+}
+
 async function main() {
   process.stdout.write("Loading session...\n");
   const systemPrompt = buildSystemPrompt();
@@ -171,6 +182,19 @@ async function main() {
     },
   });
 
+  prompt.registerSlashCommand({
+    name: "memory",
+    description: "Edit calendar memory",
+    shortcut: { ctrl: true, name: "e" },
+    action: () => {
+      const memoryPath = path.join(
+        os.homedir(),
+        ".my-mac-ai/ical/memory.yaml",
+      );
+      openInEditor(memoryPath);
+    },
+  });
+
   const exit = () => {
     process.stdout.write("\nBye!\n");
     process.exit(0);
@@ -179,6 +203,7 @@ async function main() {
   prompt.registerSlashCommand({
     name: "exit",
     description: "Exit",
+    shortcut: { ctrl: true, name: "q" },
     action: exit,
   });
 }
