@@ -14,7 +14,7 @@ function stripFrontmatter(content: string): string {
   return end === -1 ? content : content.slice(end + 4).trimStart();
 }
 
-export function buildSystemPrompt(): string {
+export function buildSystemPrompt(userName?: string): string {
   const skillMd = readFileSync(join(SKILL_DIR, "SKILL.md"), "utf-8");
   const rulesMd = readFileSync(
     join(SKILL_DIR, "references/calendar_rules.md"),
@@ -40,6 +40,6 @@ export function buildSystemPrompt(): string {
     "## Loaded Memory",
     memory,
     "## Session Context",
-    `Today is ${today}. Timezone: ${tz}.`,
+    `Today is ${today}. Timezone: ${tz}.${userName ? ` The user's name is ${userName}.` : ""}`,
   ].join("\n\n");
 }

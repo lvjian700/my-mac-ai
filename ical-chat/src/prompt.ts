@@ -29,9 +29,10 @@ const RST = "\x1b[0m";
 
 export function startPrompt(
   onMessage: (input: string) => Promise<void>,
-  options?: { trigger?: string },
+  options?: { trigger?: string; userName?: string },
 ): Prompt {
   const trigger = options?.trigger ?? "/";
+  const userLabel = `@${options?.userName ?? "You"}`;
   const commands: SlashCommand[] = [];
 
   let inputBuffer = "";
@@ -91,7 +92,7 @@ export function startPrompt(
   }
 
   function showPrompt() {
-    process.stdout.write(`\n${DIM}USER${RST}\n`);
+    process.stdout.write(`\n${DIM}${userLabel}${RST}\n`);
     inputBuffer = "";
     popupVisible = false;
     popupItems = [];

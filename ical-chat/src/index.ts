@@ -32,6 +32,8 @@ const DIM = "\x1b[2m";
 const RST = "\x1b[0m";
 const ITALIC = "\x1b[3m";
 const IS_DEV = process.env.NODE_ENV !== "production";
+const CALI_LABEL = chalk.hex("#bb9af7").bold("Cali");
+const userName = process.env.CALI_USER_NAME ?? "You";
 
 function renderToolCall(name: string, args: string[]): string {
   const gray = chalk.gray.bind(chalk);
@@ -153,7 +155,7 @@ function openInEditor(filePath: string): void {
 
 async function main() {
   process.stdout.write("Loading session...\n");
-  const systemPrompt = buildSystemPrompt();
+  const systemPrompt = buildSystemPrompt(userName);
   const history: Anthropic.MessageParam[] = [];
 
   process.stdout.write("ical chat  —  Ctrl-D to exit\n");
@@ -161,7 +163,7 @@ async function main() {
   const prompt = startPrompt(async (input) => {
     const checkpoint = history.length;
     history.push({ role: "user", content: input });
-    process.stdout.write(`\n${DIM}AGENT${RST}\n`);
+    process.stdout.write(`\n${CALI_LABEL}\n`);
 
     try {
       await runAgentTurn(systemPrompt, history);
@@ -171,7 +173,7 @@ async function main() {
       );
       history.length = checkpoint;
     }
-  });
+  }, { userName });
 
   prompt.registerSlashCommand({
     name: "clear",
