@@ -28,14 +28,22 @@ export function printWelcome() {
     console.log(caliColor(left + '  ' + right));
   }
 
+  // Bordered badge to match the design's outlined box style
+  const badge =
+    caliColor.dim('[') +
+    chalk.bgHex('#1e1208').hex('#f0a070').bold(' calendar bestie ') +
+    caliColor.dim(']');
+
   console.log();
   console.log(
-    caliColor.bold('your calendar has a brain now') +
-    chalk.hex('#333333')(' · ') +
-    chalk.bgHex('#1e1208').hex('#f0a070')(' calendar bestie ')
+    chalk.bold('  your calendar has a ') +
+    caliColor.bold('brain') +
+    chalk.bold(' now') +
+    chalk.hex('#888888')('  ·  ') +
+    badge
   );
   console.log(
-    chalk.hex('#555555')(`looks after your time, your focus, `) +
+    chalk.hex('#555555')('  looks after your time, your focus, ') +
     caliColor('and you') +
     chalk.hex('#555555')('  ·  v0.1.0')
   );
