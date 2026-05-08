@@ -37,8 +37,8 @@ export function printWelcome() {
     caliColor('and you') +
     chalk.hex('#555555')('  ·  v0.1.0');
 
-  // Right column: wordmark then taglines with a blank row between them
-  const rightCol = [...wordmark, tagline1, '', tagline2];
+  // Right column: wordmark immediately followed by taglines
+  const rightCol = [...wordmark, tagline1, tagline2];
   const lines = Math.max(avatar.length, rightCol.length);
 
   for (let i = 0; i < lines; i++) {
