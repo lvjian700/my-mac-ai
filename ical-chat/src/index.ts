@@ -8,6 +8,7 @@ import { markedTerminal } from "marked-terminal";
 import { buildSystemPrompt } from "./session.js";
 import { tools, executeTool } from "./tools.js";
 import { startPrompt, type Prompt } from "./ui.js";
+import { printWelcome } from "./welcome.js";
 
 const client = new Anthropic();
 const MODEL = "claude-sonnet-4-6";
@@ -153,11 +154,10 @@ function openInEditor(filePath: string, prompt: Prompt): void {
 }
 
 async function main() {
-  console.log("Loading session...");
   const systemPrompt = buildSystemPrompt(userName);
   const history: Anthropic.MessageParam[] = [];
 
-  console.log("ical chat  —  Ctrl-D to exit");
+  printWelcome();
 
   const prompt = startPrompt(async (input) => {
     const checkpoint = history.length;
