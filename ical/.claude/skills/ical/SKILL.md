@@ -87,6 +87,9 @@ and run `scripts/ical-memory` to load saved rules.
 
 ## Workflow
 
+> Always call the `ical` CLI for current calendar data. Never infer answers from
+> event data seen earlier in this conversation — the calendar may have changed.
+
 1. Load memory (see above). Run `date +%Z` to get the local timezone if not already known.
 2. Run the minimal `ical` call that answers the question.
 3. Match returned events against loaded rules and apply them.
