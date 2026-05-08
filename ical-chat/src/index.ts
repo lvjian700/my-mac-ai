@@ -176,8 +176,11 @@ async function main() {
     process.exit(0);
   };
 
-  prompt.registerSlashCommand({ name: "exit", description: "Exit", action: exit });
-  prompt.registerSlashCommand({ name: "q", description: "Exit (shortcut)", action: exit });
+  prompt.registerSlashCommand({
+    name: "exit",
+    description: "Exit",
+    action: exit,
+  });
 }
 
 main();
