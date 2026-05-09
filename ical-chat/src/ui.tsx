@@ -67,6 +67,40 @@ function PopupRow({ item, selected, trigger, colWidth }: PopupRowProps) {
   );
 }
 
+function PromptDivider() {
+  const width = Math.max(24, (process.stdout.columns ?? 80) - 1);
+  return <Text color="#303030">{"─".repeat(width)}</Text>;
+}
+
+const PROMPT_PLACEHOLDER = 'Try "what\'s my week look like?"';
+const USER_BLUE = "#9cdcfe";
+
+function BoxCursor() {
+  return (
+    <Text backgroundColor={USER_BLUE} color="#000000">
+      {" "}
+    </Text>
+  );
+}
+
+function PromptInput({ value }: { value: string }) {
+  if (value.length > 0) {
+    return (
+      <>
+        <Text>{value}</Text>
+        <BoxCursor />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <BoxCursor />
+      <Text color="#565656">{PROMPT_PLACEHOLDER}</Text>
+    </>
+  );
+}
+
 interface PromptAppProps {
   onMessage: (input: string) => Promise<void>;
   options?: {
@@ -85,6 +119,7 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
 
   const [inputBuffer, setInputBuffer] = useState("");
   const [popupIndex, setPopupIndex] = useState(0);
+  const [helpVisible, setHelpVisible] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const commandsRef = useRef(commands);
@@ -93,12 +128,16 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
   }, [commands]);
 
   const popupItems = useMemo(() => {
+    if (helpVisible) {
+      return commands;
+    }
+
     if (inputBuffer.startsWith(trigger)) {
       const partial = inputBuffer.slice(trigger.length);
-      return commandsRef.current.filter((c) => c.name.startsWith(partial));
+      return commands.filter((c) => c.name.startsWith(partial));
     }
     return [];
-  }, [inputBuffer, trigger]);
+  }, [commands, helpVisible, inputBuffer, trigger]);
 
   const popupVisible = popupItems.length > 0;
 
@@ -116,6 +155,12 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
       ) {
         console.log("\nBye!");
         exit();
+        return;
+      }
+
+      if (input === "?" && inputBuffer.length === 0 && !key.ctrl && !key.meta) {
+        setHelpVisible(true);
+        setPopupIndex(0);
         return;
       }
 
@@ -142,6 +187,7 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
           ),
         );
         setInputBuffer("");
+        setHelpVisible(false);
         setIsProcessing(true);
         Promise.resolve(shortcutCmd.action()).finally(() => {
           setIsProcessing(false);
@@ -157,6 +203,7 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
 
         setInputBuffer("");
         setPopupIndex(0);
+        setHelpVisible(false);
 
         if (!submitted) return;
 
@@ -196,6 +243,7 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
         if (popupVisible && popupItems.length > 0) {
           setInputBuffer(trigger + popupItems[Math.min(popupIndex, popupItems.length - 1)].name);
           setPopupIndex(0);
+          setHelpVisible(false);
         }
         return;
       }
@@ -214,16 +262,23 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
       if (key.escape) {
         setInputBuffer("");
         setPopupIndex(0);
+        setHelpVisible(false);
         return;
       }
 
       if (key.ctrl && input === "u") {
         setInputBuffer("");
         setPopupIndex(0);
+        setHelpVisible(false);
         return;
       }
 
       if (key.backspace || key.delete) {
+        if (helpVisible) {
+          setHelpVisible(false);
+          return;
+        }
+
         setInputBuffer((b) => b.slice(0, -1));
         return;
       }
@@ -231,6 +286,7 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
       if (input && input.length === 1 && !key.ctrl && !key.meta) {
         setInputBuffer((b) => b + input);
         setPopupIndex(0);
+        setHelpVisible(false);
       }
     },
     { isActive: true },
@@ -241,16 +297,22 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
   }
 
   return (
-    <Box flexDirection="column">
+    <Box flexDirection="column" marginTop={1}>
+      <PromptDivider />
       <Box>
-        <Text color="#9cdcfe" bold>
-          {userName.toUpperCase()}
+        <Text color={USER_BLUE} bold>
+          {"› "}
         </Text>
-        <Text color="#9cdcfe">{" › "}</Text>
-        <Text>{inputBuffer}</Text>
+        <PromptInput value={inputBuffer} />
       </Box>
+      <PromptDivider />
+      {!popupVisible && (
+        <Box>
+          <Text color="#565656">? for help</Text>
+        </Box>
+      )}
       {popupVisible && (
-        <Box flexDirection="column">
+        <Box flexDirection="column" marginTop={1}>
           {popupItems.map((item, i) => (
             <PopupRow
               key={item.name}
