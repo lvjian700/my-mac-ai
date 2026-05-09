@@ -2,16 +2,11 @@ import Anthropic from "@anthropic-ai/sdk";
 import { spawnSync } from "child_process";
 import * as os from "os";
 import * as path from "path";
-import chalk from "chalk";
 import { buildSystemPrompt } from "./session.js";
 import { tools, executeTool } from "./tools.js";
 import { startPrompt, type Prompt } from "./ui.js";
 import { printWelcome } from "./welcome.js";
-import {
-  renderConversationBody,
-  renderConversationHeader,
-  renderConversationMessage,
-} from "./renderer.js";
+import { renderConversationMessage } from "./renderer.js";
 import { CALI } from "./personalities/cali.js";
 
 const DIM = "\x1b[2m";
@@ -23,46 +18,10 @@ const personality = CALI;
 const DEFAULT_USER_NAME = "You";
 const userName = process.env.CALI_USER_NAME ?? DEFAULT_USER_NAME;
 
-function toolStatusLabel(calls: Anthropic.ToolUseBlock[]): string {
-  const labels = calls.map((call) => {
-    if (call.name === "write_memory") return "saving memory";
-    const input = call.input as { args?: string[] };
-    const sub = Array.isArray(input.args) ? input.args[0] : undefined;
-    return sub ? `ical ${sub}` : "ical";
-  });
-  return labels.join(", ");
-}
-
-function renderToolStatus(
-  hasHeader: boolean,
-  calls: Anthropic.ToolUseBlock[],
-): boolean {
-  if (!hasHeader) {
-    console.log();
-    console.log(
-      renderConversationHeader(
-        personality.name,
-        "assistant",
-        new Date(),
-        personality,
-      ),
-    );
-  }
-
-  process.stdout.write(
-    chalk.hex("#333")(`  · ${toolStatusLabel(calls)}...\n`),
-  );
-  return true;
-}
-
 async function runAgentTurn(
   systemPrompt: string,
   history: Anthropic.MessageParam[],
 ): Promise<void> {
-  let totalTools = 0;
-  let hasAssistantHeader = false;
-  const t0 = Date.now();
-
   while (true) {
     let collectedText = "";
 
@@ -92,27 +51,16 @@ async function runAgentTurn(
     );
 
     if (toolCalls.length === 0) {
-      if (hasAssistantHeader) {
-        console.log(renderConversationBody(collectedText, personality));
-      } else {
-        console.log();
-        console.log(
-          renderConversationMessage(
-            {
-              speaker: personality.name,
-              body: collectedText,
-              kind: "assistant",
-              timestamp: new Date(),
-            },
-            personality,
-          ),
-        );
-      }
-      const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
-      const n = totalTools;
+      console.log();
       console.log(
-        chalk.hex("#333")(
-          `  ◆ ~${elapsed}s · ${n} tool call${n !== 1 ? "s" : ""}`,
+        renderConversationMessage(
+          {
+            speaker: personality.name,
+            body: collectedText,
+            kind: "assistant",
+            timestamp: new Date(),
+          },
+          personality,
         ),
       );
       break;
@@ -123,9 +71,6 @@ async function runAgentTurn(
     if (narration) {
       console.log(`${DIM}${ITALIC}${narration}${RST}`);
     }
-
-    hasAssistantHeader = renderToolStatus(hasAssistantHeader, toolCalls);
-    totalTools += toolCalls.length;
 
     const results: Anthropic.ToolResultBlockParam[] = toolCalls.map((call) => {
       const input = call.input as Parameters<typeof executeTool>[1];
