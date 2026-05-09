@@ -23,7 +23,20 @@ const personality = CALI;
 const DEFAULT_USER_NAME = "You";
 const userName = process.env.CALI_USER_NAME ?? DEFAULT_USER_NAME;
 
-function renderToolStatus(hasHeader: boolean): boolean {
+function toolStatusLabel(calls: Anthropic.ToolUseBlock[]): string {
+  const labels = calls.map((call) => {
+    if (call.name === "write_memory") return "saving memory";
+    const input = call.input as { args?: string[] };
+    const sub = Array.isArray(input.args) ? input.args[0] : undefined;
+    return sub ? `ical ${sub}` : "ical";
+  });
+  return labels.join(", ");
+}
+
+function renderToolStatus(
+  hasHeader: boolean,
+  calls: Anthropic.ToolUseBlock[],
+): boolean {
   if (!hasHeader) {
     console.log();
     console.log(
@@ -36,7 +49,9 @@ function renderToolStatus(hasHeader: boolean): boolean {
     );
   }
 
-  process.stdout.write(chalk.hex("#333")("  · checking your calendar...\n"));
+  process.stdout.write(
+    chalk.hex("#333")(`  · ${toolStatusLabel(calls)}...\n`),
+  );
   return true;
 }
 
@@ -109,7 +124,7 @@ async function runAgentTurn(
       console.log(`${DIM}${ITALIC}${narration}${RST}`);
     }
 
-    hasAssistantHeader = renderToolStatus(hasAssistantHeader);
+    hasAssistantHeader = renderToolStatus(hasAssistantHeader, toolCalls);
     totalTools += toolCalls.length;
 
     const results: Anthropic.ToolResultBlockParam[] = toolCalls.map((call) => {
