@@ -75,27 +75,33 @@ function PromptDivider() {
 const PROMPT_PLACEHOLDER = 'Try "what\'s my week look like?"';
 const USER_BLUE = "#9cdcfe";
 
-function BoxCursor() {
+function BoxCursor({ disabled = false }: { disabled?: boolean }) {
   return (
-    <Text backgroundColor={USER_BLUE} color="#000000">
+    <Text backgroundColor={disabled ? "#333333" : USER_BLUE} color="#000000">
       {" "}
     </Text>
   );
 }
 
-function PromptInput({ value }: { value: string }) {
+function PromptInput({
+  disabled = false,
+  value,
+}: {
+  disabled?: boolean;
+  value: string;
+}) {
   if (value.length > 0) {
     return (
       <>
-        <Text>{value}</Text>
-        <BoxCursor />
+        <Text color={disabled ? "#565656" : undefined}>{value}</Text>
+        <BoxCursor disabled={disabled} />
       </>
     );
   }
 
   return (
     <>
-      <BoxCursor />
+      <BoxCursor disabled={disabled} />
       <Text color="#565656">{PROMPT_PLACEHOLDER}</Text>
     </>
   );
@@ -121,11 +127,17 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
   const [popupIndex, setPopupIndex] = useState(0);
   const [helpVisible, setHelpVisible] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const processingRef = useRef(false);
 
   const commandsRef = useRef(commands);
   useEffect(() => {
     commandsRef.current = commands;
   }, [commands]);
+
+  const setProcessing = (value: boolean) => {
+    processingRef.current = value;
+    setIsProcessing(value);
+  };
 
   const popupItems = useMemo(() => {
     if (helpVisible) {
@@ -147,8 +159,6 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
 
   useInput(
     (input, key) => {
-      if (isProcessing) return;
-
       if (
         (key.ctrl && input === "c") ||
         (key.ctrl && input === "d" && inputBuffer.length === 0)
@@ -157,6 +167,8 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
         exit();
         return;
       }
+
+      if (processingRef.current) return;
 
       if (input === "?" && inputBuffer.length === 0 && !key.ctrl && !key.meta) {
         setHelpVisible(true);
@@ -188,9 +200,9 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
         );
         setInputBuffer("");
         setHelpVisible(false);
-        setIsProcessing(true);
+        setProcessing(true);
         Promise.resolve(shortcutCmd.action()).finally(() => {
-          setIsProcessing(false);
+          setProcessing(false);
         });
         return;
       }
@@ -219,7 +231,7 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
             personality,
           ),
         );
-        setIsProcessing(true);
+        setProcessing(true);
 
         const run = async () => {
           if (submitted.startsWith(trigger)) {
@@ -235,7 +247,7 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
           }
         };
 
-        run().finally(() => setIsProcessing(false));
+        run().finally(() => setProcessing(false));
         return;
       }
 
@@ -292,26 +304,25 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
     { isActive: true },
   );
 
-  if (isProcessing) {
-    return null;
-  }
+  const inputDisabled = isProcessing;
+  const activePopupVisible = !inputDisabled && popupVisible;
 
   return (
     <Box flexDirection="column" marginTop={1}>
       <PromptDivider />
       <Box>
-        <Text color={USER_BLUE} bold>
+        <Text color={inputDisabled ? "#565656" : USER_BLUE} bold>
           {"› "}
         </Text>
-        <PromptInput value={inputBuffer} />
+        <PromptInput value={inputBuffer} disabled={inputDisabled} />
       </Box>
       <PromptDivider />
-      {!popupVisible && (
+      {!activePopupVisible && (
         <Box>
           <Text color="#565656">? for help</Text>
         </Box>
       )}
-      {popupVisible && (
+      {activePopupVisible && (
         <Box flexDirection="column" marginTop={1}>
           {popupItems.map((item, i) => (
             <PopupRow
