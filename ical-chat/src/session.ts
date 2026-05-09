@@ -1,12 +1,8 @@
+import { readFileSync, existsSync } from "fs";
+import { join } from "path";
+import { homedir } from "os";
 import { execSync } from "child_process";
-import { readFileSync } from "fs";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
-
-const SKILL_DIR = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "../../ical/.claude/skills/ical"
-);
+import { SKILL_MD, RULES_MD } from "./skill-data.js";
 
 function stripFrontmatter(content: string): string {
   if (!content.startsWith("---")) return content;
@@ -15,18 +11,12 @@ function stripFrontmatter(content: string): string {
 }
 
 export function buildSystemPrompt(userName?: string): string {
-  const skillMd = readFileSync(join(SKILL_DIR, "SKILL.md"), "utf-8");
-  const rulesMd = readFileSync(
-    join(SKILL_DIR, "references/calendar_rules.md"),
-    "utf-8"
-  );
+  const MEMORY_PATH = join(homedir(), ".my-mac-ai/ical/memory.yaml");
 
   let memory: string;
-  try {
-    memory = execSync(join(SKILL_DIR, "scripts/ical-memory"), {
-      encoding: "utf-8",
-    });
-  } catch {
+  if (existsSync(MEMORY_PATH)) {
+    memory = `# memory: ${MEMORY_PATH}\n${readFileSync(MEMORY_PATH, "utf-8")}`;
+  } else {
     memory = "# no ical memory found";
   }
 
@@ -34,9 +24,9 @@ export function buildSystemPrompt(userName?: string): string {
   const today = new Date().toLocaleDateString("en-CA");
 
   return [
-    stripFrontmatter(skillMd),
+    stripFrontmatter(SKILL_MD),
     "## Calendar Rules Reference",
-    rulesMd,
+    RULES_MD,
     "## Loaded Memory",
     memory,
     "## Session Context",

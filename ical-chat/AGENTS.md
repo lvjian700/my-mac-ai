@@ -6,11 +6,22 @@ Terminal multi-turn chat for Apple Calendar. Uses the Anthropic SDK directly (no
 
 ```bash
 npm install          # install dependencies
-npm start            # start the REPL
+npm start            # start the REPL (dev mode, reads skill files from ../ical/)
 ```
 
 Requires `ical` binary on PATH (`make install` from `../ical/`).
 Requires `ANTHROPIC_API_KEY` in the environment.
+
+## Release & Install
+
+```bash
+npm run build              # bundle to dist/cali (standalone binary, ~4 MB)
+make install               # build + install to /usr/local/bin/cali
+PREFIX=~/.local make install  # install to a custom prefix
+make uninstall             # remove installed binary
+```
+
+The bundle is a single self-contained ESM file with all dependencies inlined. Skill files (`SKILL.md`, `calendar_rules.md`) are embedded at build time. User memory (`~/.my-mac-ai/ical/memory.yaml`) is read from disk at startup as usual.
 
 ## Architecture
 
