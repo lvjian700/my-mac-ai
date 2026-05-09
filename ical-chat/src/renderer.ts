@@ -99,7 +99,7 @@ function renderLine(
 }
 
 function wrapLine(line: string): string {
-  const width = Math.max(20, (process.stdout.columns ?? 100) - 2);
+  const width = Math.max(20, (process.stdout.columns ?? 100) - 4);
   return wrapAnsi(line, width, { hard: false });
 }
 
@@ -112,6 +112,9 @@ export function renderConversationBody(
     .split(/\r?\n/)
     .map((line) => renderLine(line, personality))
     .map(wrapLine)
+    .join("\n")
+    .split("\n")
+    .map((line) => (line.length > 0 ? "  " + line : line))
     .join("\n");
 }
 
