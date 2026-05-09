@@ -3,72 +3,41 @@ import { spawnSync } from "child_process";
 import * as os from "os";
 import * as path from "path";
 import chalk from "chalk";
-import { marked } from "marked";
-import { markedTerminal } from "marked-terminal";
 import { buildSystemPrompt } from "./session.js";
 import { tools, executeTool } from "./tools.js";
 import { startPrompt, type Prompt } from "./ui.js";
 import { printWelcome } from "./welcome.js";
-
-const client = new Anthropic();
-const MODEL = "claude-sonnet-4-6";
-const STRONG_STYLE = chalk.hex("#cdd6f4").bold;
-const EM_STYLE = chalk.hex("#565f89").italic;
-
-// Tokyo Night theme for markdown responses
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-marked.use(
-  markedTerminal({
-    heading: chalk.hex("#7aa2f7").bold,
-    firstHeading: chalk.hex("#7aa2f7").bold,
-    strong: STRONG_STYLE,
-    em: EM_STYLE,
-    codespan: chalk.hex("#e0af68"),
-    showSectionPrefix: false,
-    width: process.stdout.columns ?? 100,
-  }) as any,
-);
+import {
+  renderConversationBody,
+  renderConversationHeader,
+  renderConversationMessage,
+} from "./renderer.js";
+import { CALI } from "./personalities/cali.js";
 
 const DIM = "\x1b[2m";
 const RST = "\x1b[0m";
 const ITALIC = "\x1b[3m";
-const IS_DEV = process.env.NODE_ENV !== "production";
-const CALI_LABEL = chalk.hex("#bb9af7").bold("Cali");
-const userName = process.env.CALI_USER_NAME ?? "You";
+const client = new Anthropic();
+const MODEL = "claude-sonnet-4-6";
+const personality = CALI;
+const DEFAULT_USER_NAME = "You";
+const userName = process.env.CALI_USER_NAME ?? DEFAULT_USER_NAME;
 
-function renderToolCall(name: string, args: string[]): string {
-  const gray = chalk.gray.bind(chalk);
-  const icon = gray("◦");
-  const parts: string[] = [icon + " " + gray(name)];
-  for (const a of args) {
-    parts.push(gray(a));
-  }
-  return DIM + parts.join(" ") + RST;
-}
-
-function renderListInlineMarkdown(line: string): string {
-  return line
-    .replace(
-      /(^|[^*])\*\*((?=\S)(?:[^*\n]*?\S))\*\*/g,
-      (_match, prefix: string, text: string) => prefix + STRONG_STYLE(text),
-    )
-    .replace(
-      /(^|[^*])\*((?=\S)(?:[^*\n]*?\S))\*/g,
-      (_match, prefix: string, text: string) => prefix + EM_STYLE(text),
+function renderToolStatus(hasHeader: boolean): boolean {
+  if (!hasHeader) {
+    console.log();
+    console.log(
+      renderConversationHeader(
+        personality.name,
+        "assistant",
+        new Date(),
+        personality,
+      ),
     );
-}
+  }
 
-function renderMarkdown(text: string): string {
-  const rendered = String(marked(text));
-
-  // marked-terminal 7.3 leaves inline tokens literal inside tight list items.
-  // Patch only rendered list lines so bullets and code/preformatted text stay intact.
-  return rendered
-    .split("\n")
-    .map((line) =>
-      /^\s+(?:\*|\d+\.)\s/.test(line) ? renderListInlineMarkdown(line) : line,
-    )
-    .join("\n");
+  process.stdout.write(chalk.hex("#333")("  · checking your calendar...\n"));
+  return true;
 }
 
 async function runAgentTurn(
@@ -76,6 +45,7 @@ async function runAgentTurn(
   history: Anthropic.MessageParam[],
 ): Promise<void> {
   let totalTools = 0;
+  let hasAssistantHeader = false;
   const t0 = Date.now();
 
   while (true) {
@@ -107,13 +77,28 @@ async function runAgentTurn(
     );
 
     if (toolCalls.length === 0) {
-      // Final turn: render the full buffered text through marked (gives correct
-      // multi-block parsing), then append the stats line.
-      console.log(renderMarkdown(collectedText).trimEnd());
+      if (hasAssistantHeader) {
+        console.log(renderConversationBody(collectedText, personality));
+      } else {
+        console.log();
+        console.log(
+          renderConversationMessage(
+            {
+              speaker: personality.name,
+              body: collectedText,
+              kind: "assistant",
+              timestamp: new Date(),
+            },
+            personality,
+          ),
+        );
+      }
       const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
       const n = totalTools;
       console.log(
-        `${chalk.hex("#9ece6a")("◆")} ${DIM}~${elapsed}s · ${n} tool call${n !== 1 ? "s" : ""}${RST}`,
+        chalk.hex("#333")(
+          `  ◆ ~${elapsed}s · ${n} tool call${n !== 1 ? "s" : ""}`,
+        ),
       );
       break;
     }
@@ -124,13 +109,7 @@ async function runAgentTurn(
       console.log(`${DIM}${ITALIC}${narration}${RST}`);
     }
 
-    if (IS_DEV) {
-      for (const call of toolCalls) {
-        const input = call.input as Parameters<typeof executeTool>[1];
-        const args = Array.isArray(input.args) ? input.args : [];
-        console.log(renderToolCall(call.name, args));
-      }
-    }
+    hasAssistantHeader = renderToolStatus(hasAssistantHeader);
     totalTools += toolCalls.length;
 
     const results: Anthropic.ToolResultBlockParam[] = toolCalls.map((call) => {
@@ -154,7 +133,7 @@ function openInEditor(filePath: string, prompt: Prompt): void {
 }
 
 async function main() {
-  const systemPrompt = buildSystemPrompt(userName);
+  const systemPrompt = buildSystemPrompt(userName, personality);
   const history: Anthropic.MessageParam[] = [];
 
   printWelcome();
@@ -162,7 +141,6 @@ async function main() {
   const prompt = startPrompt(async (input) => {
     const checkpoint = history.length;
     history.push({ role: "user", content: input });
-    console.log(`\n${CALI_LABEL}`);
 
     try {
       await runAgentTurn(systemPrompt, history);
@@ -170,7 +148,7 @@ async function main() {
       console.log(`\x1b[31merror: ${err instanceof Error ? err.message : err}\x1b[0m`);
       history.length = checkpoint;
     }
-  }, { userName });
+  }, { userName, personality });
 
   prompt.registerSlashCommand({
     name: "clear",

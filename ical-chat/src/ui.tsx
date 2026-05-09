@@ -1,5 +1,8 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { render, Box, Text, useInput, useApp } from "ink";
+import { renderConversationMessage } from "./renderer.js";
+import { CALI } from "./personalities/cali.js";
+import type { AssistantPersonality } from "./personalities/types.js";
 
 export interface KeyShortcut {
   ctrl?: boolean;
@@ -66,13 +69,18 @@ function PopupRow({ item, selected, trigger, colWidth }: PopupRowProps) {
 
 interface PromptAppProps {
   onMessage: (input: string) => Promise<void>;
-  options?: { trigger?: string; userName?: string };
+  options?: {
+    trigger?: string;
+    userName?: string;
+    personality?: AssistantPersonality;
+  };
   commands: SlashCommand[];
 }
 
 function PromptApp({ onMessage, options, commands }: PromptAppProps) {
   const trigger = options?.trigger ?? "/";
-  const userLabel = `@${options?.userName ?? "You"}`;
+  const personality = options?.personality ?? CALI;
+  const userName = options?.userName ?? "You";
   const { exit } = useApp();
 
   const [inputBuffer, setInputBuffer] = useState("");
@@ -121,7 +129,18 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
       );
       if (shortcutCmd) {
         const hint = formatShortcut(shortcutCmd.shortcut!);
-        console.log(`› ${hint} (${shortcutCmd.name})`);
+        console.log();
+        console.log(
+          renderConversationMessage(
+            {
+              speaker: userName,
+              body: `${hint} (${shortcutCmd.name})`,
+              kind: "user",
+              timestamp: new Date(),
+            },
+            personality,
+          ),
+        );
         setInputBuffer("");
         setIsProcessing(true);
         Promise.resolve(shortcutCmd.action()).finally(() => {
@@ -141,7 +160,18 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
 
         if (!submitted) return;
 
-        console.log(`› ${submitted}`);
+        console.log();
+        console.log(
+          renderConversationMessage(
+            {
+              speaker: userName,
+              body: submitted,
+              kind: "user",
+              timestamp: new Date(),
+            },
+            personality,
+          ),
+        );
         setIsProcessing(true);
 
         const run = async () => {
@@ -206,13 +236,18 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
     { isActive: true },
   );
 
+  if (isProcessing) {
+    return null;
+  }
+
   return (
     <Box flexDirection="column">
-      <Text dimColor>{userLabel}</Text>
       <Box>
-        <Text color="#9ece6a">{"› "}</Text>
+        <Text color="#9cdcfe" bold>
+          {userName.toUpperCase()}
+        </Text>
+        <Text color="#9cdcfe">{" › "}</Text>
         <Text>{inputBuffer}</Text>
-        {isProcessing && <Text dimColor> …</Text>}
       </Box>
       {popupVisible && (
         <Box flexDirection="column">
@@ -233,7 +268,11 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
 
 export function startPrompt(
   onMessage: (input: string) => Promise<void>,
-  options?: { trigger?: string; userName?: string },
+  options?: {
+    trigger?: string;
+    userName?: string;
+    personality?: AssistantPersonality;
+  },
 ): Prompt {
   const commands: SlashCommand[] = [];
 

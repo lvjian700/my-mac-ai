@@ -3,6 +3,8 @@ import { join } from "path";
 import { homedir } from "os";
 import { execSync } from "child_process";
 import { SKILL_MD, RULES_MD } from "./skill-data.js";
+import { CALI } from "./personalities/cali.js";
+import type { AssistantPersonality } from "./personalities/types.js";
 
 function stripFrontmatter(content: string): string {
   if (!content.startsWith("---")) return content;
@@ -10,7 +12,10 @@ function stripFrontmatter(content: string): string {
   return end === -1 ? content : content.slice(end + 4).trimStart();
 }
 
-export function buildSystemPrompt(userName?: string): string {
+export function buildSystemPrompt(
+  userName?: string,
+  personality: AssistantPersonality = CALI,
+): string {
   const MEMORY_PATH = join(homedir(), ".my-mac-ai/ical/memory.yaml");
 
   let memory: string;
@@ -25,6 +30,8 @@ export function buildSystemPrompt(userName?: string): string {
 
   return [
     stripFrontmatter(SKILL_MD),
+    `## ${personality.responseFormatSectionTitle}`,
+    personality.responseFormatPrompt,
     "## Calendar Rules Reference",
     RULES_MD,
     "## Loaded Memory",
