@@ -16,8 +16,8 @@ Requires `ANTHROPIC_API_KEY` in the environment.
 
 ```bash
 npm run build              # bundle to dist/cali (standalone binary, ~4 MB)
-make install               # build + install to /usr/local/bin/cali
-PREFIX=~/.local make install  # install to a custom prefix
+make install               # build + install to ~/.local/bin/cali
+PREFIX=/usr/local make install  # install system-wide (requires sudo)
 make uninstall             # remove installed binary
 ```
 

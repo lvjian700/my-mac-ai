@@ -1,4 +1,4 @@
-PREFIX ?= /usr/local
+PREFIX ?= $(HOME)/.local
 BIN_DIR = $(PREFIX)/bin
 
 .PHONY: build install uninstall
