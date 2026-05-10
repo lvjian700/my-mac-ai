@@ -38,6 +38,11 @@ The bundle is a single self-contained ESM file with all dependencies inlined. Sk
 - `src/session.ts` — builds the system prompt from SKILL.md + calendar_rules.md + ical-memory output + date/TZ; runs once at startup
 - `src/tools.ts` — defines `ical` and `write_memory` tools; executes them directly via `execSync`
 
+**macOS terminal input requirements:**
+
+- The Mac key labeled Delete is backward-delete. In Ink, the terminal byte `\x7f` is exposed as `key.delete`, not `key.backspace`; handle it as deleting the previous character at the cursor.
+- Do not make `key.delete` forward-delete unless the implementation can distinguish a real forward-delete sequence, such as Fn-Delete, from the normal Mac Delete key.
+
 **System prompt sources** (all from `../ical/.claude/skills/ical/`):
 
 - `SKILL.md` — canonical skill instructions (YAML frontmatter stripped)
