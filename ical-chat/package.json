@@ -4,9 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "tsx src/index.ts",
+    "start": "DEV=true tsx src/index.ts",
     "build": "node build.mjs",
-    "test": "tsx --test test/*.test.tsx"
+    "test": "tsx --test test/*.test.tsx",
+    "devtools": "react-devtools"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "latest",
@@ -19,6 +20,8 @@
     "@types/node": "^22.0.0",
     "@types/react": "^18.0.0",
     "esbuild": "^0.28.0",
+    "react-devtools": "^4.28.5",
+    "react-devtools-core": "^4.28.5",
     "tsx": "^4.19.0",
     "typescript": "^5.8.0"
   }
