@@ -182,9 +182,10 @@ export function renderAssistantResponse(
   );
 
   if (state === "loading") {
+    const loadingBody = body ?? "checking your calendar...";
     return [
       header,
-      "  " + personality.conversationTheme.muted("checking your calendar..."),
+      "  " + personality.conversationTheme.muted(loadingBody),
     ].join("\n");
   }
 

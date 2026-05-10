@@ -57,11 +57,11 @@ async function runAgentTurn(
       return collectedText;
     }
 
-    // Intermediate turn: show narration as Cali, then run tool calls.
+    // Intermediate turn: keep narration in Cali's loading response.
     const narration = collectedText.trim();
     if (narration) {
       updateAssistantResponse({
-        state: "presenting",
+        state: "loading",
         body: narration,
         timestamp: new Date(),
       });
