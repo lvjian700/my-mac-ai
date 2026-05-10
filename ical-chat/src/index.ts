@@ -6,11 +6,11 @@ import { buildSystemPrompt } from "./session.js";
 import { tools, executeTool } from "./tools.js";
 import { startPrompt, type Prompt } from "./ui.js";
 import { printWelcome } from "./welcome.js";
+import { renderAssistantResponse } from "./renderer.js";
 import { CALI } from "./personalities/cali.js";
 
 const DIM = "\x1b[2m";
 const RST = "\x1b[0m";
-const ITALIC = "\x1b[3m";
 const client = new Anthropic();
 const MODEL = "claude-sonnet-4-6";
 const personality = CALI;
@@ -53,10 +53,20 @@ async function runAgentTurn(
       return collectedText;
     }
 
-    // Intermediate turn: show narration in dim italic, then tool calls.
+    // Intermediate turn: show narration as Cali, then run tool calls.
     const narration = collectedText.trim();
     if (narration) {
-      console.log(`${DIM}${ITALIC}${narration}${RST}`);
+      console.log();
+      console.log(
+        renderAssistantResponse(
+          {
+            state: "presenting",
+            body: narration,
+            timestamp: new Date(),
+          },
+          personality,
+        ),
+      );
     }
 
     const results: Anthropic.ToolResultBlockParam[] = toolCalls.map((call) => {
