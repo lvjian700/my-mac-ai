@@ -21,6 +21,7 @@ const KEY = {
   down: "\x1B[B",
   enter: "\r",
   escape: "\x1B",
+  left: "\x1B[D",
   tab: "\t",
   up: "\x1B[A",
 };
@@ -366,6 +367,27 @@ test("delete key removes the previous character at the end of the prompt", async
     await send(harness.input, KEY.enter);
 
     await waitFor(() => assert.deepEqual(messages, ["ab"]));
+  } finally {
+    harness.unmount();
+  }
+});
+
+test("delete key removes the previous character in the middle of the prompt", async () => {
+  const messages: string[] = [];
+  const harness = createHarness({
+    onMessage: async (input) => {
+      messages.push(input);
+    },
+  });
+
+  try {
+    await send(harness.input, "abc");
+    await waitFor(() => assert.match(harness.output.text(), /abc/));
+    await send(harness.input, KEY.left);
+    await send(harness.input, KEY.delete);
+    await send(harness.input, KEY.enter);
+
+    await waitFor(() => assert.deepEqual(messages, ["ac"]));
   } finally {
     harness.unmount();
   }

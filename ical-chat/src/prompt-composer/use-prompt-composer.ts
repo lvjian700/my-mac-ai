@@ -360,30 +360,12 @@ export function usePromptComposer({
           return;
         }
 
-        if (key.backspace) {
-          if (cursorIndex === 0) return;
-
-          setInputBuffer(
-            inputBuffer.slice(0, cursorIndex - 1) +
-              inputBuffer.slice(cursorIndex),
-          );
-          setCursorIndex((i) => Math.max(0, i - 1));
-          resetHistoryNavigation();
-          return;
-        }
-
-        if (cursorIndex >= inputBuffer.length) {
-          if (cursorIndex === 0) return;
-
-          setInputBuffer(inputBuffer.slice(0, cursorIndex - 1));
-          setCursorIndex((i) => Math.max(0, i - 1));
-          resetHistoryNavigation();
-          return;
-        }
+        if (cursorIndex === 0) return;
 
         setInputBuffer(
-          inputBuffer.slice(0, cursorIndex) + inputBuffer.slice(cursorIndex + 1),
+          inputBuffer.slice(0, cursorIndex - 1) + inputBuffer.slice(cursorIndex),
         );
+        setCursorIndex((i) => Math.max(0, i - 1));
         resetHistoryNavigation();
         return;
       }
