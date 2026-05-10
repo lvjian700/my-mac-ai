@@ -6,7 +6,6 @@ import { buildSystemPrompt } from "./session.js";
 import { tools, executeTool } from "./tools.js";
 import { startPrompt, type Prompt } from "./ui.js";
 import { printWelcome } from "./welcome.js";
-import { renderConversationMessage } from "./renderer.js";
 import { CALI } from "./personalities/cali.js";
 
 const DIM = "\x1b[2m";
@@ -21,7 +20,7 @@ const userName = process.env.CALI_USER_NAME ?? DEFAULT_USER_NAME;
 async function runAgentTurn(
   systemPrompt: string,
   history: Anthropic.MessageParam[],
-): Promise<void> {
+): Promise<string> {
   while (true) {
     let collectedText = "";
 
@@ -51,19 +50,7 @@ async function runAgentTurn(
     );
 
     if (toolCalls.length === 0) {
-      console.log();
-      console.log(
-        renderConversationMessage(
-          {
-            speaker: personality.name,
-            body: collectedText,
-            kind: "assistant",
-            timestamp: new Date(),
-          },
-          personality,
-        ),
-      );
-      break;
+      return collectedText;
     }
 
     // Intermediate turn: show narration in dim italic, then tool calls.
@@ -103,7 +90,7 @@ async function main() {
     history.push({ role: "user", content: input });
 
     try {
-      await runAgentTurn(systemPrompt, history);
+      return await runAgentTurn(systemPrompt, history);
     } catch (err) {
       console.log(`\x1b[31merror: ${err instanceof Error ? err.message : err}\x1b[0m`);
       history.length = checkpoint;

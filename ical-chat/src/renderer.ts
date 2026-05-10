@@ -4,11 +4,18 @@ import { CALI } from "./personalities/cali.js";
 import type { AssistantPersonality } from "./personalities/types.js";
 
 type SpeakerKind = "assistant" | "user";
+export type AssistantResponseState = "loading" | "presenting";
 
 export interface ConversationMessage {
   speaker: string;
   body: string;
   kind: SpeakerKind;
+  timestamp?: Date;
+}
+
+export interface AssistantResponseMessage {
+  state: AssistantResponseState;
+  body?: string;
   timestamp?: Date;
 }
 
@@ -161,4 +168,25 @@ export function renderConversationMessage(
     renderConversationHeader(speaker, kind, timestamp, personality),
     renderConversationBody(body, personality),
   ].join("\n");
+}
+
+export function renderAssistantResponse(
+  { state, body, timestamp }: AssistantResponseMessage,
+  personality: AssistantPersonality = CALI,
+): string {
+  const header = renderConversationHeader(
+    personality.name,
+    "assistant",
+    timestamp,
+    personality,
+  );
+
+  if (state === "loading") {
+    return [
+      header,
+      "  " + personality.conversationTheme.muted("checking your calendar..."),
+    ].join("\n");
+  }
+
+  return [header, renderConversationBody(body ?? "", personality)].join("\n");
 }

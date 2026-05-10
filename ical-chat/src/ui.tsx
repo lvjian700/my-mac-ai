@@ -1,6 +1,10 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
-import { render, useInput, useApp } from "ink";
-import { renderConversationMessage } from "./renderer.js";
+import { Box, Text, render, useInput, useApp } from "ink";
+import {
+  renderAssistantResponse,
+  renderConversationMessage,
+} from "./renderer.js";
+import type { AssistantResponseMessage } from "./renderer.js";
 import { CALI } from "./personalities/cali.js";
 import type { AssistantPersonality } from "./personalities/types.js";
 import { formatShortcut, PromptComposer } from "./prompt-composer.js";
@@ -21,13 +25,26 @@ export interface Prompt {
 }
 
 interface PromptAppProps {
-  onMessage: (input: string) => Promise<void>;
+  onMessage: (input: string) => Promise<string | void>;
   options?: {
     trigger?: string;
     userName?: string;
     personality?: AssistantPersonality;
   };
   commands: SlashCommand[];
+}
+
+interface CaliResponseProps {
+  response: AssistantResponseMessage;
+  personality: AssistantPersonality;
+}
+
+function CaliResponse({ response, personality }: CaliResponseProps) {
+  return (
+    <Box marginTop={1} marginBottom={1}>
+      <Text>{renderAssistantResponse(response, personality)}</Text>
+    </Box>
+  );
 }
 
 function PromptApp({ onMessage, options, commands }: PromptAppProps) {
@@ -40,7 +57,10 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
   const [popupIndex, setPopupIndex] = useState(0);
   const [helpVisible, setHelpVisible] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [assistantResponse, setAssistantResponseState] =
+    useState<AssistantResponseMessage | null>(null);
   const processingRef = useRef(false);
+  const assistantResponseRef = useRef<AssistantResponseMessage | null>(null);
 
   const commandsRef = useRef(commands);
   useEffect(() => {
@@ -50,6 +70,20 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
   const setProcessing = (value: boolean) => {
     processingRef.current = value;
     setIsProcessing(value);
+  };
+
+  const setAssistantResponse = (value: AssistantResponseMessage | null) => {
+    assistantResponseRef.current = value;
+    setAssistantResponseState(value);
+  };
+
+  const commitPresentedAssistantResponse = () => {
+    const response = assistantResponseRef.current;
+    if (response?.state !== "presenting") return;
+
+    console.log();
+    console.log(renderAssistantResponse(response, personality));
+    setAssistantResponse(null);
   };
 
   const popupItems = useMemo(() => {
@@ -95,6 +129,7 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
       );
       if (shortcutCmd) {
         const hint = formatShortcut(shortcutCmd.shortcut!);
+        commitPresentedAssistantResponse();
         console.log();
         console.log(
           renderConversationMessage(
@@ -109,6 +144,7 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
         );
         setInputBuffer("");
         setHelpVisible(false);
+        setAssistantResponse(null);
         setProcessing(true);
         Promise.resolve(shortcutCmd.action()).finally(() => {
           setProcessing(false);
@@ -128,6 +164,7 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
 
         if (!submitted) return;
 
+        commitPresentedAssistantResponse();
         console.log();
         console.log(
           renderConversationMessage(
@@ -147,12 +184,24 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
             const cmdName = submitted.slice(trigger.length).split(/\s+/)[0];
             const cmd = commandsRef.current.find((c) => c.name === cmdName);
             if (cmd) {
+              setAssistantResponse(null);
               await cmd.action();
             } else {
+              setAssistantResponse(null);
               console.log(`\x1b[31mUnknown command: ${trigger}${cmdName}\x1b[0m`);
             }
           } else {
-            await onMessage(submitted);
+            setAssistantResponse({ state: "loading", timestamp: new Date() });
+            const responseBody = await onMessage(submitted);
+            if (typeof responseBody === "string") {
+              setAssistantResponse({
+                state: "presenting",
+                body: responseBody,
+                timestamp: new Date(),
+              });
+            } else {
+              setAssistantResponse(null);
+            }
           }
         };
 
@@ -214,19 +263,24 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
   );
 
   return (
-    <PromptComposer
-      disabled={isProcessing}
-      inputBuffer={inputBuffer}
-      popupItems={popupItems}
-      popupIndex={popupIndex}
-      popupVisible={popupVisible}
-      trigger={trigger}
-    />
+    <Box flexDirection="column">
+      {assistantResponse && (
+        <CaliResponse response={assistantResponse} personality={personality} />
+      )}
+      <PromptComposer
+        disabled={isProcessing}
+        inputBuffer={inputBuffer}
+        popupItems={popupItems}
+        popupIndex={popupIndex}
+        popupVisible={popupVisible}
+        trigger={trigger}
+      />
+    </Box>
   );
 }
 
 export function startPrompt(
-  onMessage: (input: string) => Promise<void>,
+  onMessage: (input: string) => Promise<string | void>,
   options?: {
     trigger?: string;
     userName?: string;
