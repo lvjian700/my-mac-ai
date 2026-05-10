@@ -5,6 +5,12 @@ import {
   renderConversationMessage,
 } from "./renderer.js";
 import type { AssistantResponseMessage } from "./renderer.js";
+import {
+  addPromptHistoryEntry,
+  loadPromptHistory,
+  savePromptHistory,
+  searchPromptHistory,
+} from "./prompt-history.js";
 import { CALI } from "./personalities/cali.js";
 import type { AssistantPersonality } from "./personalities/types.js";
 import { formatShortcut, PromptComposer } from "./prompt-composer.js";
@@ -66,6 +72,16 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
 
   const [inputBuffer, setInputBuffer] = useState("");
   const [cursorIndex, setCursorIndex] = useState(0);
+  const [promptHistory, setPromptHistory] = useState<string[]>(() =>
+    loadPromptHistory(),
+  );
+  const [historyIndex, setHistoryIndex] = useState<number | null>(null);
+  const [historyDraft, setHistoryDraft] = useState("");
+  const [historySearchVisible, setHistorySearchVisible] = useState(false);
+  const [historySearchQuery, setHistorySearchQuery] = useState("");
+  const [historySearchSelectedIndex, setHistorySearchSelectedIndex] =
+    useState(0);
+  const [historySearchDraft, setHistorySearchDraft] = useState("");
   const [popupIndex, setPopupIndex] = useState(0);
   const [helpVisible, setHelpVisible] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -87,6 +103,23 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
   const setAssistantResponse = (value: AssistantResponseMessage | null) => {
     assistantResponseRef.current = value;
     setAssistantResponseState(value);
+  };
+
+  const setPromptText = (value: string) => {
+    setInputBuffer(value);
+    setCursorIndex(value.length);
+  };
+
+  const resetHistoryNavigation = () => {
+    setHistoryIndex(null);
+    setHistoryDraft("");
+  };
+
+  const closeHistorySearch = () => {
+    setHistorySearchVisible(false);
+    setHistorySearchQuery("");
+    setHistorySearchSelectedIndex(0);
+    setHistorySearchDraft("");
   };
 
   const commitPresentedAssistantResponse = () => {
@@ -112,6 +145,88 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
 
   const popupVisible = popupItems.length > 0;
 
+  const historySearchResults = useMemo(
+    () => searchPromptHistory(promptHistory, historySearchQuery, 10),
+    [historySearchQuery, promptHistory],
+  );
+
+  const activeHistorySearchSelectedIndex = Math.min(
+    historySearchSelectedIndex,
+    Math.max(0, historySearchResults.length - 1),
+  );
+
+  const recordPromptHistory = (submitted: string) => {
+    const nextHistory = addPromptHistoryEntry(promptHistory, submitted);
+    if (nextHistory === promptHistory) return;
+
+    setPromptHistory(nextHistory);
+    try {
+      savePromptHistory(nextHistory);
+    } catch (err) {
+      console.log(
+        `\x1b[31mwarning: failed to save prompt history: ${
+          err instanceof Error ? err.message : err
+        }\x1b[0m`,
+      );
+    }
+  };
+
+  const navigatePromptHistory = (direction: "older" | "newer") => {
+    if (promptHistory.length === 0) return;
+
+    if (direction === "older") {
+      const nextIndex =
+        historyIndex === null
+          ? promptHistory.length - 1
+          : Math.max(0, historyIndex - 1);
+
+      if (historyIndex === null) {
+        setHistoryDraft(inputBuffer);
+      }
+
+      setHistoryIndex(nextIndex);
+      setPromptText(promptHistory[nextIndex]);
+      return;
+    }
+
+    if (historyIndex === null) return;
+
+    const nextIndex = historyIndex + 1;
+    if (nextIndex >= promptHistory.length) {
+      setPromptText(historyDraft);
+      resetHistoryNavigation();
+      return;
+    }
+
+    setHistoryIndex(nextIndex);
+    setPromptText(promptHistory[nextIndex]);
+  };
+
+  const openHistorySearch = () => {
+    setHistorySearchVisible(true);
+    setHistorySearchQuery("");
+    setHistorySearchSelectedIndex(0);
+    setHistorySearchDraft(inputBuffer);
+    setHelpVisible(false);
+    setPopupIndex(0);
+    resetHistoryNavigation();
+  };
+
+  const acceptHistorySearchSelection = () => {
+    const result = historySearchResults[activeHistorySearchSelectedIndex];
+    if (result) {
+      setPromptText(result.text);
+      resetHistoryNavigation();
+    }
+    closeHistorySearch();
+  };
+
+  const cancelHistorySearch = () => {
+    setPromptText(historySearchDraft);
+    resetHistoryNavigation();
+    closeHistorySearch();
+  };
+
   useInput(
     (input, key) => {
       if (
@@ -124,6 +239,58 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
       }
 
       if (processingRef.current) return;
+
+      if (historySearchVisible) {
+        if (key.ctrl && input === "r") {
+          if (historySearchQuery && historySearchResults.length > 0) {
+            setHistorySearchSelectedIndex(
+              (i) => (i + 1) % historySearchResults.length,
+            );
+          }
+          return;
+        }
+
+        if (key.return) {
+          acceptHistorySearchSelection();
+          return;
+        }
+
+        if (key.escape) {
+          cancelHistorySearch();
+          return;
+        }
+
+        if (key.upArrow) {
+          if (historySearchResults.length > 0) {
+            setHistorySearchSelectedIndex((i) => Math.max(0, i - 1));
+          }
+          return;
+        }
+
+        if (key.downArrow) {
+          if (historySearchResults.length > 0) {
+            setHistorySearchSelectedIndex((i) =>
+              Math.min(historySearchResults.length - 1, i + 1),
+            );
+          }
+          return;
+        }
+
+        if (key.backspace || key.delete) {
+          setHistorySearchQuery((query) => query.slice(0, -1));
+          setHistorySearchSelectedIndex(0);
+          return;
+        }
+
+        if (input && !key.ctrl && !key.meta) {
+          const text = normalizeTextInput(input);
+          if (text.length === 0) return;
+
+          setHistorySearchQuery((query) => query + text);
+          setHistorySearchSelectedIndex(0);
+        }
+        return;
+      }
 
       if (input === "?" && inputBuffer.length === 0 && !key.ctrl && !key.meta) {
         setHelpVisible(true);
@@ -151,9 +318,15 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
         return;
       }
 
+      if (key.ctrl && input === "r") {
+        openHistorySearch();
+        return;
+      }
+
       if (key.ctrl && input === "u") {
         setInputBuffer("");
         setCursorIndex(0);
+        resetHistoryNavigation();
         setPopupIndex(0);
         setHelpVisible(false);
         return;
@@ -184,6 +357,8 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
         );
         setInputBuffer("");
         setCursorIndex(0);
+        resetHistoryNavigation();
+        closeHistorySearch();
         setHelpVisible(false);
         setAssistantResponse(null);
         setProcessing(true);
@@ -201,6 +376,8 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
 
         setInputBuffer("");
         setCursorIndex(0);
+        resetHistoryNavigation();
+        closeHistorySearch();
         setPopupIndex(0);
         setHelpVisible(false);
 
@@ -233,6 +410,7 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
               console.log(`\x1b[31mUnknown command: ${trigger}${cmdName}\x1b[0m`);
             }
           } else {
+            recordPromptHistory(submitted);
             setAssistantResponse({ state: "loading", timestamp: new Date() });
             const responseBody = await onMessage(
               submitted,
@@ -260,6 +438,7 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
             trigger + popupItems[Math.min(popupIndex, popupItems.length - 1)].name;
           setInputBuffer(completed);
           setCursorIndex(completed.length);
+          resetHistoryNavigation();
           setPopupIndex(0);
           setHelpVisible(false);
         }
@@ -268,12 +447,14 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
 
       if (key.upArrow) {
         if (popupVisible && popupIndex > 0) setPopupIndex((i) => i - 1);
+        if (!popupVisible) navigatePromptHistory("older");
         return;
       }
 
       if (key.downArrow) {
         if (popupVisible && popupIndex < popupItems.length - 1)
           setPopupIndex((i) => i + 1);
+        if (!popupVisible) navigatePromptHistory("newer");
         return;
       }
 
@@ -290,6 +471,8 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
       if (key.escape) {
         setInputBuffer("");
         setCursorIndex(0);
+        resetHistoryNavigation();
+        closeHistorySearch();
         setPopupIndex(0);
         setHelpVisible(false);
         return;
@@ -309,6 +492,7 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
               inputBuffer.slice(cursorIndex),
           );
           setCursorIndex((i) => Math.max(0, i - 1));
+          resetHistoryNavigation();
           return;
         }
 
@@ -318,6 +502,7 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
           inputBuffer.slice(0, cursorIndex) +
             inputBuffer.slice(cursorIndex + 1),
         );
+        resetHistoryNavigation();
         return;
       }
 
@@ -331,6 +516,7 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
             inputBuffer.slice(cursorIndex),
         );
         setCursorIndex((i) => i + text.length);
+        resetHistoryNavigation();
         setPopupIndex(0);
         setHelpVisible(false);
       }
@@ -346,6 +532,10 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
       <PromptComposer
         cursorIndex={cursorIndex}
         disabled={isProcessing}
+        historySearchItems={historySearchResults.map((result) => result.text)}
+        historySearchQuery={historySearchQuery}
+        historySearchSelectedIndex={activeHistorySearchSelectedIndex}
+        historySearchVisible={historySearchVisible}
         inputBuffer={inputBuffer}
         popupItems={popupItems}
         popupIndex={popupIndex}

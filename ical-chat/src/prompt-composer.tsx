@@ -57,6 +57,58 @@ function PopupRow({ item, selected, trigger, colWidth }: PopupRowProps) {
   );
 }
 
+function truncateLine(value: string): string {
+  const width = Math.max(20, (process.stdout.columns ?? 80) - 6);
+  if (value.length <= width) return value;
+  return value.slice(0, Math.max(0, width - 3)) + "...";
+}
+
+interface HistorySearchPopupProps {
+  items: string[];
+  query: string;
+  selectedIndex: number;
+}
+
+function HistorySearchPopup({
+  items,
+  query,
+  selectedIndex,
+}: HistorySearchPopupProps) {
+  return (
+    <Box flexDirection="column" marginTop={1}>
+      <Box>
+        <Text color="#f0a070" bold>
+          {"^R "}
+        </Text>
+        <Text color="#565f89">history search</Text>
+        <Text color="#565f89">{": "}</Text>
+        <Text>{query}</Text>
+      </Box>
+      {items.length === 0 && (
+        <Box>
+          <Text color="#565656">  no matches</Text>
+        </Box>
+      )}
+      {items.map((item, i) => {
+        const selected = i === selectedIndex;
+        const label = `${selected ? "›" : " "} ${truncateLine(item)}`;
+
+        return (
+          <Box key={`${item}-${i}`}>
+            <Text
+              backgroundColor={selected ? "#1e2030" : undefined}
+              color={selected ? "#f0a070" : "#565656"}
+              bold={selected}
+            >
+              {label}
+            </Text>
+          </Box>
+        );
+      })}
+    </Box>
+  );
+}
+
 function PromptDivider() {
   const width = Math.max(24, (process.stdout.columns ?? 80) - 1);
   return <Text color="#303030">{"─".repeat(width)}</Text>;
@@ -115,6 +167,10 @@ function PromptInput({
 interface PromptComposerProps {
   cursorIndex: number;
   disabled?: boolean;
+  historySearchItems: string[];
+  historySearchQuery: string;
+  historySearchSelectedIndex: number;
+  historySearchVisible: boolean;
   inputBuffer: string;
   popupItems: PromptCommandItem[];
   popupIndex: number;
@@ -125,13 +181,19 @@ interface PromptComposerProps {
 export function PromptComposer({
   cursorIndex,
   disabled = false,
+  historySearchItems,
+  historySearchQuery,
+  historySearchSelectedIndex,
+  historySearchVisible,
   inputBuffer,
   popupItems,
   popupIndex,
   popupVisible,
   trigger,
 }: PromptComposerProps) {
-  const activePopupVisible = !disabled && popupVisible;
+  const activeHistorySearchVisible = !disabled && historySearchVisible;
+  const activePopupVisible =
+    !activeHistorySearchVisible && !disabled && popupVisible;
   const colWidth = activePopupVisible
     ? Math.max(...popupItems.map((c) => c.name.length))
     : 0;
@@ -150,10 +212,17 @@ export function PromptComposer({
         />
       </Box>
       <PromptDivider />
-      {!activePopupVisible && (
+      {!activeHistorySearchVisible && !activePopupVisible && (
         <Box>
           <Text color="#565656">? for help</Text>
         </Box>
+      )}
+      {activeHistorySearchVisible && (
+        <HistorySearchPopup
+          items={historySearchItems}
+          query={historySearchQuery}
+          selectedIndex={historySearchSelectedIndex}
+        />
       )}
       {activePopupVisible && (
         <Box flexDirection="column" marginTop={1}>
