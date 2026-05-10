@@ -24,8 +24,15 @@ export interface Prompt {
   resume(): void;
 }
 
+export type AssistantResponseUpdater = (
+  response: AssistantResponseMessage,
+) => void;
+
 interface PromptAppProps {
-  onMessage: (input: string) => Promise<string | void>;
+  onMessage: (
+    input: string,
+    updateAssistantResponse: AssistantResponseUpdater,
+  ) => Promise<string | void>;
   options?: {
     trigger?: string;
     userName?: string;
@@ -192,7 +199,10 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
             }
           } else {
             setAssistantResponse({ state: "loading", timestamp: new Date() });
-            const responseBody = await onMessage(submitted);
+            const responseBody = await onMessage(
+              submitted,
+              setAssistantResponse,
+            );
             if (typeof responseBody === "string") {
               setAssistantResponse({
                 state: "presenting",
@@ -280,7 +290,10 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
 }
 
 export function startPrompt(
-  onMessage: (input: string) => Promise<string | void>,
+  onMessage: (
+    input: string,
+    updateAssistantResponse: AssistantResponseUpdater,
+  ) => Promise<string | void>,
   options?: {
     trigger?: string;
     userName?: string;

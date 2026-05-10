@@ -4,9 +4,12 @@ import * as os from "os";
 import * as path from "path";
 import { buildSystemPrompt } from "./session.js";
 import { tools, executeTool } from "./tools.js";
-import { startPrompt, type Prompt } from "./ui.js";
+import {
+  startPrompt,
+  type AssistantResponseUpdater,
+  type Prompt,
+} from "./ui.js";
 import { printWelcome } from "./welcome.js";
-import { renderAssistantResponse } from "./renderer.js";
 import { CALI } from "./personalities/cali.js";
 
 const DIM = "\x1b[2m";
@@ -20,6 +23,7 @@ const userName = process.env.CALI_USER_NAME ?? DEFAULT_USER_NAME;
 async function runAgentTurn(
   systemPrompt: string,
   history: Anthropic.MessageParam[],
+  updateAssistantResponse: AssistantResponseUpdater,
 ): Promise<string> {
   while (true) {
     let collectedText = "";
@@ -56,17 +60,11 @@ async function runAgentTurn(
     // Intermediate turn: show narration as Cali, then run tool calls.
     const narration = collectedText.trim();
     if (narration) {
-      console.log();
-      console.log(
-        renderAssistantResponse(
-          {
-            state: "presenting",
-            body: narration,
-            timestamp: new Date(),
-          },
-          personality,
-        ),
-      );
+      updateAssistantResponse({
+        state: "presenting",
+        body: narration,
+        timestamp: new Date(),
+      });
     }
 
     const results: Anthropic.ToolResultBlockParam[] = toolCalls.map((call) => {
@@ -95,12 +93,16 @@ async function main() {
 
   printWelcome();
 
-  const prompt = startPrompt(async (input) => {
+  const prompt = startPrompt(async (input, updateAssistantResponse) => {
     const checkpoint = history.length;
     history.push({ role: "user", content: input });
 
     try {
-      return await runAgentTurn(systemPrompt, history);
+      return await runAgentTurn(
+        systemPrompt,
+        history,
+        updateAssistantResponse,
+      );
     } catch (err) {
       console.log(`\x1b[31merror: ${err instanceof Error ? err.message : err}\x1b[0m`);
       history.length = checkpoint;
