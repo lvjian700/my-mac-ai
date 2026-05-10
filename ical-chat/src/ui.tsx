@@ -54,6 +54,10 @@ function CaliResponse({ response, personality }: CaliResponseProps) {
   );
 }
 
+function normalizeTextInput(input: string): string {
+  return input.replace(/[\r\n]+/g, " ").replace(/[\u0000-\u001f\u007f]/g, "");
+}
+
 function PromptApp({ onMessage, options, commands }: PromptAppProps) {
   const trigger = options?.trigger ?? "/";
   const personality = options?.personality ?? CALI;
@@ -263,8 +267,11 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
         return;
       }
 
-      if (input && input.length === 1 && !key.ctrl && !key.meta) {
-        setInputBuffer((b) => b + input);
+      if (input && !key.ctrl && !key.meta) {
+        const text = normalizeTextInput(input);
+        if (text.length === 0) return;
+
+        setInputBuffer((b) => b + text);
         setPopupIndex(0);
         setHelpVisible(false);
       }
