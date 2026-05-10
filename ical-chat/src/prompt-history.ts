@@ -3,10 +3,15 @@ import { homedir } from "os";
 import { dirname, join } from "path";
 
 export const PROMPT_HISTORY_LIMIT = 500;
-export const PROMPT_HISTORY_PATH = join(
+export const DEFAULT_PROMPT_HISTORY_PATH = join(
   homedir(),
   ".my-mac-ai/ical/history.jsonl",
 );
+export const PROMPT_HISTORY_PATH = DEFAULT_PROMPT_HISTORY_PATH;
+
+export function getPromptHistoryPath(): string {
+  return process.env.ICAL_CHAT_HISTORY_PATH ?? DEFAULT_PROMPT_HISTORY_PATH;
+}
 
 export interface PromptHistoryEntry {
   text: string;
@@ -31,7 +36,7 @@ function parsePromptHistoryLine(line: string): PromptHistoryEntry | null {
 }
 
 export function loadPromptHistory(
-  path: string = PROMPT_HISTORY_PATH,
+  path: string = getPromptHistoryPath(),
 ): string[] {
   if (!existsSync(path)) return [];
 
@@ -62,7 +67,7 @@ export function addPromptHistoryEntry(
 
 export function savePromptHistory(
   history: string[],
-  path: string = PROMPT_HISTORY_PATH,
+  path: string = getPromptHistoryPath(),
 ): void {
   mkdirSync(dirname(path), { recursive: true });
 

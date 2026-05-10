@@ -32,7 +32,9 @@ The bundle is a single self-contained ESM file with all dependencies inlined. Sk
 **Key files:**
 
 - `src/index.ts` — entry point; agentic turn runner; conversation rendering
-- `src/ui.tsx` — Ink-based interactive prompt: input buffer, slash command popup, keyboard handling
+- `src/ui.tsx` — Ink prompt shell: assistant response state, slash command registration/execution, processing lifecycle
+- `src/prompt-composer.tsx` — stable prompt-composer facade for imports
+- `src/prompt-composer/` — prompt input state, keyboard handling, history search UI, slash command popup UI
 - `src/session.ts` — builds the system prompt from SKILL.md + calendar_rules.md + ical-memory output + date/TZ; runs once at startup
 - `src/tools.ts` — defines `ical` and `write_memory` tools; executes them directly via `execSync`
 

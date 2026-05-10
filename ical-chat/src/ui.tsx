@@ -1,20 +1,18 @@
-import React, { useState, useMemo, useRef, useEffect } from "react";
-import { Box, Text, render, useInput, useApp } from "ink";
+import React, { useState, useRef, useEffect } from "react";
+import { Box, Text, render, useApp } from "ink";
+import type { RenderOptions } from "ink";
 import {
   renderAssistantResponse,
   renderConversationMessage,
 } from "./renderer.js";
 import type { AssistantResponseMessage } from "./renderer.js";
-import {
-  addPromptHistoryEntry,
-  loadPromptHistory,
-  savePromptHistory,
-  searchPromptHistory,
-} from "./prompt-history.js";
 import { CALI } from "./personalities/cali.js";
 import type { AssistantPersonality } from "./personalities/types.js";
-import { formatShortcut, PromptComposer } from "./prompt-composer.js";
-import type { KeyShortcut } from "./prompt-composer.js";
+import { PromptComposer } from "./prompt-composer.js";
+import type {
+  KeyShortcut,
+  PromptComposerSubmission,
+} from "./prompt-composer.js";
 export type { KeyShortcut } from "./prompt-composer.js";
 
 export interface SlashCommand {
@@ -34,7 +32,7 @@ export type AssistantResponseUpdater = (
   response: AssistantResponseMessage,
 ) => void;
 
-interface PromptAppProps {
+export interface PromptAppProps {
   onMessage: (
     input: string,
     updateAssistantResponse: AssistantResponseUpdater,
@@ -60,30 +58,12 @@ function CaliResponse({ response, personality }: CaliResponseProps) {
   );
 }
 
-function normalizeTextInput(input: string): string {
-  return input.replace(/[\r\n]+/g, " ").replace(/[\u0000-\u001f\u007f]/g, "");
-}
-
-function PromptApp({ onMessage, options, commands }: PromptAppProps) {
+export function PromptApp({ onMessage, options, commands }: PromptAppProps) {
   const trigger = options?.trigger ?? "/";
   const personality = options?.personality ?? CALI;
   const userName = options?.userName ?? "You";
   const { exit } = useApp();
 
-  const [inputBuffer, setInputBuffer] = useState("");
-  const [cursorIndex, setCursorIndex] = useState(0);
-  const [promptHistory, setPromptHistory] = useState<string[]>(() =>
-    loadPromptHistory(),
-  );
-  const [historyIndex, setHistoryIndex] = useState<number | null>(null);
-  const [historyDraft, setHistoryDraft] = useState("");
-  const [historySearchVisible, setHistorySearchVisible] = useState(false);
-  const [historySearchQuery, setHistorySearchQuery] = useState("");
-  const [historySearchSelectedIndex, setHistorySearchSelectedIndex] =
-    useState(0);
-  const [historySearchDraft, setHistorySearchDraft] = useState("");
-  const [popupIndex, setPopupIndex] = useState(0);
-  const [helpVisible, setHelpVisible] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [assistantResponse, setAssistantResponseState] =
     useState<AssistantResponseMessage | null>(null);
@@ -105,23 +85,6 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
     setAssistantResponseState(value);
   };
 
-  const setPromptText = (value: string) => {
-    setInputBuffer(value);
-    setCursorIndex(value.length);
-  };
-
-  const resetHistoryNavigation = () => {
-    setHistoryIndex(null);
-    setHistoryDraft("");
-  };
-
-  const closeHistorySearch = () => {
-    setHistorySearchVisible(false);
-    setHistorySearchQuery("");
-    setHistorySearchSelectedIndex(0);
-    setHistorySearchDraft("");
-  };
-
   const commitPresentedAssistantResponse = () => {
     const response = assistantResponseRef.current;
     if (response?.state !== "presenting") return;
@@ -131,398 +94,86 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
     setAssistantResponse(null);
   };
 
-  const popupItems = useMemo(() => {
-    if (helpVisible) {
-      return commands;
-    }
+  const handleExit = () => {
+    console.log("\nBye!");
+    exit();
+  };
 
-    if (inputBuffer.startsWith(trigger)) {
-      const partial = inputBuffer.slice(trigger.length);
-      return commands.filter((c) => c.name.startsWith(partial));
-    }
-    return [];
-  }, [commands, helpVisible, inputBuffer, trigger]);
+  const handleHistorySaveError = (err: unknown) => {
+    console.log(
+      `\x1b[31mwarning: failed to save prompt history: ${
+        err instanceof Error ? err.message : err
+      }\x1b[0m`,
+    );
+  };
 
-  const popupVisible = popupItems.length > 0;
+  const renderUserSubmission = (body: string) => {
+    commitPresentedAssistantResponse();
+    console.log();
+    console.log(
+      renderConversationMessage(
+        {
+          speaker: userName,
+          body,
+          kind: "user",
+          timestamp: new Date(),
+        },
+        personality,
+      ),
+    );
+  };
 
-  const historySearchResults = useMemo(
-    () => searchPromptHistory(promptHistory, historySearchQuery, 10),
-    [historySearchQuery, promptHistory],
-  );
+  const handleComposerSubmit = (submission: PromptComposerSubmission) => {
+    if (processingRef.current) return;
 
-  const activeHistorySearchSelectedIndex = Math.min(
-    historySearchSelectedIndex,
-    Math.max(0, historySearchResults.length - 1),
-  );
+    const body =
+      submission.kind === "shortcut"
+        ? `${submission.shortcutLabel} (${submission.name})`
+        : submission.input;
 
-  const recordPromptHistory = (submitted: string) => {
-    const nextHistory = addPromptHistoryEntry(promptHistory, submitted);
-    if (nextHistory === promptHistory) return;
+    renderUserSubmission(body);
+    setProcessing(true);
 
-    setPromptHistory(nextHistory);
-    try {
-      savePromptHistory(nextHistory);
-    } catch (err) {
-      console.log(
-        `\x1b[31mwarning: failed to save prompt history: ${
-          err instanceof Error ? err.message : err
-        }\x1b[0m`,
+    const run = async () => {
+      if (submission.kind === "shortcut") {
+        const cmd = commandsRef.current.find((c) => c.name === submission.name);
+        if (cmd) {
+          setAssistantResponse(null);
+          await cmd.action();
+        }
+        return;
+      }
+
+      if (submission.kind === "slash-command") {
+        const cmd = commandsRef.current.find((c) => c.name === submission.name);
+        if (cmd) {
+          setAssistantResponse(null);
+          await cmd.action();
+        } else {
+          setAssistantResponse(null);
+          console.log(`\x1b[31mUnknown command: ${trigger}${submission.name}\x1b[0m`);
+        }
+        return;
+      }
+
+      setAssistantResponse({ state: "loading", timestamp: new Date() });
+      const responseBody = await onMessage(
+        submission.input,
+        setAssistantResponse,
       );
-    }
-  };
-
-  const navigatePromptHistory = (direction: "older" | "newer") => {
-    if (promptHistory.length === 0) return;
-
-    if (direction === "older") {
-      const nextIndex =
-        historyIndex === null
-          ? promptHistory.length - 1
-          : Math.max(0, historyIndex - 1);
-
-      if (historyIndex === null) {
-        setHistoryDraft(inputBuffer);
-      }
-
-      setHistoryIndex(nextIndex);
-      setPromptText(promptHistory[nextIndex]);
-      return;
-    }
-
-    if (historyIndex === null) return;
-
-    const nextIndex = historyIndex + 1;
-    if (nextIndex >= promptHistory.length) {
-      setPromptText(historyDraft);
-      resetHistoryNavigation();
-      return;
-    }
-
-    setHistoryIndex(nextIndex);
-    setPromptText(promptHistory[nextIndex]);
-  };
-
-  const openHistorySearch = () => {
-    setHistorySearchVisible(true);
-    setHistorySearchQuery("");
-    setHistorySearchSelectedIndex(0);
-    setHistorySearchDraft(inputBuffer);
-    setHelpVisible(false);
-    setPopupIndex(0);
-    resetHistoryNavigation();
-  };
-
-  const acceptHistorySearchSelection = () => {
-    const result = historySearchResults[activeHistorySearchSelectedIndex];
-    if (result) {
-      setPromptText(result.text);
-      resetHistoryNavigation();
-    }
-    closeHistorySearch();
-  };
-
-  const cancelHistorySearch = () => {
-    setPromptText(historySearchDraft);
-    resetHistoryNavigation();
-    closeHistorySearch();
-  };
-
-  useInput(
-    (input, key) => {
-      if (
-        (key.ctrl && input === "c") ||
-        (key.ctrl && input === "d" && inputBuffer.length === 0)
-      ) {
-        console.log("\nBye!");
-        exit();
-        return;
-      }
-
-      if (processingRef.current) return;
-
-      if (historySearchVisible) {
-        if (key.ctrl && input === "r") {
-          if (historySearchQuery && historySearchResults.length > 0) {
-            setHistorySearchSelectedIndex(
-              (i) => (i + 1) % historySearchResults.length,
-            );
-          }
-          return;
-        }
-
-        if (key.return) {
-          acceptHistorySearchSelection();
-          return;
-        }
-
-        if (key.escape) {
-          cancelHistorySearch();
-          return;
-        }
-
-        if (key.upArrow) {
-          if (historySearchResults.length > 0) {
-            setHistorySearchSelectedIndex((i) => Math.max(0, i - 1));
-          }
-          return;
-        }
-
-        if (key.downArrow) {
-          if (historySearchResults.length > 0) {
-            setHistorySearchSelectedIndex((i) =>
-              Math.min(historySearchResults.length - 1, i + 1),
-            );
-          }
-          return;
-        }
-
-        if (key.backspace || key.delete) {
-          setHistorySearchQuery((query) => query.slice(0, -1));
-          setHistorySearchSelectedIndex(0);
-          return;
-        }
-
-        if (input && !key.ctrl && !key.meta) {
-          const text = normalizeTextInput(input);
-          if (text.length === 0) return;
-
-          setHistorySearchQuery((query) => query + text);
-          setHistorySearchSelectedIndex(0);
-        }
-        return;
-      }
-
-      if (input === "?" && inputBuffer.length === 0 && !key.ctrl && !key.meta) {
-        setHelpVisible(true);
-        setPopupIndex(0);
-        return;
-      }
-
-      if (key.ctrl && input === "a") {
-        setCursorIndex(0);
-        return;
-      }
-
-      if (key.ctrl && input === "b") {
-        setCursorIndex((i) => Math.max(0, i - 1));
-        return;
-      }
-
-      if (key.ctrl && input === "e") {
-        setCursorIndex(inputBuffer.length);
-        return;
-      }
-
-      if (key.ctrl && input === "f") {
-        setCursorIndex((i) => Math.min(inputBuffer.length, i + 1));
-        return;
-      }
-
-      if (key.ctrl && input === "r") {
-        openHistorySearch();
-        return;
-      }
-
-      if (key.ctrl && input === "u") {
-        setInputBuffer("");
-        setCursorIndex(0);
-        resetHistoryNavigation();
-        setPopupIndex(0);
-        setHelpVisible(false);
-        return;
-      }
-
-      // Keyboard shortcut
-      const shortcutCmd = commandsRef.current.find(
-        (c) =>
-          c.shortcut &&
-          c.shortcut.name === input &&
-          !!c.shortcut.ctrl === !!key.ctrl &&
-          !!c.shortcut.meta === !!key.meta,
-      );
-      if (shortcutCmd) {
-        const hint = formatShortcut(shortcutCmd.shortcut!);
-        commitPresentedAssistantResponse();
-        console.log();
-        console.log(
-          renderConversationMessage(
-            {
-              speaker: userName,
-              body: `${hint} (${shortcutCmd.name})`,
-              kind: "user",
-              timestamp: new Date(),
-            },
-            personality,
-          ),
-        );
-        setInputBuffer("");
-        setCursorIndex(0);
-        resetHistoryNavigation();
-        closeHistorySearch();
-        setHelpVisible(false);
-        setAssistantResponse(null);
-        setProcessing(true);
-        Promise.resolve(shortcutCmd.action()).finally(() => {
-          setProcessing(false);
+      if (typeof responseBody === "string") {
+        setAssistantResponse({
+          state: "presenting",
+          body: responseBody,
+          timestamp: new Date(),
         });
-        return;
+      } else {
+        setAssistantResponse(null);
       }
+    };
 
-      if (key.return) {
-        const submitted =
-          popupVisible && popupItems.length > 0
-            ? trigger + popupItems[Math.min(popupIndex, popupItems.length - 1)].name
-            : inputBuffer.trim();
-
-        setInputBuffer("");
-        setCursorIndex(0);
-        resetHistoryNavigation();
-        closeHistorySearch();
-        setPopupIndex(0);
-        setHelpVisible(false);
-
-        if (!submitted) return;
-
-        commitPresentedAssistantResponse();
-        console.log();
-        console.log(
-          renderConversationMessage(
-            {
-              speaker: userName,
-              body: submitted,
-              kind: "user",
-              timestamp: new Date(),
-            },
-            personality,
-          ),
-        );
-        setProcessing(true);
-
-        const run = async () => {
-          if (submitted.startsWith(trigger)) {
-            const cmdName = submitted.slice(trigger.length).split(/\s+/)[0];
-            const cmd = commandsRef.current.find((c) => c.name === cmdName);
-            if (cmd) {
-              setAssistantResponse(null);
-              await cmd.action();
-            } else {
-              setAssistantResponse(null);
-              console.log(`\x1b[31mUnknown command: ${trigger}${cmdName}\x1b[0m`);
-            }
-          } else {
-            recordPromptHistory(submitted);
-            setAssistantResponse({ state: "loading", timestamp: new Date() });
-            const responseBody = await onMessage(
-              submitted,
-              setAssistantResponse,
-            );
-            if (typeof responseBody === "string") {
-              setAssistantResponse({
-                state: "presenting",
-                body: responseBody,
-                timestamp: new Date(),
-              });
-            } else {
-              setAssistantResponse(null);
-            }
-          }
-        };
-
-        run().finally(() => setProcessing(false));
-        return;
-      }
-
-      if (key.tab) {
-        if (popupVisible && popupItems.length > 0) {
-          const completed =
-            trigger + popupItems[Math.min(popupIndex, popupItems.length - 1)].name;
-          setInputBuffer(completed);
-          setCursorIndex(completed.length);
-          resetHistoryNavigation();
-          setPopupIndex(0);
-          setHelpVisible(false);
-        }
-        return;
-      }
-
-      if (key.upArrow) {
-        if (popupVisible && popupIndex > 0) setPopupIndex((i) => i - 1);
-        if (!popupVisible) navigatePromptHistory("older");
-        return;
-      }
-
-      if (key.downArrow) {
-        if (popupVisible && popupIndex < popupItems.length - 1)
-          setPopupIndex((i) => i + 1);
-        if (!popupVisible) navigatePromptHistory("newer");
-        return;
-      }
-
-      if (key.leftArrow) {
-        setCursorIndex((i) => Math.max(0, i - 1));
-        return;
-      }
-
-      if (key.rightArrow) {
-        setCursorIndex((i) => Math.min(inputBuffer.length, i + 1));
-        return;
-      }
-
-      if (key.escape) {
-        setInputBuffer("");
-        setCursorIndex(0);
-        resetHistoryNavigation();
-        closeHistorySearch();
-        setPopupIndex(0);
-        setHelpVisible(false);
-        return;
-      }
-
-      if (key.backspace || key.delete) {
-        if (helpVisible) {
-          setHelpVisible(false);
-          return;
-        }
-
-        if (key.backspace) {
-          if (cursorIndex === 0) return;
-
-          setInputBuffer(
-            inputBuffer.slice(0, cursorIndex - 1) +
-              inputBuffer.slice(cursorIndex),
-          );
-          setCursorIndex((i) => Math.max(0, i - 1));
-          resetHistoryNavigation();
-          return;
-        }
-
-        if (cursorIndex >= inputBuffer.length) return;
-
-        setInputBuffer(
-          inputBuffer.slice(0, cursorIndex) +
-            inputBuffer.slice(cursorIndex + 1),
-        );
-        resetHistoryNavigation();
-        return;
-      }
-
-      if (input && !key.ctrl && !key.meta) {
-        const text = normalizeTextInput(input);
-        if (text.length === 0) return;
-
-        setInputBuffer(
-          inputBuffer.slice(0, cursorIndex) +
-            text +
-            inputBuffer.slice(cursorIndex),
-        );
-        setCursorIndex((i) => i + text.length);
-        resetHistoryNavigation();
-        setPopupIndex(0);
-        setHelpVisible(false);
-      }
-    },
-    { isActive: true },
-  );
+    run().finally(() => setProcessing(false));
+  };
 
   return (
     <Box flexDirection="column">
@@ -530,16 +181,11 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
         <CaliResponse response={assistantResponse} personality={personality} />
       )}
       <PromptComposer
-        cursorIndex={cursorIndex}
+        commands={commands}
         disabled={isProcessing}
-        historySearchItems={historySearchResults.map((result) => result.text)}
-        historySearchQuery={historySearchQuery}
-        historySearchSelectedIndex={activeHistorySearchSelectedIndex}
-        historySearchVisible={historySearchVisible}
-        inputBuffer={inputBuffer}
-        popupItems={popupItems}
-        popupIndex={popupIndex}
-        popupVisible={popupVisible}
+        onExit={handleExit}
+        onHistorySaveError={handleHistorySaveError}
+        onSubmit={handleComposerSubmit}
         trigger={trigger}
       />
     </Box>
@@ -556,6 +202,7 @@ export function startPrompt(
     userName?: string;
     personality?: AssistantPersonality;
   },
+  renderOptions?: RenderOptions,
 ): Prompt {
   const commands: SlashCommand[] = [];
 
@@ -569,7 +216,7 @@ export function startPrompt(
     );
   }
 
-  let inst = render(makeElement());
+  let inst = render(makeElement(), renderOptions);
 
   return {
     registerSlashCommand(cmd) {
@@ -580,7 +227,7 @@ export function startPrompt(
       inst.unmount();
     },
     resume() {
-      inst = render(makeElement());
+      inst = render(makeElement(), renderOptions);
     },
   };
 }
