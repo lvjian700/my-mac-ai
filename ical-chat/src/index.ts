@@ -121,7 +121,6 @@ async function main() {
   prompt.registerSlashCommand({
     name: "memory",
     description: "Edit calendar memory",
-    shortcut: { ctrl: true, name: "e" },
     action: () => {
       const memoryPath = path.join(
         os.homedir(),

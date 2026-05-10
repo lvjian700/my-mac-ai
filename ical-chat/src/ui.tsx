@@ -131,6 +131,34 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
         return;
       }
 
+      if (key.ctrl && input === "a") {
+        setCursorIndex(0);
+        return;
+      }
+
+      if (key.ctrl && input === "b") {
+        setCursorIndex((i) => Math.max(0, i - 1));
+        return;
+      }
+
+      if (key.ctrl && input === "e") {
+        setCursorIndex(inputBuffer.length);
+        return;
+      }
+
+      if (key.ctrl && input === "f") {
+        setCursorIndex((i) => Math.min(inputBuffer.length, i + 1));
+        return;
+      }
+
+      if (key.ctrl && input === "u") {
+        setInputBuffer("");
+        setCursorIndex(0);
+        setPopupIndex(0);
+        setHelpVisible(false);
+        return;
+      }
+
       // Keyboard shortcut
       const shortcutCmd = commandsRef.current.find(
         (c) =>
@@ -260,24 +288,6 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
       }
 
       if (key.escape) {
-        setInputBuffer("");
-        setCursorIndex(0);
-        setPopupIndex(0);
-        setHelpVisible(false);
-        return;
-      }
-
-      if (key.ctrl && input === "a") {
-        setCursorIndex(0);
-        return;
-      }
-
-      if (key.ctrl && input === "e") {
-        setCursorIndex(inputBuffer.length);
-        return;
-      }
-
-      if (key.ctrl && input === "u") {
         setInputBuffer("");
         setCursorIndex(0);
         setPopupIndex(0);
