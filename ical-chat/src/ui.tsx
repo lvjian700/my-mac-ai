@@ -1,6 +1,10 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
-import { render, useInput, useApp } from "ink";
-import { renderConversationMessage } from "./renderer.js";
+import { Box, Text, render, useInput, useApp } from "ink";
+import {
+  renderAssistantResponse,
+  renderConversationMessage,
+} from "./renderer.js";
+import type { AssistantResponseMessage } from "./renderer.js";
 import { CALI } from "./personalities/cali.js";
 import type { AssistantPersonality } from "./personalities/types.js";
 import { formatShortcut, PromptComposer } from "./prompt-composer.js";
@@ -20,14 +24,38 @@ export interface Prompt {
   resume(): void;
 }
 
+export type AssistantResponseUpdater = (
+  response: AssistantResponseMessage,
+) => void;
+
 interface PromptAppProps {
-  onMessage: (input: string) => Promise<void>;
+  onMessage: (
+    input: string,
+    updateAssistantResponse: AssistantResponseUpdater,
+  ) => Promise<string | void>;
   options?: {
     trigger?: string;
     userName?: string;
     personality?: AssistantPersonality;
   };
   commands: SlashCommand[];
+}
+
+interface CaliResponseProps {
+  response: AssistantResponseMessage;
+  personality: AssistantPersonality;
+}
+
+function CaliResponse({ response, personality }: CaliResponseProps) {
+  return (
+    <Box marginTop={1} marginBottom={1}>
+      <Text>{renderAssistantResponse(response, personality)}</Text>
+    </Box>
+  );
+}
+
+function normalizeTextInput(input: string): string {
+  return input.replace(/[\r\n]+/g, " ").replace(/[\u0000-\u001f\u007f]/g, "");
 }
 
 function PromptApp({ onMessage, options, commands }: PromptAppProps) {
@@ -37,10 +65,14 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
   const { exit } = useApp();
 
   const [inputBuffer, setInputBuffer] = useState("");
+  const [cursorIndex, setCursorIndex] = useState(0);
   const [popupIndex, setPopupIndex] = useState(0);
   const [helpVisible, setHelpVisible] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [assistantResponse, setAssistantResponseState] =
+    useState<AssistantResponseMessage | null>(null);
   const processingRef = useRef(false);
+  const assistantResponseRef = useRef<AssistantResponseMessage | null>(null);
 
   const commandsRef = useRef(commands);
   useEffect(() => {
@@ -50,6 +82,20 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
   const setProcessing = (value: boolean) => {
     processingRef.current = value;
     setIsProcessing(value);
+  };
+
+  const setAssistantResponse = (value: AssistantResponseMessage | null) => {
+    assistantResponseRef.current = value;
+    setAssistantResponseState(value);
+  };
+
+  const commitPresentedAssistantResponse = () => {
+    const response = assistantResponseRef.current;
+    if (response?.state !== "presenting") return;
+
+    console.log();
+    console.log(renderAssistantResponse(response, personality));
+    setAssistantResponse(null);
   };
 
   const popupItems = useMemo(() => {
@@ -85,6 +131,34 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
         return;
       }
 
+      if (key.ctrl && input === "a") {
+        setCursorIndex(0);
+        return;
+      }
+
+      if (key.ctrl && input === "b") {
+        setCursorIndex((i) => Math.max(0, i - 1));
+        return;
+      }
+
+      if (key.ctrl && input === "e") {
+        setCursorIndex(inputBuffer.length);
+        return;
+      }
+
+      if (key.ctrl && input === "f") {
+        setCursorIndex((i) => Math.min(inputBuffer.length, i + 1));
+        return;
+      }
+
+      if (key.ctrl && input === "u") {
+        setInputBuffer("");
+        setCursorIndex(0);
+        setPopupIndex(0);
+        setHelpVisible(false);
+        return;
+      }
+
       // Keyboard shortcut
       const shortcutCmd = commandsRef.current.find(
         (c) =>
@@ -95,6 +169,7 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
       );
       if (shortcutCmd) {
         const hint = formatShortcut(shortcutCmd.shortcut!);
+        commitPresentedAssistantResponse();
         console.log();
         console.log(
           renderConversationMessage(
@@ -108,7 +183,9 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
           ),
         );
         setInputBuffer("");
+        setCursorIndex(0);
         setHelpVisible(false);
+        setAssistantResponse(null);
         setProcessing(true);
         Promise.resolve(shortcutCmd.action()).finally(() => {
           setProcessing(false);
@@ -123,11 +200,13 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
             : inputBuffer.trim();
 
         setInputBuffer("");
+        setCursorIndex(0);
         setPopupIndex(0);
         setHelpVisible(false);
 
         if (!submitted) return;
 
+        commitPresentedAssistantResponse();
         console.log();
         console.log(
           renderConversationMessage(
@@ -147,12 +226,27 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
             const cmdName = submitted.slice(trigger.length).split(/\s+/)[0];
             const cmd = commandsRef.current.find((c) => c.name === cmdName);
             if (cmd) {
+              setAssistantResponse(null);
               await cmd.action();
             } else {
+              setAssistantResponse(null);
               console.log(`\x1b[31mUnknown command: ${trigger}${cmdName}\x1b[0m`);
             }
           } else {
-            await onMessage(submitted);
+            setAssistantResponse({ state: "loading", timestamp: new Date() });
+            const responseBody = await onMessage(
+              submitted,
+              setAssistantResponse,
+            );
+            if (typeof responseBody === "string") {
+              setAssistantResponse({
+                state: "presenting",
+                body: responseBody,
+                timestamp: new Date(),
+              });
+            } else {
+              setAssistantResponse(null);
+            }
           }
         };
 
@@ -162,7 +256,10 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
 
       if (key.tab) {
         if (popupVisible && popupItems.length > 0) {
-          setInputBuffer(trigger + popupItems[Math.min(popupIndex, popupItems.length - 1)].name);
+          const completed =
+            trigger + popupItems[Math.min(popupIndex, popupItems.length - 1)].name;
+          setInputBuffer(completed);
+          setCursorIndex(completed.length);
           setPopupIndex(0);
           setHelpVisible(false);
         }
@@ -180,15 +277,19 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
         return;
       }
 
-      if (key.escape) {
-        setInputBuffer("");
-        setPopupIndex(0);
-        setHelpVisible(false);
+      if (key.leftArrow) {
+        setCursorIndex((i) => Math.max(0, i - 1));
         return;
       }
 
-      if (key.ctrl && input === "u") {
+      if (key.rightArrow) {
+        setCursorIndex((i) => Math.min(inputBuffer.length, i + 1));
+        return;
+      }
+
+      if (key.escape) {
         setInputBuffer("");
+        setCursorIndex(0);
         setPopupIndex(0);
         setHelpVisible(false);
         return;
@@ -200,12 +301,36 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
           return;
         }
 
-        setInputBuffer((b) => b.slice(0, -1));
+        if (key.backspace) {
+          if (cursorIndex === 0) return;
+
+          setInputBuffer(
+            inputBuffer.slice(0, cursorIndex - 1) +
+              inputBuffer.slice(cursorIndex),
+          );
+          setCursorIndex((i) => Math.max(0, i - 1));
+          return;
+        }
+
+        if (cursorIndex >= inputBuffer.length) return;
+
+        setInputBuffer(
+          inputBuffer.slice(0, cursorIndex) +
+            inputBuffer.slice(cursorIndex + 1),
+        );
         return;
       }
 
-      if (input && input.length === 1 && !key.ctrl && !key.meta) {
-        setInputBuffer((b) => b + input);
+      if (input && !key.ctrl && !key.meta) {
+        const text = normalizeTextInput(input);
+        if (text.length === 0) return;
+
+        setInputBuffer(
+          inputBuffer.slice(0, cursorIndex) +
+            text +
+            inputBuffer.slice(cursorIndex),
+        );
+        setCursorIndex((i) => i + text.length);
         setPopupIndex(0);
         setHelpVisible(false);
       }
@@ -214,19 +339,28 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
   );
 
   return (
-    <PromptComposer
-      disabled={isProcessing}
-      inputBuffer={inputBuffer}
-      popupItems={popupItems}
-      popupIndex={popupIndex}
-      popupVisible={popupVisible}
-      trigger={trigger}
-    />
+    <Box flexDirection="column">
+      {assistantResponse && (
+        <CaliResponse response={assistantResponse} personality={personality} />
+      )}
+      <PromptComposer
+        cursorIndex={cursorIndex}
+        disabled={isProcessing}
+        inputBuffer={inputBuffer}
+        popupItems={popupItems}
+        popupIndex={popupIndex}
+        popupVisible={popupVisible}
+        trigger={trigger}
+      />
+    </Box>
   );
 }
 
 export function startPrompt(
-  onMessage: (input: string) => Promise<void>,
+  onMessage: (
+    input: string,
+    updateAssistantResponse: AssistantResponseUpdater,
+  ) => Promise<string | void>,
   options?: {
     trigger?: string;
     userName?: string;

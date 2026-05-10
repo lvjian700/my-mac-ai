@@ -4,14 +4,16 @@ import * as os from "os";
 import * as path from "path";
 import { buildSystemPrompt } from "./session.js";
 import { tools, executeTool } from "./tools.js";
-import { startPrompt, type Prompt } from "./ui.js";
+import {
+  startPrompt,
+  type AssistantResponseUpdater,
+  type Prompt,
+} from "./ui.js";
 import { printWelcome } from "./welcome.js";
-import { renderConversationMessage } from "./renderer.js";
 import { CALI } from "./personalities/cali.js";
 
 const DIM = "\x1b[2m";
 const RST = "\x1b[0m";
-const ITALIC = "\x1b[3m";
 const client = new Anthropic();
 const MODEL = "claude-sonnet-4-6";
 const personality = CALI;
@@ -21,7 +23,8 @@ const userName = process.env.CALI_USER_NAME ?? DEFAULT_USER_NAME;
 async function runAgentTurn(
   systemPrompt: string,
   history: Anthropic.MessageParam[],
-): Promise<void> {
+  updateAssistantResponse: AssistantResponseUpdater,
+): Promise<string> {
   while (true) {
     let collectedText = "";
 
@@ -51,25 +54,17 @@ async function runAgentTurn(
     );
 
     if (toolCalls.length === 0) {
-      console.log();
-      console.log(
-        renderConversationMessage(
-          {
-            speaker: personality.name,
-            body: collectedText,
-            kind: "assistant",
-            timestamp: new Date(),
-          },
-          personality,
-        ),
-      );
-      break;
+      return collectedText;
     }
 
-    // Intermediate turn: show narration in dim italic, then tool calls.
+    // Intermediate turn: keep narration in Cali's loading response.
     const narration = collectedText.trim();
     if (narration) {
-      console.log(`${DIM}${ITALIC}${narration}${RST}`);
+      updateAssistantResponse({
+        state: "loading",
+        body: narration,
+        timestamp: new Date(),
+      });
     }
 
     const results: Anthropic.ToolResultBlockParam[] = toolCalls.map((call) => {
@@ -98,12 +93,16 @@ async function main() {
 
   printWelcome();
 
-  const prompt = startPrompt(async (input) => {
+  const prompt = startPrompt(async (input, updateAssistantResponse) => {
     const checkpoint = history.length;
     history.push({ role: "user", content: input });
 
     try {
-      await runAgentTurn(systemPrompt, history);
+      return await runAgentTurn(
+        systemPrompt,
+        history,
+        updateAssistantResponse,
+      );
     } catch (err) {
       console.log(`\x1b[31merror: ${err instanceof Error ? err.message : err}\x1b[0m`);
       history.length = checkpoint;
@@ -122,7 +121,6 @@ async function main() {
   prompt.registerSlashCommand({
     name: "memory",
     description: "Edit calendar memory",
-    shortcut: { ctrl: true, name: "e" },
     action: () => {
       const memoryPath = path.join(
         os.homedir(),

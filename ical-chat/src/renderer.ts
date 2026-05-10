@@ -4,11 +4,18 @@ import { CALI } from "./personalities/cali.js";
 import type { AssistantPersonality } from "./personalities/types.js";
 
 type SpeakerKind = "assistant" | "user";
+export type AssistantResponseState = "loading" | "presenting";
 
 export interface ConversationMessage {
   speaker: string;
   body: string;
   kind: SpeakerKind;
+  timestamp?: Date;
+}
+
+export interface AssistantResponseMessage {
+  state: AssistantResponseState;
+  body?: string;
   timestamp?: Date;
 }
 
@@ -118,6 +125,24 @@ export function renderConversationBody(
     .join("\n");
 }
 
+function renderLoadingBody(
+  body: string,
+  personality: AssistantPersonality,
+): string {
+  return body
+    .trim()
+    .split(/\r?\n/)
+    .map(wrapLine)
+    .join("\n")
+    .split("\n")
+    .map((line) =>
+      line.length > 0
+        ? "  " + personality.conversationTheme.muted(line)
+        : line,
+    )
+    .join("\n");
+}
+
 function formatTimestamp(date: Date): string {
   return new Intl.DateTimeFormat(undefined, {
     hour: "numeric",
@@ -161,4 +186,23 @@ export function renderConversationMessage(
     renderConversationHeader(speaker, kind, timestamp, personality),
     renderConversationBody(body, personality),
   ].join("\n");
+}
+
+export function renderAssistantResponse(
+  { state, body, timestamp }: AssistantResponseMessage,
+  personality: AssistantPersonality = CALI,
+): string {
+  const header = renderConversationHeader(
+    personality.name,
+    "assistant",
+    timestamp,
+    personality,
+  );
+
+  if (state === "loading") {
+    const loadingBody = body ?? "checking your calendar...";
+    return [header, renderLoadingBody(loadingBody, personality)].join("\n");
+  }
+
+  return [header, renderConversationBody(body ?? "", personality)].join("\n");
 }

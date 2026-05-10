@@ -65,26 +65,41 @@ function PromptDivider() {
 const PROMPT_PLACEHOLDER = 'Try "what\'s my week look like?"';
 export const USER_BLUE = "#9cdcfe";
 
-function BoxCursor({ disabled = false }: { disabled?: boolean }) {
+function BoxCursor({
+  disabled = false,
+  value = " ",
+}: {
+  disabled?: boolean;
+  value?: string;
+}) {
   return (
     <Text backgroundColor={disabled ? "#333333" : USER_BLUE} color="#000000">
-      {" "}
+      {value}
     </Text>
   );
 }
 
 function PromptInput({
+  cursorIndex,
   disabled = false,
   value,
 }: {
+  cursorIndex: number;
   disabled?: boolean;
   value: string;
 }) {
   if (value.length > 0) {
+    const safeCursorIndex = Math.min(Math.max(cursorIndex, 0), value.length);
+    const beforeCursor = value.slice(0, safeCursorIndex);
+    const cursorValue = value[safeCursorIndex] ?? " ";
+    const afterCursor =
+      safeCursorIndex < value.length ? value.slice(safeCursorIndex + 1) : "";
+
     return (
       <>
-        <Text color={disabled ? "#565656" : undefined}>{value}</Text>
-        <BoxCursor disabled={disabled} />
+        <Text color={disabled ? "#565656" : undefined}>{beforeCursor}</Text>
+        <BoxCursor disabled={disabled} value={cursorValue} />
+        <Text color={disabled ? "#565656" : undefined}>{afterCursor}</Text>
       </>
     );
   }
@@ -98,6 +113,7 @@ function PromptInput({
 }
 
 interface PromptComposerProps {
+  cursorIndex: number;
   disabled?: boolean;
   inputBuffer: string;
   popupItems: PromptCommandItem[];
@@ -107,6 +123,7 @@ interface PromptComposerProps {
 }
 
 export function PromptComposer({
+  cursorIndex,
   disabled = false,
   inputBuffer,
   popupItems,
@@ -126,7 +143,11 @@ export function PromptComposer({
         <Text color={disabled ? "#565656" : USER_BLUE} bold>
           {"› "}
         </Text>
-        <PromptInput value={inputBuffer} disabled={disabled} />
+        <PromptInput
+          cursorIndex={cursorIndex}
+          value={inputBuffer}
+          disabled={disabled}
+        />
       </Box>
       <PromptDivider />
       {!activePopupVisible && (
