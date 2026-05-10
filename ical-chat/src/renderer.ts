@@ -125,6 +125,24 @@ export function renderConversationBody(
     .join("\n");
 }
 
+function renderLoadingBody(
+  body: string,
+  personality: AssistantPersonality,
+): string {
+  return body
+    .trim()
+    .split(/\r?\n/)
+    .map(wrapLine)
+    .join("\n")
+    .split("\n")
+    .map((line) =>
+      line.length > 0
+        ? "  " + personality.conversationTheme.muted(line)
+        : line,
+    )
+    .join("\n");
+}
+
 function formatTimestamp(date: Date): string {
   return new Intl.DateTimeFormat(undefined, {
     hour: "numeric",
@@ -183,10 +201,7 @@ export function renderAssistantResponse(
 
   if (state === "loading") {
     const loadingBody = body ?? "checking your calendar...";
-    return [
-      header,
-      "  " + personality.conversationTheme.muted(loadingBody),
-    ].join("\n");
+    return [header, renderLoadingBody(loadingBody, personality)].join("\n");
   }
 
   return [header, renderConversationBody(body ?? "", personality)].join("\n");
