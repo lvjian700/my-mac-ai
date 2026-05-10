@@ -17,6 +17,7 @@ import type {
 const KEY = {
   ctrlQ: "\x11",
   ctrlR: "\x12",
+  delete: "\x7f",
   down: "\x1B[B",
   enter: "\r",
   escape: "\x1B",
@@ -344,6 +345,27 @@ test("history up can submit the newest saved prompt", async () => {
     await send(harness.input, KEY.enter);
 
     await waitFor(() => assert.deepEqual(messages, ["newer prompt"]));
+  } finally {
+    harness.unmount();
+  }
+});
+
+test("delete key removes the previous character at the end of the prompt", async () => {
+  const messages: string[] = [];
+  const harness = createHarness({
+    onMessage: async (input) => {
+      messages.push(input);
+    },
+  });
+
+  try {
+    await send(harness.input, "abc");
+    await waitFor(() => assert.match(harness.output.text(), /abc/));
+    await send(harness.input, KEY.delete);
+    await waitFor(() => assert.match(harness.output.text(), /ab/));
+    await send(harness.input, KEY.enter);
+
+    await waitFor(() => assert.deepEqual(messages, ["ab"]));
   } finally {
     harness.unmount();
   }
