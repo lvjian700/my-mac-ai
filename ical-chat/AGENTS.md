@@ -40,8 +40,9 @@ The bundle is a single self-contained ESM file with all dependencies inlined. Sk
 
 **Terminal input requirements:**
 
-- Preserve platform-native prompt editing behavior. Key names reported by Ink may not match the label on the user's keyboard, so validate behavior from the user's terminal semantics rather than from the hook field name alone.
-- Cover terminal editing changes with integration tests that send the real escape/control bytes for the expected user action.
+- The terminal environment is macOS. Implement prompt input like a macOS text field, including macOS keyboard mapping, cursor movement, deletion behavior, and special-key handling.
+- Key names reported by Ink may not match the label or convention users expect on macOS; validate behavior against macOS text-field semantics, not just hook field names.
+- Cover terminal editing changes with integration tests that send the real escape/control bytes for the expected macOS user action.
 
 **System prompt sources** (all from `../ical/.claude/skills/ical/`):
 
