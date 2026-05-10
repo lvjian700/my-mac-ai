@@ -65,6 +65,7 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
   const { exit } = useApp();
 
   const [inputBuffer, setInputBuffer] = useState("");
+  const [cursorIndex, setCursorIndex] = useState(0);
   const [popupIndex, setPopupIndex] = useState(0);
   const [helpVisible, setHelpVisible] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -154,6 +155,7 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
           ),
         );
         setInputBuffer("");
+        setCursorIndex(0);
         setHelpVisible(false);
         setAssistantResponse(null);
         setProcessing(true);
@@ -170,6 +172,7 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
             : inputBuffer.trim();
 
         setInputBuffer("");
+        setCursorIndex(0);
         setPopupIndex(0);
         setHelpVisible(false);
 
@@ -225,7 +228,10 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
 
       if (key.tab) {
         if (popupVisible && popupItems.length > 0) {
-          setInputBuffer(trigger + popupItems[Math.min(popupIndex, popupItems.length - 1)].name);
+          const completed =
+            trigger + popupItems[Math.min(popupIndex, popupItems.length - 1)].name;
+          setInputBuffer(completed);
+          setCursorIndex(completed.length);
           setPopupIndex(0);
           setHelpVisible(false);
         }
@@ -243,15 +249,37 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
         return;
       }
 
+      if (key.leftArrow) {
+        setCursorIndex((i) => Math.max(0, i - 1));
+        return;
+      }
+
+      if (key.rightArrow) {
+        setCursorIndex((i) => Math.min(inputBuffer.length, i + 1));
+        return;
+      }
+
       if (key.escape) {
         setInputBuffer("");
+        setCursorIndex(0);
         setPopupIndex(0);
         setHelpVisible(false);
         return;
       }
 
+      if (key.ctrl && input === "a") {
+        setCursorIndex(0);
+        return;
+      }
+
+      if (key.ctrl && input === "e") {
+        setCursorIndex(inputBuffer.length);
+        return;
+      }
+
       if (key.ctrl && input === "u") {
         setInputBuffer("");
+        setCursorIndex(0);
         setPopupIndex(0);
         setHelpVisible(false);
         return;
@@ -263,7 +291,23 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
           return;
         }
 
-        setInputBuffer((b) => b.slice(0, -1));
+        if (key.backspace) {
+          if (cursorIndex === 0) return;
+
+          setInputBuffer(
+            inputBuffer.slice(0, cursorIndex - 1) +
+              inputBuffer.slice(cursorIndex),
+          );
+          setCursorIndex((i) => Math.max(0, i - 1));
+          return;
+        }
+
+        if (cursorIndex >= inputBuffer.length) return;
+
+        setInputBuffer(
+          inputBuffer.slice(0, cursorIndex) +
+            inputBuffer.slice(cursorIndex + 1),
+        );
         return;
       }
 
@@ -271,7 +315,12 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
         const text = normalizeTextInput(input);
         if (text.length === 0) return;
 
-        setInputBuffer((b) => b + text);
+        setInputBuffer(
+          inputBuffer.slice(0, cursorIndex) +
+            text +
+            inputBuffer.slice(cursorIndex),
+        );
+        setCursorIndex((i) => i + text.length);
         setPopupIndex(0);
         setHelpVisible(false);
       }
@@ -285,6 +334,7 @@ function PromptApp({ onMessage, options, commands }: PromptAppProps) {
         <CaliResponse response={assistantResponse} personality={personality} />
       )}
       <PromptComposer
+        cursorIndex={cursorIndex}
         disabled={isProcessing}
         inputBuffer={inputBuffer}
         popupItems={popupItems}
