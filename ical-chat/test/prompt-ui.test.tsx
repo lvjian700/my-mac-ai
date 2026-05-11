@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable, Writable } from "node:stream";
-import test, { afterEach, beforeEach } from "node:test";
+import { afterEach, beforeEach, test } from "bun:test";
 import React from "react";
 import { render } from "ink";
 import { PromptApp, startPrompt } from "../src/ui.js";

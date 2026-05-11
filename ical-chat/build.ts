@@ -1,7 +1,6 @@
-import { build } from "esbuild";
-import { readFileSync, chmodSync, mkdirSync } from "fs";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
+import { chmodSync, mkdirSync, readFileSync, rmSync, renameSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SKILL_DIR = join(__dirname, "../ical/.claude/skills/ical");
@@ -9,13 +8,12 @@ const SKILL_DIR = join(__dirname, "../ical/.claude/skills/ical");
 const skillMd = readFileSync(join(SKILL_DIR, "SKILL.md"), "utf-8");
 const rulesMd = readFileSync(
   join(SKILL_DIR, "references/calendar_rules.md"),
-  "utf-8"
+  "utf-8",
 );
 
-// At build time, intercept the skill-data module and embed file contents
 const embedSkillData = {
   name: "embed-skill-data",
-  setup(build) {
+  setup(build: Bun.PluginBuilder) {
     build.onResolve({ filter: /\/skill-data\.js$/ }, () => ({
       path: "skill-data",
       namespace: "embedded",
@@ -30,12 +28,10 @@ const embedSkillData = {
   },
 };
 
-// Replace ink's optional react-devtools integration with a no-op so the
-// missing react-devtools-core package doesn't cause a hard import error.
 const stubDevtools = {
   name: "stub-devtools",
-  setup(build) {
-    build.onResolve({ filter: /react-devtools-core/ }, () => ({
+  setup(build: Bun.PluginBuilder) {
+    build.onResolve({ filter: /^react-devtools-core$/ }, () => ({
       path: "react-devtools-core",
       namespace: "stub",
     }));
@@ -47,26 +43,29 @@ const stubDevtools = {
 };
 
 mkdirSync("dist", { recursive: true });
+rmSync("dist/cali", { force: true });
 
-await build({
-  entryPoints: ["src/index.ts"],
-  bundle: true,
-  platform: "node",
-  target: ["node23"],
+const result = await Bun.build({
+  entrypoints: ["src/index.ts"],
+  outdir: "dist",
+  target: "bun",
   format: "esm",
-  outfile: "dist/cali",
+  splitting: false,
   plugins: [embedSkillData, stubDevtools],
-  jsx: "automatic",
-  jsxImportSource: "react",
-  banner: {
-    js: [
-      "#!/usr/bin/env node",
-      // Polyfill require() for CJS modules bundled into ESM context
-      'import { createRequire } from "module";',
-      "const require = createRequire(import.meta.url);",
-    ].join("\n"),
+  jsx: {
+    runtime: "automatic",
+    importSource: "react",
   },
+  banner: "#!/usr/bin/env bun",
 });
 
+if (!result.success) {
+  for (const log of result.logs) {
+    console.error(log);
+  }
+  process.exit(1);
+}
+
+renameSync("dist/index.js", "dist/cali");
 chmodSync("dist/cali", 0o755);
 console.log("Built dist/cali");

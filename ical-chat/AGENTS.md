@@ -5,8 +5,10 @@ Terminal multi-turn chat for Apple Calendar. Uses the Anthropic SDK directly (no
 ## Build & Run
 
 ```bash
-npm install          # install dependencies
-npm start            # start the REPL (dev mode, reads skill files from ../ical/)
+bun install          # install dependencies
+bun run start        # start the REPL (reads skill files from ../ical/)
+bun run typecheck    # type-check source, build script, and tests
+bun run test         # run prompt integration tests
 ```
 
 Requires `ical` binary on PATH (`make install` from `../ical/`).
@@ -15,17 +17,17 @@ Requires `ANTHROPIC_API_KEY` in the environment.
 ## Release & Install
 
 ```bash
-npm run build              # bundle to dist/cali (standalone binary, ~4 MB)
+bun run build              # bundle to dist/cali (Bun executable)
 make install               # build + install to ~/.local/bin/cali
 PREFIX=/usr/local make install  # install system-wide (requires sudo)
 make uninstall             # remove installed binary
 ```
 
-The bundle is a single self-contained ESM file with all dependencies inlined. Skill files (`SKILL.md`, `calendar_rules.md`) are embedded at build time. User memory (`~/.my-mac-ai/ical/memory.yaml`) is read from disk at startup as usual.
+The bundle is a single self-contained ESM file with all dependencies inlined and a Bun shebang. Skill files (`SKILL.md`, `calendar_rules.md`) are embedded at build time. User memory (`~/.my-mac-ai/ical/memory.yaml`) is read from disk at startup as usual.
 
 ## Architecture
 
-**Tech stack:** TypeScript, Node.js 23+, `@anthropic-ai/sdk`, `ink` (React for CLIs).
+**Tech stack:** TypeScript, Bun, `@anthropic-ai/sdk`, `ink` (React for CLIs).
 
 **Data flow:** user input → Anthropic API (claude-sonnet-4-6) → tool calls → `ical` binary → tool results → API → streamed text response → repeat.
 
