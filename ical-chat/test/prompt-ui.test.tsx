@@ -262,11 +262,84 @@ test("slash command popup supports tab completion then enter", async () => {
     await send(harness.input, "/m");
     await waitFor(() => assert.match(harness.output.text(), /Edit memory/));
     await send(harness.input, KEY.tab);
-    await waitFor(() => assert.match(harness.output.text(), /\/memory/));
+    await waitFor(() =>
+      assert.match(harness.output.writes.at(-1) ?? "", /› \/memory/),
+    );
+    const writeCountBeforeSubmit = harness.output.writes.length;
     await send(harness.input, KEY.enter);
 
     await waitFor(() => assert.equal(memoryCommandCount, 1));
+    const submitWrites = harness.output.writes
+      .slice(writeCountBeforeSubmit)
+      .join("");
+    const transcriptIndex = submitWrites.indexOf("YOU");
+    assert.ok(
+      transcriptIndex >= 0,
+      "submitted slash command should be rendered in the transcript",
+    );
+    const beforeTranscript = submitWrites.slice(0, transcriptIndex);
+    assert.doesNotMatch(
+      beforeTranscript,
+      /Try "what's my week look like\?"/,
+      "composer should be hidden before transcript output",
+    );
+    assert.doesNotMatch(
+      beforeTranscript,
+      /\? for help/,
+      "composer help should be hidden before transcript output",
+    );
+    assert.doesNotMatch(
+      beforeTranscript,
+      /Edit memory/,
+      "slash popup should not be repainted before transcript output",
+    );
     assert.deepEqual(messages, []);
+  } finally {
+    harness.unmount();
+  }
+});
+
+test("slash command pause clears the live composer before resume", async () => {
+  let memoryCommandRan = false;
+  const harness = createStartedPromptHarness({
+    onMessage: async () => {},
+  });
+
+  try {
+    harness.prompt.registerSlashCommand({
+      name: "memory",
+      description: "Edit memory",
+      action: () => {
+        memoryCommandRan = true;
+        harness.prompt.pause();
+        harness.prompt.resume();
+      },
+    });
+
+    await send(harness.input, "/memory");
+    await waitFor(() =>
+      assert.match(harness.output.writes.at(-1) ?? "", /› \/memory/),
+    );
+    const writeCountBeforeSubmit = harness.output.writes.length;
+    await send(harness.input, KEY.enter);
+
+    await waitFor(() => assert.equal(memoryCommandRan, true));
+    const submitWrites = harness.output.writes
+      .slice(writeCountBeforeSubmit)
+      .join("");
+    const transcriptIndex = submitWrites.indexOf("YOU");
+    assert.ok(
+      transcriptIndex >= 0,
+      "submitted slash command should be rendered in the transcript",
+    );
+    const afterTranscript = submitWrites.slice(transcriptIndex);
+    const composerFrames =
+      afterTranscript.match(/Try "what's my week look like\?"/g) ?? [];
+    assert.equal(
+      composerFrames.length,
+      1,
+      "pause/resume should leave only the resumed composer frame visible",
+    );
   } finally {
     harness.unmount();
   }

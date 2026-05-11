@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useInput } from "ink";
 import {
   addPromptHistoryEntry,
@@ -47,6 +47,25 @@ export function usePromptComposer({
   const [historySearchDraft, setHistorySearchDraft] = useState("");
   const [popupIndex, setPopupIndex] = useState(0);
   const [helpVisible, setHelpVisible] = useState(false);
+  const [pendingSubmission, setPendingSubmission] =
+    useState<PromptComposerSubmission | null>(null);
+
+  useEffect(() => {
+    if (!pendingSubmission) return;
+
+    const submission = pendingSubmission;
+    // Ink batches terminal paints at 32ms; let the hidden prompt flush before
+    // the parent writes transcript rows with console output.
+    const handle = setTimeout(() => {
+      try {
+        onSubmit(submission);
+      } finally {
+        setPendingSubmission(null);
+      }
+    }, 40);
+
+    return () => clearTimeout(handle);
+  }, [onSubmit, pendingSubmission]);
 
   const setPromptText = (value: string) => {
     setInputBuffer(value);
@@ -72,7 +91,8 @@ export function usePromptComposer({
 
     if (inputBuffer.startsWith(trigger)) {
       const partial = inputBuffer.slice(trigger.length);
-      return commands.filter((c) => c.name.startsWith(partial));
+      const matches = commands.filter((c) => c.name.startsWith(partial));
+      return matches.some((c) => c.name === partial) ? [] : matches;
     }
     return [];
   }, [commands, helpVisible, inputBuffer, trigger]);
@@ -166,24 +186,30 @@ export function usePromptComposer({
     setHelpVisible(false);
   };
 
+  const queueSubmission = (submission: PromptComposerSubmission) => {
+    resetPrompt();
+    setPendingSubmission(submission);
+  };
+
   const submitPrompt = () => {
     const submitted =
       popupVisible && popupItems.length > 0
         ? trigger + popupItems[Math.min(popupIndex, popupItems.length - 1)].name
         : inputBuffer.trim();
 
-    resetPrompt();
-
-    if (!submitted) return;
+    if (!submitted) {
+      resetPrompt();
+      return;
+    }
 
     if (submitted.startsWith(trigger)) {
       const name = submitted.slice(trigger.length).split(/\s+/)[0];
-      onSubmit({ kind: "slash-command", input: submitted, name });
+      queueSubmission({ kind: "slash-command", input: submitted, name });
       return;
     }
 
     recordPromptHistory(submitted);
-    onSubmit({ kind: "message", input: submitted });
+    queueSubmission({ kind: "message", input: submitted });
   };
 
   useInput(
@@ -298,8 +324,7 @@ export function usePromptComposer({
           !!c.shortcut.meta === !!key.meta,
       );
       if (shortcutCommand?.shortcut) {
-        resetPrompt();
-        onSubmit({
+        queueSubmission({
           kind: "shortcut",
           name: shortcutCommand.name,
           shortcut: shortcutCommand.shortcut,
@@ -398,5 +423,6 @@ export function usePromptComposer({
     popupIndex,
     popupItems,
     popupVisible,
+    submitting: pendingSubmission !== null,
   };
 }

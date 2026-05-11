@@ -38,6 +38,10 @@ export function PromptComposer({
   const activePopupVisible =
     !activeHistorySearchVisible && !disabled && state.popupVisible;
 
+  if (state.submitting) {
+    return null;
+  }
+
   return (
     <Box flexDirection="column" marginTop={1}>
       <PromptDivider />

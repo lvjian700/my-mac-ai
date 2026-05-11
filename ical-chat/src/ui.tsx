@@ -65,6 +65,7 @@ export function PromptApp({ onMessage, options, commands }: PromptAppProps) {
   const { exit } = useApp();
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const [composerSuspended, setComposerSuspended] = useState(false);
   const [assistantResponse, setAssistantResponseState] =
     useState<AssistantResponseMessage | null>(null);
   const processingRef = useRef(false);
@@ -134,6 +135,10 @@ export function PromptApp({ onMessage, options, commands }: PromptAppProps) {
     renderUserSubmission(body);
     setProcessing(true);
 
+    const isCommand =
+      submission.kind === "shortcut" || submission.kind === "slash-command";
+    if (isCommand) setComposerSuspended(true);
+
     const run = async () => {
       if (submission.kind === "shortcut") {
         const cmd = commandsRef.current.find((c) => c.name === submission.name);
@@ -172,7 +177,10 @@ export function PromptApp({ onMessage, options, commands }: PromptAppProps) {
       }
     };
 
-    run().finally(() => setProcessing(false));
+    run().finally(() => {
+      setProcessing(false);
+      if (isCommand) setComposerSuspended(false);
+    });
   };
 
   return (
@@ -180,14 +188,16 @@ export function PromptApp({ onMessage, options, commands }: PromptAppProps) {
       {assistantResponse && (
         <CaliResponse response={assistantResponse} personality={personality} />
       )}
-      <PromptComposer
-        commands={commands}
-        disabled={isProcessing}
-        onExit={handleExit}
-        onHistorySaveError={handleHistorySaveError}
-        onSubmit={handleComposerSubmit}
-        trigger={trigger}
-      />
+      {!composerSuspended && (
+        <PromptComposer
+          commands={commands}
+          disabled={isProcessing}
+          onExit={handleExit}
+          onHistorySaveError={handleHistorySaveError}
+          onSubmit={handleComposerSubmit}
+          trigger={trigger}
+        />
+      )}
     </Box>
   );
 }
@@ -224,6 +234,7 @@ export function startPrompt(
       inst.rerender(makeElement());
     },
     pause() {
+      inst.clear();
       inst.unmount();
     },
     resume() {
