@@ -1,0 +1,114 @@
+import { buildSystemPrompt } from "../session.js";
+import {
+  RealtimeSession,
+  realtimeConfigFromEnv,
+  requireOpenAIKey,
+} from "../realtime/session.js";
+import { CALI } from "../personalities/cali.js";
+import {
+  convertF32Base64ToPcm16Base64,
+  NativeAudioBridge,
+  type AudioBridge,
+} from "./audio-bridge.js";
+import { startVoiceIdleTimeout } from "./idle-timeout.js";
+
+const DEFAULT_USER_NAME = "You";
+
+export interface VoiceChatOptions {
+  audioBridge?: AudioBridge;
+}
+
+export async function runVoiceChat(options: VoiceChatOptions = {}) {
+  const userName = process.env.CALI_USER_NAME ?? DEFAULT_USER_NAME;
+  const systemPrompt = buildVoiceSystemPrompt(
+    buildSystemPrompt(userName, CALI),
+  );
+  const realtimeConfig = realtimeConfigFromEnv();
+  const audioBridge = options.audioBridge ?? new NativeAudioBridge();
+
+  let shuttingDown = false;
+  let session: RealtimeSession | undefined;
+
+  const shutdown = (message = "voice mode idle for 60s. shutting down.") => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    idleTimeout.stop();
+    session?.close();
+    audioBridge.shutdown();
+    console.log(`\n${message}`);
+    process.exit(0);
+  };
+
+  const idleTimeout = startVoiceIdleTimeout({
+    shutdown: () => shutdown(),
+  });
+
+  session = RealtimeSession.connect({
+    apiKey: requireOpenAIKey(),
+    instructions: systemPrompt,
+    outputMode: "audio",
+    ...realtimeConfig,
+    onActivity: () => idleTimeout.reset(),
+    onAudioDelta: (delta) => {
+      idleTimeout.reset();
+      audioBridge.sendOutputAudio(delta);
+    },
+    onStatus: (message) => {
+      idleTimeout.reset();
+      console.log(message);
+    },
+  });
+
+  audioBridge.onEvent((event) => {
+    idleTimeout.reset();
+
+    if (event.type === "input_audio") {
+      session?.appendInputAudio(
+        event.format === "f32le"
+          ? convertF32Base64ToPcm16Base64(event.audio)
+          : event.audio,
+      );
+      return;
+    }
+
+    if (event.type === "error") {
+      console.error(`audio error: ${event.message}`);
+      return;
+    }
+
+    if (event.type === "shutdown") {
+      shutdown("voice audio stopped. shutting down.");
+    }
+  });
+
+  audioBridge.onError((err) => {
+    idleTimeout.reset();
+    console.error(`audio error: ${err.message}`);
+  });
+
+  audioBridge.onClose(() => shutdown("voice audio stopped. shutting down."));
+
+  process.stdin.resume();
+  process.stdin.setEncoding("utf-8");
+  process.stdin.on("data", () => idleTimeout.reset());
+
+  process.once("SIGINT", () => shutdown("voice mode stopped."));
+  process.once("SIGTERM", () => shutdown("voice mode stopped."));
+
+  console.log("Cali voice mode is listening. Idle shutdown: 60s.");
+
+  await new Promise<void>(() => {});
+}
+
+function buildVoiceSystemPrompt(basePrompt: string): string {
+  return [
+    basePrompt,
+    "## Voice Mode",
+    [
+      "You are speaking out loud in a terminal voice session.",
+      "Keep answers short and natural.",
+      "Avoid visual-only formatting such as backticks, markdown bullets, checkmarks, and block quotes.",
+      "Confirm calendar writes briefly after tools succeed.",
+    ].join("\n"),
+  ].join("\n\n");
+}

@@ -2,17 +2,31 @@ import { execFileSync } from "child_process";
 import { writeFileSync, mkdirSync } from "fs";
 import { dirname } from "path";
 import { homedir } from "os";
-import type Anthropic from "@anthropic-ai/sdk";
 
 const MEMORY_PATH = `${homedir()}/.my-mac-ai/ical/memory.yaml`;
 
-export const tools: Anthropic.Tool[] = [
+export interface JsonObjectSchema {
+  type: "object";
+  properties: Record<string, unknown>;
+  required?: string[];
+  additionalProperties?: boolean;
+}
+
+export interface CaliTool {
+  type: "function";
+  name: string;
+  description: string;
+  parameters: JsonObjectSchema;
+}
+
+export const tools: CaliTool[] = [
   {
+    type: "function",
     name: "ical",
     description:
       "Run the ical CLI to read or write Apple Calendar events. Always use --format json for structured output.",
-    input_schema: {
-      type: "object" as const,
+    parameters: {
+      type: "object",
       properties: {
         args: {
           type: "array",
@@ -22,14 +36,16 @@ export const tools: Anthropic.Tool[] = [
         },
       },
       required: ["args"],
+      additionalProperties: false,
     },
   },
   {
+    type: "function",
     name: "write_memory",
     description:
       "Write the calendar rules memory file. Call this when the user describes a calendar habit to save.",
-    input_schema: {
-      type: "object" as const,
+    parameters: {
+      type: "object",
       properties: {
         content: {
           type: "string",
@@ -37,11 +53,12 @@ export const tools: Anthropic.Tool[] = [
         },
       },
       required: ["content"],
+      additionalProperties: false,
     },
   },
 ];
 
-type ToolInput = {
+export type ToolInput = {
   args?: string[];
   content?: string;
 };

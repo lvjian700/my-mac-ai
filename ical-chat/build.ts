@@ -1,9 +1,11 @@
 import { chmodSync, mkdirSync, readFileSync, rmSync, renameSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SKILL_DIR = join(__dirname, "../ical/.claude/skills/ical");
+const VOICE_AUDIO_DIR = join(__dirname, "native/voice-audio");
 
 const skillMd = readFileSync(join(SKILL_DIR, "SKILL.md"), "utf-8");
 const rulesMd = readFileSync(
@@ -44,6 +46,14 @@ const stubDevtools = {
 
 mkdirSync("dist", { recursive: true });
 rmSync("dist/cali", { force: true });
+
+const swiftBuild = spawnSync("swift", ["build", "-c", "release"], {
+  cwd: VOICE_AUDIO_DIR,
+  stdio: "inherit",
+});
+if (swiftBuild.status !== 0) {
+  process.exit(swiftBuild.status ?? 1);
+}
 
 const result = await Bun.build({
   entrypoints: ["src/index.ts"],
