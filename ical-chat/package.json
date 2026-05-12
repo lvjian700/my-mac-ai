@@ -10,7 +10,7 @@
   "scripts": {
     "start": "bun run src/index.ts",
     "build": "bun run build.ts",
-    "test": "bun test test/*.test.ts test/*.test.tsx",
+    "test": "bun test test/*.test.ts test/*.test.tsx && cd native/voice-audio && swift test",
     "typecheck": "tsc --noEmit",
     "devtools": "react-devtools"
   },

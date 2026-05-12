@@ -4,6 +4,7 @@ import {
   convertPcm16Base64ToF32Base64,
   decodeFrames,
   encodeFrame,
+  resolveAudioHelperPath,
 } from "../src/voice/audio-bridge.js";
 
 describe("audio bridge framing", () => {
@@ -22,6 +23,31 @@ describe("audio bridge framing", () => {
     expect(decodeFrames(encoded.subarray(2), state)).toEqual([
       { type: "shutdown" },
     ]);
+  });
+});
+
+describe("resolveAudioHelperPath", () => {
+  test("prefers explicit helper override", () => {
+    expect(
+      resolveAudioHelperPath({
+        env: { CALI_VOICE_AUDIO_HELPER: "/tmp/helper" },
+        exists: () => false,
+      }),
+    ).toBe("/tmp/helper");
+  });
+
+  test("finds the helper installed beside the launched cali script", () => {
+    const installed = "/Users/jlyu/.local/libexec/cali/cali-voice-audio";
+
+    expect(
+      resolveAudioHelperPath({
+        env: {},
+        argv: ["bun", "/Users/jlyu/.local/bin/cali"],
+        execPath: "/Users/jlyu/.bun/bin/bun",
+        moduleUrl: import.meta.url,
+        exists: (path) => path === installed,
+      }),
+    ).toBe(installed);
   });
 });
 

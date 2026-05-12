@@ -8,7 +8,7 @@ build:
 	bun run build
 
 test:
-	bun test test/*.test.ts test/*.test.tsx
+	bun run test
 
 typecheck:
 	bun run typecheck

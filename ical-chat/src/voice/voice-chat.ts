@@ -57,11 +57,12 @@ export async function runVoiceChat(options: VoiceChatOptions = {}) {
       idleTimeout.reset();
       console.log(message);
     },
+    onError: (err) => {
+      console.error(`realtime error: ${err.message}`);
+    },
   });
 
   audioBridge.onEvent((event) => {
-    idleTimeout.reset();
-
     if (event.type === "input_audio") {
       session?.appendInputAudio(
         event.format === "f32le"
@@ -70,6 +71,8 @@ export async function runVoiceChat(options: VoiceChatOptions = {}) {
       );
       return;
     }
+
+    idleTimeout.reset();
 
     if (event.type === "error") {
       console.error(`audio error: ${event.message}`);

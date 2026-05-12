@@ -25,6 +25,7 @@ export interface RealtimeSessionOptions {
   onActivity?: () => void;
   onTextDelta?: (delta: string) => void;
   onAudioDelta?: (delta: string) => void;
+  onError?: (err: Error) => void;
   onStatus?: (message: string) => void;
   transport?: RealtimeTransport;
 }
@@ -74,6 +75,7 @@ export function buildSessionUpdateEvent(
   return {
     type: "session.update",
     session: {
+      type: "realtime",
       model: options.model ?? DEFAULT_MODEL,
       instructions: options.instructions,
       output_modalities: outputModalities,
@@ -84,11 +86,22 @@ export function buildSessionUpdateEvent(
       },
       ...(options.outputMode === "audio"
         ? {
-            voice: options.voice ?? DEFAULT_VOICE,
-            input_audio_format: "pcm16",
-            output_audio_format: "pcm16",
-            turn_detection: {
-              type: "server_vad",
+            audio: {
+              input: {
+                format: {
+                  type: "audio/pcm",
+                  rate: 24_000,
+                },
+                turn_detection: {
+                  type: "semantic_vad",
+                },
+              },
+              output: {
+                format: {
+                  type: "audio/pcm",
+                },
+                voice: options.voice ?? DEFAULT_VOICE,
+              },
             },
           }
         : {}),
@@ -241,7 +254,6 @@ export class RealtimeSession {
   }
 
   appendInputAudio(audio: string): void {
-    this.activity();
     this.send({
       type: "input_audio_buffer.append",
       audio,
@@ -255,9 +267,8 @@ export class RealtimeSession {
   }
 
   private handleEvent(event: RealtimeEvent): void {
-    this.activity();
-
     if (event.type === "response.output_text.delta") {
+      this.activity();
       const delta = typeof event.delta === "string" ? event.delta : "";
       this.pendingText && (this.pendingText.text += delta);
       this.options.onTextDelta?.(delta);
@@ -268,27 +279,28 @@ export class RealtimeSession {
       event.type === "response.audio.delta" ||
       event.type === "response.output_audio.delta"
     ) {
+      this.activity();
       const delta = typeof event.delta === "string" ? event.delta : "";
       this.options.onAudioDelta?.(delta);
       return;
     }
 
     if (event.type === "input_audio_buffer.speech_started") {
+      this.activity();
       this.options.onStatus?.("listening...");
       return;
     }
 
     if (event.type === "response.done") {
+      this.activity();
       void this.handleResponseDone(event as RealtimeEvent & RealtimeResponseDone);
       return;
     }
 
     if (event.type === "error") {
-      const message =
-        typeof event.message === "string"
-          ? event.message
-          : "Realtime API error";
-      this.rejectPending(new Error(message));
+      const error = new Error(getRealtimeErrorMessage(event));
+      this.options.onError?.(error);
+      this.rejectPending(error);
     }
   }
 
@@ -348,4 +360,20 @@ export class RealtimeSession {
     this.pendingText = undefined;
     pending.reject(err);
   }
+}
+
+export function getRealtimeErrorMessage(event: RealtimeEvent): string {
+  if (typeof event.message === "string") {
+    return event.message;
+  }
+
+  const nested = event.error;
+  if (nested && typeof nested === "object") {
+    const message = (nested as { message?: unknown }).message;
+    if (typeof message === "string") {
+      return message;
+    }
+  }
+
+  return "Realtime API error";
 }

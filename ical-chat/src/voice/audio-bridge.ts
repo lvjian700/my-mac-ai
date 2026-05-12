@@ -125,15 +125,33 @@ export class NativeAudioBridge implements AudioBridge {
   }
 }
 
-export function resolveAudioHelperPath(): string {
-  if (process.env.CALI_VOICE_AUDIO_HELPER) {
-    return process.env.CALI_VOICE_AUDIO_HELPER;
+export interface ResolveAudioHelperPathOptions {
+  env?: NodeJS.ProcessEnv;
+  argv?: readonly string[];
+  execPath?: string;
+  moduleUrl?: string;
+  exists?: (path: string) => boolean;
+}
+
+export function resolveAudioHelperPath({
+  env = process.env,
+  argv = process.argv,
+  execPath = process.execPath,
+  moduleUrl = import.meta.url,
+  exists = existsSync,
+}: ResolveAudioHelperPathOptions = {}): string {
+  if (env.CALI_VOICE_AUDIO_HELPER) {
+    return env.CALI_VOICE_AUDIO_HELPER;
   }
 
-  const srcDir = dirname(fileURLToPath(import.meta.url));
+  const srcDir = dirname(fileURLToPath(moduleUrl));
   const packageRoot = join(srcDir, "../../native/voice-audio");
+  const launchedScriptPath = argv[1];
+  const installedFromScriptPath = launchedScriptPath
+    ? join(dirname(launchedScriptPath), "../libexec/cali/cali-voice-audio")
+    : undefined;
   const installedPath = join(
-    dirname(process.execPath),
+    dirname(execPath),
     "../libexec/cali/cali-voice-audio",
   );
   const releasePath = join(
@@ -142,11 +160,14 @@ export function resolveAudioHelperPath(): string {
   );
   const debugPath = join(packageRoot, ".build/debug/cali-voice-audio");
 
-  if (existsSync(installedPath)) return installedPath;
-  if (existsSync(releasePath)) return releasePath;
-  if (existsSync(debugPath)) return debugPath;
+  if (installedFromScriptPath && exists(installedFromScriptPath)) {
+    return installedFromScriptPath;
+  }
+  if (exists(installedPath)) return installedPath;
+  if (exists(releasePath)) return releasePath;
+  if (exists(debugPath)) return debugPath;
 
-  return releasePath;
+  return installedFromScriptPath ?? releasePath;
 }
 
 export function convertF32Base64ToPcm16Base64(audio: string): string {

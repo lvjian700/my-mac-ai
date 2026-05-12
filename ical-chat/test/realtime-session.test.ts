@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   buildSessionUpdateEvent,
+  getRealtimeErrorMessage,
   RealtimeSession,
   type RealtimeEvent,
   type RealtimeTransport,
@@ -53,6 +54,44 @@ describe("RealtimeSession", () => {
     expect((event.session as { output_modalities: string[] }).output_modalities)
       .toEqual(["text"]);
     expect((event.session as { tools: unknown[] }).tools).toHaveLength(2);
+  });
+
+  test("builds Realtime 2 audio session shape", () => {
+    const event = buildSessionUpdateEvent({
+      instructions: "hello",
+      outputMode: "audio",
+      voice: "marin",
+    });
+
+    expect(event).toMatchObject({
+      type: "session.update",
+      session: {
+        type: "realtime",
+        model: "gpt-realtime-2",
+        output_modalities: ["audio"],
+        audio: {
+          input: {
+            format: {
+              type: "audio/pcm",
+              rate: 24000,
+            },
+            turn_detection: {
+              type: "semantic_vad",
+            },
+          },
+          output: {
+            format: {
+              type: "audio/pcm",
+            },
+            voice: "marin",
+          },
+        },
+      },
+    });
+    expect((event.session as Record<string, unknown>).input_audio_format)
+      .toBeUndefined();
+    expect((event.session as Record<string, unknown>).output_audio_format)
+      .toBeUndefined();
   });
 
   test("sends user text and resolves text deltas on response.done", async () => {
@@ -111,5 +150,37 @@ describe("RealtimeSession", () => {
     expect(transport.sent.at(-1)).toMatchObject({
       type: "response.create",
     });
+  });
+
+  test("does not count raw audio append frames as idle activity", () => {
+    const transport = new MockTransport();
+    let activityCount = 0;
+    const session = RealtimeSession.connect({
+      apiKey: "test",
+      instructions: "hello",
+      outputMode: "audio",
+      transport,
+      onActivity: () => {
+        activityCount += 1;
+      },
+    });
+
+    session.appendInputAudio("AAAA");
+    session.appendInputAudio("BBBB");
+
+    expect(activityCount).toBe(0);
+
+    transport.emit({ type: "input_audio_buffer.speech_started" });
+
+    expect(activityCount).toBe(1);
+  });
+
+  test("extracts nested Realtime error messages", () => {
+    expect(
+      getRealtimeErrorMessage({
+        type: "error",
+        error: { message: "bad session" },
+      }),
+    ).toBe("bad session");
   });
 });
