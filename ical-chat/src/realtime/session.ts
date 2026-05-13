@@ -3,6 +3,7 @@ import {
   realtimeTools,
   type RealtimeFunctionCall,
 } from "./tool-adapter.js";
+import { debugLogger, type DebugLogger } from "../debug.js";
 
 export type RealtimeOutputMode = "text" | "audio";
 export type RealtimeEvent = Record<string, unknown> & { type: string };
@@ -27,6 +28,7 @@ export interface RealtimeSessionOptions {
   onAudioDelta?: (delta: string) => void;
   onError?: (err: Error) => void;
   onStatus?: (message: string) => void;
+  debug?: DebugLogger;
   transport?: RealtimeTransport;
 }
 
@@ -136,6 +138,9 @@ export class WebSocketRealtimeTransport implements RealtimeTransport {
 
     this.ws.addEventListener("open", () => {
       this.isOpen = true;
+      debugLogger.log("realtime", "websocket open", {
+        queuedEvents: this.pendingEvents.length,
+      });
       for (const event of this.pendingEvents.splice(0)) {
         this.ws.send(JSON.stringify(event));
       }
@@ -156,10 +161,12 @@ export class WebSocketRealtimeTransport implements RealtimeTransport {
     });
 
     this.ws.addEventListener("close", () => {
+      debugLogger.log("realtime", "websocket close");
       this.closeHandlers.forEach((handler) => handler());
     });
 
     this.ws.addEventListener("error", () => {
+      debugLogger.log("realtime", "websocket error");
       this.errorHandlers.forEach(
         (handler) => handler(new Error("Realtime WebSocket error")),
       );
@@ -195,11 +202,13 @@ export class WebSocketRealtimeTransport implements RealtimeTransport {
 export class RealtimeSession {
   private pendingText: PendingTextResponse | undefined;
   private closed = false;
+  private readonly debug: DebugLogger;
 
   constructor(
     private readonly transport: RealtimeTransport,
     private readonly options: RealtimeSessionOptions,
   ) {
+    this.debug = options.debug ?? debugLogger;
     this.transport.onEvent((event) => this.handleEvent(event));
     this.transport.onError((err) => this.rejectPending(err));
     this.transport.onClose(() => {
@@ -255,6 +264,9 @@ export class RealtimeSession {
   }
 
   appendInputAudio(audio: string): void {
+    this.debug.log("realtime", "append input audio", {
+      bytesBase64: audio.length,
+    });
     this.send({
       type: "input_audio_buffer.append",
       audio,
@@ -268,6 +280,8 @@ export class RealtimeSession {
   }
 
   private handleEvent(event: RealtimeEvent): void {
+    this.debug.log("realtime", "recv", summarizeEvent(event));
+
     if (event.type === "response.output_text.delta") {
       this.activity();
       const delta = typeof event.delta === "string" ? event.delta : "";
@@ -318,9 +332,19 @@ export class RealtimeSession {
 
     if (calls.length > 0) {
       for (const call of calls) {
+        this.debug.log("realtime", "tool call", {
+          name: call.name,
+          callId: call.call_id,
+          argumentBytes: call.arguments.length,
+        });
         this.options.onStatus?.(`running ${call.name}...`);
         const output = executeRealtimeFunctionCall(call);
         this.activity();
+        this.debug.log("realtime", "tool result", {
+          name: call.name,
+          callId: call.call_id,
+          outputBytes: output.length,
+        });
         this.send({
           type: "conversation.item.create",
           item: {
@@ -348,6 +372,7 @@ export class RealtimeSession {
   }
 
   private send(event: RealtimeEvent): void {
+    this.debug.log("realtime", "send", summarizeEvent(event));
     this.transport.send(event);
   }
 
@@ -361,6 +386,54 @@ export class RealtimeSession {
     this.pendingText = undefined;
     pending.reject(err);
   }
+}
+
+function summarizeEvent(event: RealtimeEvent): Record<string, unknown> {
+  const response = event.response as
+    | {
+        id?: unknown;
+        status?: unknown;
+        output?: unknown;
+      }
+    | undefined;
+  const item = event.item as
+    | {
+        type?: unknown;
+        call_id?: unknown;
+        name?: unknown;
+      }
+    | undefined;
+
+  return {
+    type: event.type,
+    responseId:
+      typeof event.response_id === "string"
+        ? event.response_id
+        : typeof response?.id === "string"
+          ? response.id
+          : undefined,
+    responseStatus: response?.status,
+    itemType: item?.type,
+    callId:
+      typeof event.call_id === "string"
+        ? event.call_id
+        : typeof item?.call_id === "string"
+          ? item.call_id
+          : undefined,
+    name:
+      typeof event.name === "string"
+        ? event.name
+        : typeof item?.name === "string"
+          ? item.name
+          : undefined,
+    deltaBytes:
+      typeof event.delta === "string" ? event.delta.length : undefined,
+    audioBytesBase64:
+      typeof event.audio === "string" ? event.audio.length : undefined,
+    outputCount: Array.isArray(response?.output)
+      ? response.output.length
+      : undefined,
+  };
 }
 
 export function getRealtimeErrorMessage(event: RealtimeEvent): string {

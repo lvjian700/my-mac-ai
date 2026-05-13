@@ -11,6 +11,7 @@ import {
   type AudioBridge,
 } from "./audio-bridge.js";
 import { startVoiceIdleTimeout } from "./idle-timeout.js";
+import { debugLogger } from "../debug.js";
 
 const DEFAULT_USER_NAME = "You";
 
@@ -25,6 +26,7 @@ export async function runVoiceChat(options: VoiceChatOptions = {}) {
   );
   const realtimeConfig = realtimeConfigFromEnv();
   const audioBridge = options.audioBridge ?? new NativeAudioBridge();
+  const debug = debugLogger;
 
   let shuttingDown = false;
   let session: RealtimeSession | undefined;
@@ -32,6 +34,7 @@ export async function runVoiceChat(options: VoiceChatOptions = {}) {
   const shutdown = (message = "voice mode idle for 60s. shutting down.") => {
     if (shuttingDown) return;
     shuttingDown = true;
+    debug.log("voice", "shutdown", { message });
     idleTimeout.stop();
     session?.close();
     audioBridge.shutdown();
@@ -48,6 +51,7 @@ export async function runVoiceChat(options: VoiceChatOptions = {}) {
     instructions: systemPrompt,
     outputMode: "audio",
     ...realtimeConfig,
+    debug,
     onActivity: () => idleTimeout.reset(),
     onAudioDelta: (delta) => {
       idleTimeout.reset();
@@ -55,6 +59,7 @@ export async function runVoiceChat(options: VoiceChatOptions = {}) {
     },
     onStatus: (message) => {
       idleTimeout.reset();
+      debug.log("voice", "status", { message });
       console.log(message);
     },
     onError: (err) => {
@@ -63,6 +68,17 @@ export async function runVoiceChat(options: VoiceChatOptions = {}) {
   });
 
   audioBridge.onEvent((event) => {
+    debug.log("voice", "audio bridge event", {
+      type: event.type,
+      audioBytesBase64:
+        event.type === "input_audio" ? event.audio.length : undefined,
+      sampleRate:
+        event.type === "input_audio" ? event.sample_rate : undefined,
+      channels:
+        event.type === "input_audio" ? event.channels : undefined,
+      format: event.type === "input_audio" ? event.format : undefined,
+    });
+
     if (event.type === "input_audio") {
       session?.appendInputAudio(
         event.format === "f32le"
@@ -86,14 +102,21 @@ export async function runVoiceChat(options: VoiceChatOptions = {}) {
 
   audioBridge.onError((err) => {
     idleTimeout.reset();
+    debug.log("voice", "audio bridge error", { message: err.message });
     console.error(`audio error: ${err.message}`);
   });
 
-  audioBridge.onClose(() => shutdown("voice audio stopped. shutting down."));
+  audioBridge.onClose(() => {
+    debug.log("voice", "audio bridge close");
+    shutdown("voice audio stopped. shutting down.");
+  });
 
   process.stdin.resume();
   process.stdin.setEncoding("utf-8");
-  process.stdin.on("data", () => idleTimeout.reset());
+  process.stdin.on("data", () => {
+    debug.log("voice", "stdin activity");
+    idleTimeout.reset();
+  });
 
   process.once("SIGINT", () => shutdown("voice mode stopped."));
   process.once("SIGTERM", () => shutdown("voice mode stopped."));

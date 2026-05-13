@@ -2,6 +2,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from "child_process";
 import { existsSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
+import { debugLogger } from "../debug.js";
 
 export type AudioBridgeEvent =
   | {
@@ -62,6 +63,7 @@ export class NativeAudioBridge implements AudioBridge {
   private readonly decoderState = { buffer: Buffer.alloc(0) };
 
   constructor(executablePath = resolveAudioHelperPath()) {
+    debugLogger.log("audio", "spawn helper", { executablePath });
     this.child = spawn(executablePath, [], {
       stdio: ["pipe", "pipe", "pipe"],
     });
@@ -89,6 +91,10 @@ export class NativeAudioBridge implements AudioBridge {
   }
 
   sendOutputAudio(audio: string, sampleRate = 24_000): void {
+    debugLogger.log("audio", "send output audio", {
+      audioBytesBase64: audio.length,
+      sampleRate,
+    });
     this.child.stdin.write(
       encodeFrame({
         type: "output_audio",
@@ -102,6 +108,7 @@ export class NativeAudioBridge implements AudioBridge {
 
   shutdown(): void {
     if (!this.child.killed) {
+      debugLogger.log("audio", "shutdown helper");
       this.child.stdin.write(encodeFrame({ type: "shutdown" }));
       this.child.kill("SIGTERM");
     }
