@@ -99,6 +99,7 @@ export function buildSessionUpdateEvent(
               output: {
                 format: {
                   type: "audio/pcm",
+                  rate: 24_000,
                 },
                 voice: options.voice ?? DEFAULT_VOICE,
               },

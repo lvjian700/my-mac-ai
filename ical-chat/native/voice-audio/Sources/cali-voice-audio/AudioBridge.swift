@@ -18,6 +18,17 @@ final class AudioBridge: @unchecked Sendable {
   private let player = AVAudioPlayerNode()
   private let realtimeSampleRate = 24_000.0
   private let realtimeChannelCount: AVAudioChannelCount = 1
+  private lazy var realtimeFormat: AVAudioFormat = {
+    guard let format = AVAudioFormat(
+      commonFormat: .pcmFormatFloat32,
+      sampleRate: realtimeSampleRate,
+      channels: realtimeChannelCount,
+      interleaved: true
+    ) else {
+      preconditionFailure("failed to create Realtime audio format")
+    }
+    return format
+  }()
 
   init(writer: LockedFrameWriter) {
     self.writer = writer
@@ -65,7 +76,11 @@ final class AudioBridge: @unchecked Sendable {
 
   private func startPlayer() throws {
     playerEngine.attach(player)
-    playerEngine.connect(player, to: playerEngine.mainMixerNode, format: nil)
+    playerEngine.connect(
+      player,
+      to: playerEngine.mainMixerNode,
+      format: realtimeFormat
+    )
     playerEngine.prepare()
     try playerEngine.start()
     player.play()
@@ -74,14 +89,6 @@ final class AudioBridge: @unchecked Sendable {
   private func startInputCapture() throws {
     let inputNode = inputEngine.inputNode
     let inputFormat = inputNode.outputFormat(forBus: 0)
-    guard let realtimeFormat = AVAudioFormat(
-      commonFormat: .pcmFormatFloat32,
-      sampleRate: realtimeSampleRate,
-      channels: realtimeChannelCount,
-      interleaved: true
-    ) else {
-      throw AudioBridgeError.audioFormatAllocationFailed
-    }
     guard let converter = AVAudioConverter(from: inputFormat, to: realtimeFormat) else {
       throw AudioBridgeError.audioConverterAllocationFailed
     }

@@ -82,6 +82,7 @@ describe("RealtimeSession", () => {
           output: {
             format: {
               type: "audio/pcm",
+              rate: 24000,
             },
             voice: "marin",
           },
