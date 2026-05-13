@@ -167,8 +167,8 @@ export class WebSocketRealtimeTransport implements RealtimeTransport {
 
     this.ws.addEventListener("error", () => {
       debugLogger.log("realtime", "websocket error");
-      this.errorHandlers.forEach(
-        (handler) => handler(new Error("Realtime WebSocket error")),
+      this.errorHandlers.forEach((handler) =>
+        handler(new Error("Realtime WebSocket error")),
       );
     });
   }
@@ -220,7 +220,8 @@ export class RealtimeSession {
   static connect(options: RealtimeSessionOptions): RealtimeSession {
     const model = options.model ?? DEFAULT_MODEL;
     const transport =
-      options.transport ?? new WebSocketRealtimeTransport(options.apiKey, model);
+      options.transport ??
+      new WebSocketRealtimeTransport(options.apiKey, model);
     const session = new RealtimeSession(transport, { ...options, model });
     session.configure();
     return session;
@@ -308,7 +309,9 @@ export class RealtimeSession {
 
     if (event.type === "response.done") {
       this.activity();
-      void this.handleResponseDone(event as RealtimeEvent & RealtimeResponseDone);
+      void this.handleResponseDone(
+        event as RealtimeEvent & RealtimeResponseDone,
+      );
       return;
     }
 

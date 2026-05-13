@@ -3,11 +3,21 @@ import { parseCliOptions } from "../src/cli.js";
 
 describe("parseCliOptions", () => {
   test("defaults to text mode", () => {
-    expect(parseCliOptions([])).toEqual({ mode: "text" });
+    expect(parseCliOptions([])).toEqual({ mode: "text", debug: false });
   });
 
   test("--voice selects voice mode", () => {
-    expect(parseCliOptions(["--voice"])).toEqual({ mode: "voice" });
+    expect(parseCliOptions(["--voice"])).toEqual({
+      mode: "voice",
+      debug: false,
+    });
+  });
+
+  test("--debug enables diagnostics", () => {
+    expect(parseCliOptions(["--voice", "--debug"])).toEqual({
+      mode: "voice",
+      debug: true,
+    });
   });
 
   test("unknown flags throw a useful error", () => {
