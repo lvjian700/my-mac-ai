@@ -13,6 +13,7 @@ enum AudioBridgeError: Error {
 final class AudioBridge: @unchecked Sendable {
   private let writer: LockedFrameWriter
   private let sequenceCounter = SequenceCounter()
+  private let volumeThrottle = VolumeThrottle()
   private let inputEngine = AVAudioEngine()
   private let playerEngine = AVAudioEngine()
   private let player = AVAudioPlayerNode()
@@ -94,7 +95,7 @@ final class AudioBridge: @unchecked Sendable {
     }
 
     inputNode.installTap(onBus: 0, bufferSize: 1_024, format: inputFormat) {
-      [realtimeFormat, converter, sequenceCounter, writer] buffer,
+      [realtimeFormat, converter, sequenceCounter, writer, volumeThrottle] buffer,
       _ in
       do {
         let convertedBuffer = try Self.convert(
@@ -106,6 +107,12 @@ final class AudioBridge: @unchecked Sendable {
           return
         }
         let audio = try PCMFloat32Codec.encode(convertedBuffer)
+
+        if volumeThrottle.tick() {
+          let rms = Self.rmsLevel(audio)
+          try? writer.write(.activity("volume:\(String(format: "%.4f", rms))"))
+        }
+
         let frame = VoiceAudioFrame.inputAudio(
           audio,
           sampleRate: Int(convertedBuffer.format.sampleRate),
@@ -121,6 +128,24 @@ final class AudioBridge: @unchecked Sendable {
 
     inputEngine.prepare()
     try inputEngine.start()
+  }
+
+  private static func rmsLevel(_ audio: Data) -> Float {
+    let sampleCount = audio.count / MemoryLayout<Float>.size
+    guard sampleCount > 0 else { return 0 }
+    var sumSquares = Double(0)
+    audio.withUnsafeBytes { rawBuffer in
+      for offset in stride(
+        from: 0,
+        to: sampleCount * MemoryLayout<Float>.size,
+        by: MemoryLayout<Float>.size
+      ) {
+        let sample = rawBuffer.loadUnaligned(fromByteOffset: offset, as: Float.self)
+        let clamped = max(-1, min(1, Double(sample)))
+        sumSquares += clamped * clamped
+      }
+    }
+    return Float(sqrt(sumSquares / Double(sampleCount)))
   }
 
   private static func convert(
@@ -217,6 +242,27 @@ final class SequenceCounter: @unchecked Sendable {
     let current = value
     value += 1
     return current
+  }
+}
+
+final class VolumeThrottle: @unchecked Sendable {
+  private let lock = NSLock()
+  private var count = 0
+  private let interval: Int
+
+  init(interval: Int = 5) {
+    self.interval = interval
+  }
+
+  func tick() -> Bool {
+    lock.lock()
+    defer { lock.unlock() }
+    count += 1
+    if count >= interval {
+      count = 0
+      return true
+    }
+    return false
   }
 }
 

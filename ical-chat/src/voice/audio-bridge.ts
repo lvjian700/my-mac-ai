@@ -12,7 +12,7 @@ export type AudioBridgeEvent =
       channels?: number;
       format?: string;
     }
-  | { type: "activity" }
+  | { type: "activity"; activity?: string }
   | { type: "error"; message: string }
   | { type: "shutdown" };
 
@@ -209,11 +209,16 @@ function isAudioBridgeEvent(value: unknown): value is AudioBridgeEvent {
   const event = value as {
     type?: unknown;
     audio?: unknown;
+    activity?: unknown;
     message?: unknown;
   };
 
   if (event.type === "input_audio") return typeof event.audio === "string";
-  if (event.type === "activity") return true;
+  if (event.type === "activity") {
+    return (
+      event.activity === undefined || typeof event.activity === "string"
+    );
+  }
   if (event.type === "shutdown") return true;
   if (event.type === "error") return typeof event.message === "string";
   return false;

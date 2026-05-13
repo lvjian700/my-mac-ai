@@ -27,6 +27,8 @@ export interface RealtimeSessionOptions {
   onTextDelta?: (delta: string) => void;
   onAudioDelta?: (delta: string) => void;
   onError?: (err: Error) => void;
+  onResponseStart?: () => void;
+  onResponseEnd?: () => void;
   onStatus?: (message: string) => void;
   debug?: DebugLogger;
   transport?: RealtimeTransport;
@@ -301,9 +303,14 @@ export class RealtimeSession {
       return;
     }
 
+    if (event.type === "response.created") {
+      this.activity();
+      this.options.onResponseStart?.();
+      return;
+    }
+
     if (event.type === "input_audio_buffer.speech_started") {
       this.activity();
-      this.options.onStatus?.("listening...");
       return;
     }
 
@@ -367,6 +374,8 @@ export class RealtimeSession {
       });
       return;
     }
+
+    this.options.onResponseEnd?.();
 
     const pending = this.pendingText;
     if (!pending) return;

@@ -31,14 +31,60 @@ export async function runVoiceChat(options: VoiceChatOptions = {}) {
   let shuttingDown = false;
   let session: RealtimeSession | undefined;
 
+  const METER_BARS = 20;
+  const METER_MAX_RMS = 0.08;
+  const WAVE = [0, 1, 2, 4, 6, 8, 6, 4, 2, 1, 0, 0, 1, 2, 4, 6, 8, 6, 4, 2];
+  const BLOCKS = " ▁▂▃▄▅▆▇█";
+  const LINE_WIDTH = METER_BARS + 12;
+
+  const clearLine = () => process.stdout.write(`\r${" ".repeat(LINE_WIDTH)}\r`);
+
+  let muteState = "";
+
+  const renderVolumeMeter = (rms: number) => {
+    const filled = Math.min(
+      METER_BARS,
+      Math.round((rms / METER_MAX_RMS) * METER_BARS),
+    );
+    const bar = "█".repeat(filled) + "░".repeat(METER_BARS - filled);
+    process.stdout.write(`\r mic ${bar}${muteState}`);
+  };
+
+  let speakerFrame = 0;
+  let speakerTimer: ReturnType<typeof setInterval> | undefined;
+
+  const renderSpeakerFrame = () => {
+    const bar = Array.from({ length: METER_BARS }, (_, i) =>
+      BLOCKS[WAVE[(speakerFrame + i) % WAVE.length]],
+    ).join("");
+    process.stdout.write(`\r spk ${bar}${muteState}`);
+    speakerFrame++;
+  };
+
+  const startSpeakerAnim = () => {
+    speakerFrame = 0;
+    renderSpeakerFrame();
+    speakerTimer = setInterval(renderSpeakerFrame, 80);
+  };
+
+  const stopSpeakerAnim = () => {
+    if (speakerTimer) {
+      clearInterval(speakerTimer);
+      speakerTimer = undefined;
+      clearLine();
+    }
+  };
+
   const shutdown = (message = "voice mode idle for 60s. shutting down.") => {
     if (shuttingDown) return;
     shuttingDown = true;
     debug.log("voice", "shutdown", { message });
     idleTimeout.stop();
+    stopSpeakerAnim();
     session?.close();
     audioBridge.shutdown();
-    console.log(`\n${message}`);
+    clearLine();
+    console.log(message);
     process.exit(0);
   };
 
@@ -57,10 +103,15 @@ export async function runVoiceChat(options: VoiceChatOptions = {}) {
       idleTimeout.reset();
       audioBridge.sendOutputAudio(delta);
     },
+    onResponseStart: () => {
+      startSpeakerAnim();
+    },
+    onResponseEnd: () => {
+      stopSpeakerAnim();
+    },
     onStatus: (message) => {
       idleTimeout.reset();
       debug.log("voice", "status", { message });
-      console.log(message);
     },
     onError: (err) => {
       console.error(`realtime error: ${err.message}`);
@@ -68,16 +119,21 @@ export async function runVoiceChat(options: VoiceChatOptions = {}) {
   });
 
   audioBridge.onEvent((event) => {
-    debug.log("voice", "audio bridge event", {
-      type: event.type,
-      audioBytesBase64:
-        event.type === "input_audio" ? event.audio.length : undefined,
-      sampleRate:
-        event.type === "input_audio" ? event.sample_rate : undefined,
-      channels:
-        event.type === "input_audio" ? event.channels : undefined,
-      format: event.type === "input_audio" ? event.format : undefined,
-    });
+    if (
+      event.type !== "activity" ||
+      !event.activity?.startsWith("volume:")
+    ) {
+      debug.log("voice", "audio bridge event", {
+        type: event.type,
+        audioBytesBase64:
+          event.type === "input_audio" ? event.audio.length : undefined,
+        sampleRate:
+          event.type === "input_audio" ? event.sample_rate : undefined,
+        channels:
+          event.type === "input_audio" ? event.channels : undefined,
+        format: event.type === "input_audio" ? event.format : undefined,
+      });
+    }
 
     if (event.type === "input_audio") {
       session?.appendInputAudio(
@@ -89,6 +145,22 @@ export async function runVoiceChat(options: VoiceChatOptions = {}) {
     }
 
     idleTimeout.reset();
+
+    if (event.type === "activity" && event.activity?.startsWith("volume:")) {
+      stopSpeakerAnim();
+      renderVolumeMeter(parseFloat(event.activity.slice(7)));
+      return;
+    }
+
+    if (event.type === "activity" && event.activity === "mute:on") {
+      muteState = "  muted";
+      return;
+    }
+
+    if (event.type === "activity" && event.activity === "mute:off") {
+      muteState = "  live";
+      return;
+    }
 
     if (event.type === "error") {
       console.error(`audio error: ${event.message}`);
@@ -121,7 +193,7 @@ export async function runVoiceChat(options: VoiceChatOptions = {}) {
   process.once("SIGINT", () => shutdown("voice mode stopped."));
   process.once("SIGTERM", () => shutdown("voice mode stopped."));
 
-  console.log("Cali voice mode is listening. Idle shutdown: 60s.");
+  console.log("Cali voice mode. Idle shutdown: 60s.");
 
   await new Promise<void>(() => {});
 }
