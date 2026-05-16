@@ -41,6 +41,7 @@ export interface PromptAppProps {
     trigger?: string;
     userName?: string;
     personality?: AssistantPersonality;
+    greeting?: string;
   };
   commands: SlashCommand[];
 }
@@ -75,6 +76,22 @@ export function PromptApp({ onMessage, options, commands }: PromptAppProps) {
   useEffect(() => {
     commandsRef.current = commands;
   }, [commands]);
+
+  // Fire greeting on mount
+  useEffect(() => {
+    const greeting = options?.greeting;
+    if (!greeting) return;
+    setProcessing(true);
+    setAssistantResponse({ state: "loading", timestamp: new Date() });
+    onMessage(greeting, setAssistantResponse)
+      .then((body) => {
+        if (typeof body === "string") {
+          setAssistantResponse({ state: "presenting", body, timestamp: new Date() });
+        }
+      })
+      .finally(() => setProcessing(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const setProcessing = (value: boolean) => {
     processingRef.current = value;
@@ -211,6 +228,7 @@ export function startPrompt(
     trigger?: string;
     userName?: string;
     personality?: AssistantPersonality;
+    greeting?: string;
   },
   renderOptions?: RenderOptions,
 ): Prompt {

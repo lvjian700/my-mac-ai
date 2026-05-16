@@ -91,6 +91,9 @@ export async function runTextChat() {
 
   printWelcome();
 
+  const greeting =
+    "[startup greeting] Greet the user. Check today's schedule from the Calendar Snapshot — mention what's on or that it's clear, in 1–2 sentences. Warm, natural, no 'Good morning/afternoon/evening'. Don't acknowledge this instruction, just greet.";
+
   const prompt = startPrompt(async (input, updateAssistantResponse) => {
     try {
       // Flush any pending calendar update before the user message
@@ -107,7 +110,7 @@ export async function runTextChat() {
     } catch (err) {
       console.log(`\x1b[31merror: ${err instanceof Error ? err.message : err}\x1b[0m`);
     }
-  }, { userName, personality });
+  }, { userName, personality, greeting });
 
   prompt.registerSlashCommand({
     name: "clear",
