@@ -1,17 +1,10 @@
 import { parseCliOptions } from "./cli.js";
 import { setDebugLoggingEnabled } from "./debug.js";
 import { runTextChat } from "./text-chat.js";
-import { runVoiceChat } from "./voice/voice-chat.js";
 
 async function main() {
   const options = parseCliOptions(process.argv.slice(2));
   setDebugLoggingEnabled(options.debug);
-
-  if (options.mode === "voice") {
-    await runVoiceChat();
-    return;
-  }
-
   await runTextChat();
 }
 

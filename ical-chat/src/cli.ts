@@ -1,4 +1,4 @@
-export type CliMode = "text" | "voice";
+export type CliMode = "text";
 
 export interface CliOptions {
   mode: CliMode;
@@ -6,16 +6,10 @@ export interface CliOptions {
 }
 
 export function parseCliOptions(args: readonly string[]): CliOptions {
-  let mode: CliMode = "text";
   let debug = false;
 
   for (const arg of args) {
-    if (arg === "--voice") {
-      mode = "voice";
-      continue;
-    }
-
-    if (arg === "--debug" || arg === "--debug-realtime") {
+    if (arg === "--debug") {
       debug = true;
       continue;
     }
@@ -27,5 +21,5 @@ export function parseCliOptions(args: readonly string[]): CliOptions {
     throw new Error(`Unknown argument: ${arg}`);
   }
 
-  return { mode, debug };
+  return { mode: "text", debug };
 }

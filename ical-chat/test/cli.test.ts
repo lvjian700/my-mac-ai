@@ -6,16 +6,9 @@ describe("parseCliOptions", () => {
     expect(parseCliOptions([])).toEqual({ mode: "text", debug: false });
   });
 
-  test("--voice selects voice mode", () => {
-    expect(parseCliOptions(["--voice"])).toEqual({
-      mode: "voice",
-      debug: false,
-    });
-  });
-
   test("--debug enables diagnostics", () => {
-    expect(parseCliOptions(["--voice", "--debug"])).toEqual({
-      mode: "voice",
+    expect(parseCliOptions(["--debug"])).toEqual({
+      mode: "text",
       debug: true,
     });
   });

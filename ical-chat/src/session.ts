@@ -5,6 +5,7 @@ import { execSync } from "child_process";
 import { SKILL_MD, RULES_MD } from "./skill-data.js";
 import { CALI } from "./personalities/cali.js";
 import type { AssistantPersonality } from "./personalities/types.js";
+import { type SessionMemory, formatSnapshot } from "./session-memory.js";
 
 function stripFrontmatter(content: string): string {
   if (!content.startsWith("---")) return content;
@@ -15,28 +16,37 @@ function stripFrontmatter(content: string): string {
 export function buildSystemPrompt(
   userName?: string,
   personality: AssistantPersonality = CALI,
+  sessionMemory?: SessionMemory | null,
 ): string {
   const MEMORY_PATH = join(homedir(), ".my-mac-ai/ical/memory.yaml");
 
-  let memory: string;
+  let userMemory: string;
   if (existsSync(MEMORY_PATH)) {
-    memory = `# memory: ${MEMORY_PATH}\n${readFileSync(MEMORY_PATH, "utf-8")}`;
+    userMemory = `# memory: ${MEMORY_PATH}\n${readFileSync(MEMORY_PATH, "utf-8")}`;
   } else {
-    memory = "# no ical memory found";
+    userMemory = "# no ical memory found";
   }
 
   const tz = execSync("date +%Z", { encoding: "utf-8" }).trim();
   const today = new Date().toLocaleDateString("en-CA");
 
-  return [
+  const sections = [
     stripFrontmatter(SKILL_MD),
     `## ${personality.responseFormatSectionTitle}`,
     personality.responseFormatPrompt,
     "## Calendar Rules Reference",
     RULES_MD,
     "## Loaded Memory",
-    memory,
+    userMemory,
     "## Session Context",
     `Today is ${today}. Timezone: ${tz}.${userName ? ` The user's name is ${userName}.` : ""}`,
-  ].join("\n\n");
+  ];
+
+  if (sessionMemory) {
+    sections.push(formatSnapshot(sessionMemory));
+  } else {
+    sections.push("## Calendar Snapshot\n\nNo snapshot available — use the calendar tool for all calendar queries.");
+  }
+
+  return sections.join("\n\n");
 }

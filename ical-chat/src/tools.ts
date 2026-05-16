@@ -1,50 +1,40 @@
-import { execFileSync } from "child_process";
 import { writeFileSync, mkdirSync } from "fs";
 import { dirname } from "path";
 import { homedir } from "os";
+import type Anthropic from "@anthropic-ai/sdk";
+import { runICalAgent } from "./ical-agent.js";
 
 const MEMORY_PATH = `${homedir()}/.my-mac-ai/ical/memory.yaml`;
 
-export interface JsonObjectSchema {
-  type: "object";
-  properties: Record<string, unknown>;
-  required?: string[];
-  additionalProperties?: boolean;
-}
+export type ToolInput = Record<string, unknown> & {
+  request?: string;
+  content?: string;
+};
 
-export interface CaliTool {
-  type: "function";
-  name: string;
-  description: string;
-  parameters: JsonObjectSchema;
-}
-
-export const tools: CaliTool[] = [
+const TOOLS: Anthropic.Tool[] = [
   {
-    type: "function",
-    name: "ical",
+    name: "calendar",
     description:
-      "Run the ical CLI to read or write Apple Calendar events. Always use --format json for structured output.",
-    parameters: {
+      "Delegate a calendar operation to the calendar agent. Use for: queries outside " +
+      "the pre-loaded snapshot range, creating, updating, or deleting events. " +
+      "Do NOT use for questions answerable from the Calendar Snapshot.",
+    input_schema: {
       type: "object",
       properties: {
-        args: {
-          type: "array",
-          items: { type: "string" },
+        request: {
+          type: "string",
           description:
-            "Arguments for the ical command, e.g. ['events', '--from', 'today', '--to', 'tomorrow', '--format', 'json']",
+            "Natural language description of the calendar operation to perform",
         },
       },
-      required: ["args"],
-      additionalProperties: false,
+      required: ["request"],
     },
   },
   {
-    type: "function",
     name: "write_memory",
     description:
       "Write the calendar rules memory file. Call this when the user describes a calendar habit to save.",
-    parameters: {
+    input_schema: {
       type: "object",
       properties: {
         content: {
@@ -53,34 +43,23 @@ export const tools: CaliTool[] = [
         },
       },
       required: ["content"],
-      additionalProperties: false,
     },
   },
 ];
 
-export type ToolInput = {
-  args?: string[];
-  content?: string;
-};
+export function anthropicTools(): Anthropic.Tool[] {
+  return TOOLS;
+}
 
-export function executeTool(name: string, input: ToolInput): string {
-  if (name === "ical") {
-    try {
-      const args = input.args ?? [];
-      return execFileSync("ical", args, {
-        encoding: "utf-8",
-        timeout: 10_000,
-      });
-    } catch (err) {
-      const e = err as { stderr?: string; stdout?: string; message?: string };
-      return e.stderr || e.stdout || e.message || String(err);
-    }
+export async function executeTool(name: string, input: ToolInput): Promise<string> {
+  if (name === "calendar") {
+    return runICalAgent(input.request ?? "");
   }
 
   if (name === "write_memory") {
     try {
       mkdirSync(dirname(MEMORY_PATH), { recursive: true });
-      writeFileSync(MEMORY_PATH, input.content ?? "", "utf-8");
+      writeFileSync(MEMORY_PATH, (input.content as string) ?? "", "utf-8");
       return `Saved to ${MEMORY_PATH}`;
     } catch (err) {
       return `Error: ${err instanceof Error ? err.message : err}`;
