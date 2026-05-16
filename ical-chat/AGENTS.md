@@ -7,8 +7,11 @@ Terminal multi-turn chat for Apple Calendar. Uses the Anthropic API directly so 
 ```bash
 bun install          # install dependencies
 bun run start        # start the REPL (reads skill files from ../ical/)
+bun run start -- --debug  # start with API/tool debug logs on stderr
+bun run sync         # refresh session-memory.json every 2 minutes
 bun run typecheck    # type-check source, build script, and tests
-bun run test         # run tests
+bun run test         # run unit/prompt tests
+bun run test:integration  # run Calendar integration tests against real ical + ~/.my-mac-ai
 ```
 
 Requires `ical` binary on PATH (`make install` from `../ical/`).
@@ -20,6 +23,7 @@ Requires `ANTHROPIC_API_KEY` in the environment.
 bun run build              # bundle to dist/cali (Bun executable)
 make install               # build + install to ~/.local/bin/cali
 PREFIX=/usr/local make install  # install system-wide (requires sudo)
+make sync                  # run the Calendar Snapshot refresh daemon
 make uninstall             # remove installed binary
 ```
 
@@ -68,11 +72,14 @@ This split eliminates preamble narration ("One sec…", "Checking your calendar�
 
 - On startup, `buildSessionMemory()` fetches the current week + next week from `ical` and writes `~/.my-mac-ai/ical/session-memory.json`.
 - The snapshot is embedded in the system prompt so the orchestrator can answer common date-range questions without a tool call.
-- A `setInterval` (60 s) polls the file for daemon-written updates and queues a `SessionMemoryUpdate` diff, injected as a context message before the next user turn.
+- `bun run sync` / `make sync` runs `scripts/cali-sync.ts`, a long-running daemon that refreshes the snapshot file every 2 minutes.
+- During chat, a `setInterval` (60 s) polls the file for daemon-written updates and queues a `SessionMemoryUpdate` diff, injected as a context message before the next user turn.
 
 **Memory:** `write_memory` tool writes to `~/.my-mac-ai/ical/memory.yaml`. Memory is loaded once at session startup; if a habit is saved mid-session, it applies from the next turn onward.
 
 **Debug flags:**
 
+- `--debug` — CLI flag equivalent to enabling API/tool debug logs
 - `CALI_DEBUG=1` — log API send/recv events to stderr
+- `CALI_DEBUG_REALTIME=1` — legacy alias still accepted for debug logging
 - `CALI_DEBUG_MESSAGES=1` — append raw user/assistant messages to `~/.my-mac-ai/ical/messages.jsonl`

@@ -60,8 +60,14 @@ export function buildSessionMemory(): SessionMemory {
     ["events", "--from", range.from, "--to", range.to, "--format", "json"],
     { encoding: "utf-8", timeout: 15_000 },
   );
+  let events: CalEvent[];
+  try {
+    events = JSON.parse(raw) as CalEvent[];
+  } catch {
+    throw new Error(`ical returned invalid JSON: ${raw.slice(0, 200)}`);
+  }
   const memory: SessionMemory = {
-    events: JSON.parse(raw) as CalEvent[],
+    events,
     syncedAt: new Date().toISOString(),
     range,
   };

@@ -1,5 +1,15 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { execFileSync } from "child_process";
+import { SKILL_MD } from "./skill-data.js";
+
+function extractCommandsSection(md: string): string {
+  const start = md.indexOf("\n## Commands\n");
+  if (start === -1) return "";
+  const end = md.indexOf("\n## ", start + 1);
+  return end === -1 ? md.slice(start) : md.slice(start, end);
+}
+
+const CLI_REFERENCE = extractCommandsSection(SKILL_MD);
 
 const ICAL_TOOL: Anthropic.Tool = {
   name: "ical",
@@ -47,7 +57,7 @@ export async function runICalAgent(request: string): Promise<string> {
   const today = new Date().toLocaleDateString("en-CA");
   const tz = getTimezone();
 
-  const systemPrompt = `You are a calendar operations agent. Today is ${today}, timezone ${tz}. Execute the requested calendar operation using the ical tool and return a concise factual summary. Do not narrate — just do and report.`;
+  const systemPrompt = `You are a calendar operations agent. Today is ${today}, timezone ${tz}. Execute the requested calendar operation using the ical tool and return a concise factual summary. Do not narrate — just do and report.\n\n${CLI_REFERENCE}`;
 
   const messages: Anthropic.MessageParam[] = [{ role: "user", content: request }];
 

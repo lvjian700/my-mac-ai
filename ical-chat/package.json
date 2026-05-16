@@ -11,6 +11,7 @@
     "start": "bun run src/index.ts",
     "build": "bun run build.ts",
     "test": "bun test test/*.test.ts test/*.test.tsx",
+    "test:integration": "bun test ./test/*.integration.ts",
     "typecheck": "tsc --noEmit",
     "sync": "bun run scripts/cali-sync.ts",
     "devtools": "react-devtools"

@@ -53,13 +53,17 @@ export function anthropicTools(): Anthropic.Tool[] {
 
 export async function executeTool(name: string, input: ToolInput): Promise<string> {
   if (name === "calendar") {
-    return runICalAgent(input.request ?? "");
+    try {
+      return await runICalAgent(input.request ?? "");
+    } catch (err) {
+      return `Error: ${err instanceof Error ? err.message : err}`;
+    }
   }
 
   if (name === "write_memory") {
     try {
       mkdirSync(dirname(MEMORY_PATH), { recursive: true });
-      writeFileSync(MEMORY_PATH, (input.content as string) ?? "", "utf-8");
+      writeFileSync(MEMORY_PATH, (input.content as string | undefined) ?? "", "utf-8");
       return `Saved to ${MEMORY_PATH}`;
     } catch (err) {
       return `Error: ${err instanceof Error ? err.message : err}`;

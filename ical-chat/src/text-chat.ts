@@ -87,6 +87,7 @@ export async function runTextChat() {
       memoryState.pendingUpdate = { kind: "session_memory_update", syncedAt: current.syncedAt, diff };
     }
   }, 60_000);
+  process.on("exit", () => clearInterval(watchInterval));
 
   printWelcome();
 
@@ -98,8 +99,8 @@ export async function runTextChat() {
         memoryState.pendingUpdate = null;
         try {
           session.injectContextMessage(formatMemoryUpdate(update));
-        } catch {
-          // silently skip — don't block the user turn
+        } catch (err) {
+          process.stderr.write(`[cali] snapshot inject failed: ${err instanceof Error ? err.message : err}\n`);
         }
       }
       return await runAgentTurn(session, input, updateAssistantResponse);
