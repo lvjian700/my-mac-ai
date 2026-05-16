@@ -54,10 +54,10 @@ function getTimezone(): string {
 
 export async function runICalAgent(request: string): Promise<string> {
   const client = new Anthropic({ apiKey: requireAnthropicKey() });
-  const today = new Date().toLocaleDateString("en-CA");
+  const now = new Date().toLocaleString("en-CA", { hour12: false }).replace(",", "");
   const tz = getTimezone();
 
-  const systemPrompt = `You are a calendar operations agent. Today is ${today}, timezone ${tz}. Execute the requested calendar operation using the ical tool and return a concise factual summary. Do not narrate — just do and report.\n\n${CLI_REFERENCE}`;
+  const systemPrompt = `You are a calendar operations agent. Current date/time is ${now} (${tz}). Execute the requested calendar operation using the ical tool and return a concise factual summary. Do not narrate — just do and report.\n\n${CLI_REFERENCE}`;
 
   const messages: Anthropic.MessageParam[] = [{ role: "user", content: request }];
 
