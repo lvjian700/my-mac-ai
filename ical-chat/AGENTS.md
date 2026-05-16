@@ -38,7 +38,7 @@ The bundle is a single self-contained ESM file with all dependencies inlined and
 **Two-agent design:**
 
 - **Orchestrator** (`claude-sonnet-4-6`) — handles conversation, reads the Calendar Snapshot from system prompt, calls `calendar` tool for anything outside the snapshot window or mutations.
-- **iCal sub-agent** (`claude-haiku-4-5-20251001`) — has only the `ical` tool; runs a tool-calling loop until done; returns a concise factual summary. Never speaks to the user directly.
+- **iCal sub-agent** (`claude-haiku-4-5-20251001`) — has only the `ical` tool; runs a tool-calling loop until done; returns a concise factual summary. Never speaks to the user directly. The `## Commands` section of `SKILL.md` is injected into its system prompt so it has the correct CLI flags at call time.
 
 This split eliminates preamble narration ("One sec…", "Checking your calendar…") from the orchestrator's final response.
 
@@ -79,7 +79,6 @@ This split eliminates preamble narration ("One sec…", "Checking your calendar�
 
 **Debug flags:**
 
-- `--debug` — CLI flag equivalent to enabling API/tool debug logs
+- `--debug` — CLI flag equivalent to `CALI_DEBUG=1`
 - `CALI_DEBUG=1` — log API send/recv events to stderr
-- `CALI_DEBUG_REALTIME=1` — legacy alias still accepted for debug logging
 - `CALI_DEBUG_MESSAGES=1` — append raw user/assistant messages to `~/.my-mac-ai/ical/messages.jsonl`
