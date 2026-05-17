@@ -1,0 +1,4 @@
+[commands]
+build = "make app"
+run = "script/build_and_run.sh"
+test = "make test"
