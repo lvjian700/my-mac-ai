@@ -7,11 +7,13 @@ import SwiftUI
         .frame(width: 800, height: 600)
 }
 
-struct ContentView: View {
+public struct ContentView: View {
     @EnvironmentObject private var model: AppModel
     @SceneStorage("ical-mac.selection") private var selection: SidebarItem.ID?
 
-    var body: some View {
+    public init() {}
+
+    public var body: some View {
         NavigationSplitView {
             SidebarView(selection: $selection)
         } detail: {
@@ -43,12 +45,12 @@ struct ContentView: View {
     }
 }
 
-struct SidebarItem: Identifiable, Hashable {
-    let id: String
+public struct SidebarItem: Identifiable, Hashable, Sendable {
+    public let id: String
     let title: String
     let detail: String
     let systemImage: String
 
-    static let chat = SidebarItem(id: "chat", title: "Assistant", detail: "Calendar chat", systemImage: "message")
-    static let calendar = SidebarItem(id: "calendar", title: "Calendar", detail: "Upcoming context", systemImage: "calendar")
+    public static let chat = SidebarItem(id: "chat", title: "Assistant", detail: "Calendar chat", systemImage: "message")
+    public static let calendar = SidebarItem(id: "calendar", title: "Calendar", detail: "Upcoming context", systemImage: "calendar")
 }

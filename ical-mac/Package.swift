@@ -8,6 +8,7 @@ let package = Package(
     ],
     products: [
         .library(name: "ICalMacCore", targets: ["ICalMacCore"]),
+        .library(name: "ICalMacUI", targets: ["ICalMacUI"]),
         .executable(name: "ical-mac", targets: ["ICalMacApp"]),
     ],
     targets: [
@@ -19,9 +20,14 @@ let package = Package(
                 .linkedFramework("Security"),
             ]
         ),
+        .target(
+            name: "ICalMacUI",
+            dependencies: ["ICalMacCore"],
+            path: "Sources/ICalMacUI"
+        ),
         .executableTarget(
             name: "ICalMacApp",
-            dependencies: ["ICalMacCore"],
+            dependencies: ["ICalMacUI"],
             path: "Sources/ICalMacApp",
             resources: [
                 .process("../../Resources")

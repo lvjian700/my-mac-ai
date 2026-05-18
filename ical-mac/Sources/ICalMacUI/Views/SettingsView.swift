@@ -6,10 +6,12 @@ import SwiftUI
         .frame(width: 400)
 }
 
-struct SettingsView: View {
+public struct SettingsView: View {
     @EnvironmentObject private var model: AppModel
 
-    var body: some View {
+    public init() {}
+
+    public var body: some View {
         Form {
             Section("Anthropic") {
                 SecureField("API key", text: $model.apiKeyDraft)

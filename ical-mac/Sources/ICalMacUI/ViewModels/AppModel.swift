@@ -2,20 +2,20 @@ import Foundation
 import ICalMacCore
 
 @MainActor
-final class AppModel: ObservableObject {
-    @Published var messages: [ChatMessage] = [
+public final class AppModel: ObservableObject {
+    @Published public var messages: [ChatMessage] = [
         ChatMessage(role: .assistant, text: "Ask about your calendar or tell me what to schedule.")
     ]
-    @Published var events: [CalendarEvent] = []
-    @Published var calendars: [CalendarInfo] = []
-    @Published var accessStatus: CalendarAccessStatus = .notDetermined
-    @Published var statusText = "Calendar not loaded"
-    @Published var isSending = false
-    @Published var isRefreshing = false
-    @Published var apiKeyDraft = ""
-    @Published var modelName = UserDefaults.standard.string(forKey: "icalMac.model") ?? "claude-sonnet-4-6"
-    @Published var defaultCalendarTitle = UserDefaults.standard.string(forKey: "icalMac.defaultCalendarTitle") ?? ""
-    @Published var isShowingCachedSnapshot = false
+    @Published public var events: [CalendarEvent] = []
+    @Published public var calendars: [CalendarInfo] = []
+    @Published public var accessStatus: CalendarAccessStatus = .notDetermined
+    @Published public var statusText = "Calendar not loaded"
+    @Published public var isSending = false
+    @Published public var isRefreshing = false
+    @Published public var apiKeyDraft = ""
+    @Published public var modelName = UserDefaults.standard.string(forKey: "icalMac.model") ?? "claude-sonnet-4-6"
+    @Published public var defaultCalendarTitle = UserDefaults.standard.string(forKey: "icalMac.defaultCalendarTitle") ?? ""
+    @Published public var isShowingCachedSnapshot = false
 
     private let calendarStore: CalendarStore
     private let memoryStore: MemoryStore
@@ -25,7 +25,7 @@ final class AppModel: ObservableObject {
     private var assistant: AssistantService
     private var snapshot: SessionSnapshot?
 
-    init(
+    public init(
         calendarStore: CalendarStore = EventKitCalendarStore(),
         memoryStore: MemoryStore = MemoryStore(),
         promptStore: PromptStore = PromptStore(),
@@ -56,11 +56,11 @@ final class AppModel: ObservableObject {
         self.accessStatus = calendarStore.accessStatus()
     }
 
-    var hasAPIKey: Bool {
+    public var hasAPIKey: Bool {
         !(apiKeyStore.readAPIKey() ?? "").isEmpty
     }
 
-    func loadCalendarOnLaunch() async {
+    public func loadCalendarOnLaunch() async {
         accessStatus = calendarStore.accessStatus()
         guard accessStatus == .granted else {
             statusText = snapshot == nil ? "Calendar permission not requested" : "Calendar permission not requested; showing cached snapshot"
@@ -69,7 +69,7 @@ final class AppModel: ObservableObject {
         await refreshCalendar()
     }
 
-    func refreshCalendar() async {
+    public func refreshCalendar() async {
         isRefreshing = true
         defer { isRefreshing = false }
         do {
@@ -92,7 +92,7 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func send(_ text: String) async {
+    public func send(_ text: String) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !isSending else { return }
         messages.append(ChatMessage(role: .user, text: trimmed))
@@ -108,7 +108,7 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func saveSettings() {
+    public func saveSettings() {
         UserDefaults.standard.set(modelName, forKey: "icalMac.model")
         let defaultCalendar = defaultCalendarTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         if defaultCalendar.isEmpty {
@@ -130,7 +130,7 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func clearChat() {
+    public func clearChat() {
         assistant.clearHistory()
         messages = [ChatMessage(role: .assistant, text: "Fresh thread. What should we do with your calendar?")]
     }
