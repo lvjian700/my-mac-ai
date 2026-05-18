@@ -65,9 +65,8 @@ describe("ChatSession", () => {
   test("sendText resolves with streamed text", async () => {
     const client = mockClient([{ blocks: [makeTextBlock("Hello!")] }]);
     const session = ChatSession.connect({
-      apiKey: "test",
+      client,
       instructions: "You are helpful.",
-      _client: client,
     });
 
     const result = await session.sendText("hi");
@@ -78,9 +77,8 @@ describe("ChatSession", () => {
     const client = mockClient([{ blocks: [makeTextBlock("world")] }]);
     const deltas: string[] = [];
     const session = ChatSession.connect({
-      apiKey: "test",
+      client,
       instructions: "sys",
-      _client: client,
       onTextDelta: (d) => deltas.push(d),
     });
 
@@ -90,7 +88,7 @@ describe("ChatSession", () => {
 
   test("injectContextMessage adds to history without sending", () => {
     const client = mockClient([]);
-    const session = new ChatSession({ apiKey: "test", instructions: "sys", _client: client });
+    const session = new ChatSession({ client, instructions: "sys" });
     session.injectContextMessage("background info");
     expect((client.messages.stream as ReturnType<typeof mock>).mock.calls.length).toBe(0);
   });
@@ -101,9 +99,8 @@ describe("ChatSession", () => {
       { blocks: [makeTextBlock("second")] },
     ]);
     const session = ChatSession.connect({
-      apiKey: "test",
+      client,
       instructions: "sys",
-      _client: client,
     });
 
     await session.sendText("hello");
@@ -127,9 +124,8 @@ describe("ChatSession", () => {
 
     const statuses: string[] = [];
     const session = ChatSession.connect({
-      apiKey: "test",
+      client,
       instructions: "sys",
-      _client: client,
       onStatus: (s) => statuses.push(s),
     });
 

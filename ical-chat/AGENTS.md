@@ -77,6 +77,27 @@ This split eliminates preamble narration ("One sec…", "Checking your calendar�
 
 **Memory:** `write_memory` tool writes to `~/.my-mac-ai/ical/memory.yaml`. Memory is loaded once at session startup; if a habit is saved mid-session, it applies from the next turn onward.
 
+**Provider overrides:**
+
+By default the app uses the Anthropic API directly (`ANTHROPIC_API_KEY`). To swap in a different provider (e.g. AWS Bedrock) on a specific machine without touching committed files, create `src/provider.local.ts`. This file is gitignored and never pushed to the remote.
+
+`src/provider.local.ts` must export a single `createProvider()` function that returns a `Provider`:
+
+```typescript
+import AnthropicBedrock from "@anthropic-ai/bedrock-sdk";
+import type { Provider } from "./provider.js";
+
+export function createProvider(): Provider {
+  return {
+    client: new AnthropicBedrock() as unknown as import("@anthropic-ai/sdk").default,
+    orchestratorModel: "us.anthropic.claude-sonnet-4-6-v1:0",
+    subAgentModel: "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+  };
+}
+```
+
+When the file is absent, `getProvider()` in `src/provider.ts` falls back to the default Anthropic client. The build system (`build.ts`) stubs the missing module automatically, so `bun run build` works on machines without a local override.
+
 **Debug flags:**
 
 - `--debug` — CLI flag equivalent to `CALI_DEBUG=1`

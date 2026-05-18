@@ -1,4 +1,4 @@
-import { chmodSync, mkdirSync, readFileSync, rmSync, renameSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, renameSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -28,6 +28,24 @@ const embedSkillData = {
   },
 };
 
+// When building on a machine without a local provider override, stub the module
+// so Bun doesn't fail trying to bundle a non-existent file.
+const stubLocalProvider = {
+  name: "stub-local-provider",
+  setup(build: Bun.PluginBuilder) {
+    if (!existsSync(join(__dirname, "src/provider.local.ts"))) {
+      build.onResolve({ filter: /\/provider\.local\.js$/ }, () => ({
+        path: "provider-local-stub",
+        namespace: "no-local-provider",
+      }));
+      build.onLoad({ filter: /.*/, namespace: "no-local-provider" }, () => ({
+        contents: "// no local provider override",
+        loader: "js",
+      }));
+    }
+  },
+};
+
 const stubDevtools = {
   name: "stub-devtools",
   setup(build: Bun.PluginBuilder) {
@@ -51,7 +69,7 @@ const result = await Bun.build({
   target: "bun",
   format: "esm",
   splitting: false,
-  plugins: [embedSkillData, stubDevtools],
+  plugins: [embedSkillData, stubLocalProvider, stubDevtools],
   jsx: {
     runtime: "automatic",
     importSource: "react",

@@ -3,10 +3,8 @@ import { appendFileSync, mkdirSync } from "fs";
 import * as os from "os";
 import * as path from "path";
 import { buildSystemPrompt } from "./session.js";
-import {
-  ChatSession,
-  requireAnthropicKey,
-} from "./chat-session.js";
+import { ChatSession } from "./chat-session.js";
+import { getProvider } from "./provider.js";
 import {
   startPrompt,
   type AssistantResponseUpdater,
@@ -63,10 +61,11 @@ export async function runTextChat() {
   }
 
   const systemPrompt = buildSystemPrompt(userName, personality, sessionMemory);
-  const apiKey = requireAnthropicKey();
+  const provider = await getProvider();
   const createSession = () =>
     ChatSession.connect({
-      apiKey,
+      client: provider.client,
+      model: provider.orchestratorModel,
       instructions: systemPrompt,
     });
   let session = createSession();

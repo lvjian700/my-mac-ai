@@ -1,10 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { requireAnthropicKey } from "./ical-agent.js";
 import { executeTool, anthropicTools, type ToolInput } from "./tools.js";
 import { debugLogger, type DebugLogger } from "./debug.js";
 
 export interface ChatSessionOptions {
-  apiKey: string;
+  client: Anthropic;
   instructions: string;
   model?: string;
   onTextDelta?: (delta: string) => void;
@@ -12,12 +11,9 @@ export interface ChatSessionOptions {
   onResponseStart?: () => void;
   onResponseEnd?: () => void;
   debug?: DebugLogger;
-  _client?: Anthropic;
 }
 
 const DEFAULT_MODEL = "claude-sonnet-4-6";
-
-export { requireAnthropicKey };
 
 export class ChatSession {
   private messages: Anthropic.MessageParam[] = [];
@@ -25,8 +21,7 @@ export class ChatSession {
   private readonly debug: DebugLogger;
 
   constructor(private readonly options: ChatSessionOptions) {
-    this.client =
-      options._client ?? new Anthropic({ apiKey: options.apiKey });
+    this.client = options.client;
     this.debug = options.debug ?? debugLogger;
   }
 

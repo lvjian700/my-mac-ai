@@ -1,6 +1,7 @@
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { execFileSync } from "child_process";
 import { SKILL_MD } from "./skill-data.js";
+import { getProvider } from "./provider.js";
 
 function extractCommandsSection(md: string): string {
   const start = md.indexOf("\n## Commands\n");
@@ -29,12 +30,6 @@ const ICAL_TOOL: Anthropic.Tool = {
   },
 };
 
-export function requireAnthropicKey(env: NodeJS.ProcessEnv = process.env): string {
-  const apiKey = env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required");
-  return apiKey;
-}
-
 function executeIcal(args: string[]): string {
   try {
     return execFileSync("ical", args, { encoding: "utf-8", timeout: 10_000 });
@@ -53,7 +48,7 @@ function getTimezone(): string {
 }
 
 export async function runICalAgent(request: string): Promise<string> {
-  const client = new Anthropic({ apiKey: requireAnthropicKey() });
+  const provider = await getProvider();
   const now = new Date().toLocaleString("en-CA", { hour12: false }).replace(",", "");
   const tz = getTimezone();
 
@@ -62,8 +57,8 @@ export async function runICalAgent(request: string): Promise<string> {
   const messages: Anthropic.MessageParam[] = [{ role: "user", content: request }];
 
   while (true) {
-    const response = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
+    const response = await provider.client.messages.create({
+      model: provider.subAgentModel,
       max_tokens: 1024,
       system: systemPrompt,
       tools: [ICAL_TOOL],
