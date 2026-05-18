@@ -29,10 +29,18 @@ private struct StatusPanel: View {
                 .foregroundStyle(.secondary)
             Text("Calendar access: \(model.accessStatus.rawValue)")
                 .foregroundStyle(.secondary)
+            if model.isShowingCachedSnapshot {
+                Text("Events below are from the last saved snapshot.")
+                    .foregroundStyle(.secondary)
+            }
             if !model.hasAPIKey {
                 Text("Add an Anthropic API key in Settings before chatting.")
                     .foregroundStyle(.secondary)
             }
+            Button(model.accessStatus == .granted ? "Refresh Calendar" : "Request Calendar Access") {
+                Task { await model.refreshCalendar() }
+            }
+            .disabled(model.isRefreshing)
         }
         .panelStyle()
     }
@@ -43,8 +51,15 @@ private struct UpcomingEventsPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label("Upcoming", systemImage: "calendar.badge.clock")
-                .font(.headline)
+            HStack {
+                Label("Upcoming", systemImage: "calendar.badge.clock")
+                    .font(.headline)
+                if events.isEmpty == false {
+                    Text(events.count == 1 ? "1 event" : "\(events.count) events")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
 
             if events.isEmpty {
                 Text("No events loaded.")

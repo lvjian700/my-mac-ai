@@ -72,13 +72,16 @@ private struct ComposerView: View {
     @EnvironmentObject private var model: AppModel
     @Binding var text: String
     var onSubmit: () -> Void
+    @FocusState private var isFocused: Bool
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 10) {
             TextField("Ask about your schedule or create an event", text: $text, axis: .vertical)
                 .textFieldStyle(.roundedBorder)
                 .lineLimit(1...5)
+                .focused($isFocused)
                 .onSubmit(onSubmit)
+                .onAppear { isFocused = true }
 
             Button(action: onSubmit) {
                 Label("Send", systemImage: "paperplane.fill")

@@ -88,7 +88,13 @@ public struct PromptStore: Sendable {
 
     public static func defaultSkillDirectory() -> URL? {
         let cwd = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        let packageRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
         let candidates = [
+            packageRoot.appendingPathComponent("../ical/.claude/skills/ical").standardizedFileURL,
             cwd.appendingPathComponent("../ical/.claude/skills/ical").standardizedFileURL,
             cwd.appendingPathComponent("ical/.claude/skills/ical").standardizedFileURL,
             URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".codex/skills/ical"),

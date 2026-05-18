@@ -15,6 +15,18 @@ make install             # install app to ~/Applications/ical-mac.app
 
 Requires macOS 14+.
 
+## Xcode
+
+```bash
+make xcode        # open the SwiftPM package in Xcode
+make xcode-build  # validate the Xcode-generated ical-mac scheme
+make xcode-test   # run package tests through Xcode
+```
+
+In Xcode, select the `ical-mac` scheme and `My Mac`, then Run. The package keeps
+skill lookup independent of Xcode's generated `.swiftpm/xcode` working directory,
+so breakpoints in `Sources/ICalMacApp` and `Sources/ICalMacCore` work normally.
+
 ## Architecture
 
 **Tech stack:** Swift 6, SwiftUI, EventKit, Security/Keychain, URLSession.

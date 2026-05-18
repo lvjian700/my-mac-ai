@@ -3,7 +3,7 @@ APP_DIR ?= $(HOME)/Applications
 BUILD_DIR := .build/release
 APP_BUNDLE := .build/ical-mac.app
 
-.PHONY: build test run app install uninstall clean
+.PHONY: build test run app install uninstall clean xcode xcode-build xcode-test
 
 build:
 	swift build -c release
@@ -27,3 +27,14 @@ uninstall:
 
 clean:
 	rm -rf .build
+
+xcode:
+	./scripts/open_xcode.sh
+
+xcode-build:
+	./scripts/ensure_xcode_workspace.sh
+	xcodebuild -quiet -workspace .swiftpm/xcode/package.xcworkspace -scheme ical-mac -destination 'platform=macOS' build
+
+xcode-test:
+	./scripts/ensure_xcode_workspace.sh
+	xcodebuild -quiet -workspace .swiftpm/xcode/package.xcworkspace -scheme ical-mac-Package -destination 'platform=macOS' test

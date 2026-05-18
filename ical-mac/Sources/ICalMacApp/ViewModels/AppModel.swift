@@ -15,6 +15,7 @@ final class AppModel: ObservableObject {
     @Published var apiKeyDraft = ""
     @Published var modelName = UserDefaults.standard.string(forKey: "icalMac.model") ?? "claude-sonnet-4-6"
     @Published var defaultCalendarTitle = UserDefaults.standard.string(forKey: "icalMac.defaultCalendarTitle") ?? ""
+    @Published var isShowingCachedSnapshot = false
 
     private let calendarStore: CalendarStore
     private let memoryStore: MemoryStore
@@ -51,6 +52,7 @@ final class AppModel: ObservableObject {
         self.apiKeyDraft = apiKeyStore.readAPIKey() ?? ""
         self.snapshot = memoryStore.readSnapshot()
         self.events = snapshot?.events ?? []
+        self.isShowingCachedSnapshot = snapshot != nil
         self.accessStatus = calendarStore.accessStatus()
     }
 
@@ -61,7 +63,7 @@ final class AppModel: ObservableObject {
     func loadCalendarOnLaunch() async {
         accessStatus = calendarStore.accessStatus()
         guard accessStatus == .granted else {
-            statusText = "Calendar permission not requested"
+            statusText = snapshot == nil ? "Calendar permission not requested" : "Calendar permission not requested; showing cached snapshot"
             return
         }
         await refreshCalendar()
@@ -82,6 +84,7 @@ final class AppModel: ObservableObject {
             try memoryStore.writeSnapshot(nextSnapshot)
             snapshot = nextSnapshot
             events = nextSnapshot.events
+            isShowingCachedSnapshot = false
             statusText = "Synced \(Self.timeFormatter.string(from: nextSnapshot.syncedAt))"
         } catch {
             statusText = error.localizedDescription
