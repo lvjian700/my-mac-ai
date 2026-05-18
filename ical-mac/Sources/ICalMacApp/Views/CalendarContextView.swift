@@ -1,6 +1,18 @@
 import ICalMacCore
 import SwiftUI
 
+#Preview("Granted") {
+    CalendarContextView()
+        .environmentObject(AppModel.preview())
+        .frame(width: 600, height: 500)
+}
+
+#Preview("No permission") {
+    CalendarContextView()
+        .environmentObject(AppModel.preview(status: .denied, events: [], calendars: []))
+        .frame(width: 600, height: 500)
+}
+
 struct CalendarContextView: View {
     @EnvironmentObject private var model: AppModel
 

@@ -1,5 +1,11 @@
 import SwiftUI
 
+#Preview {
+    @Previewable @State var selection: SidebarItem.ID? = SidebarItem.chat.id
+    SidebarView(selection: $selection)
+        .frame(width: 200)
+}
+
 struct SidebarView: View {
     @Binding var selection: SidebarItem.ID?
 

@@ -1,5 +1,11 @@
 import SwiftUI
 
+#Preview {
+    SettingsView()
+        .environmentObject(AppModel.preview())
+        .frame(width: 400)
+}
+
 struct SettingsView: View {
     @EnvironmentObject private var model: AppModel
 

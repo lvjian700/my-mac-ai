@@ -1,6 +1,20 @@
 import ICalMacCore
 import SwiftUI
 
+#Preview("With messages") {
+    ChatView()
+        .environmentObject(AppModel.preview())
+        .frame(width: 700, height: 500)
+}
+
+#Preview("Empty") {
+    ChatView()
+        .environmentObject(AppModel.preview(messages: [
+            ChatMessage(role: .assistant, text: "Ask about your calendar or tell me what to schedule.")
+        ]))
+        .frame(width: 700, height: 500)
+}
+
 struct ChatView: View {
     @EnvironmentObject private var model: AppModel
     @State private var draft = ""

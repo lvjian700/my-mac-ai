@@ -1,6 +1,12 @@
 import ICalMacCore
 import SwiftUI
 
+#Preview {
+    ContentView()
+        .environmentObject(AppModel.preview())
+        .frame(width: 800, height: 600)
+}
+
 struct ContentView: View {
     @EnvironmentObject private var model: AppModel
     @SceneStorage("ical-mac.selection") private var selection: SidebarItem.ID?
