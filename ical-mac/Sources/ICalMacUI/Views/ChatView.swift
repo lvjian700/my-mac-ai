@@ -70,8 +70,8 @@ private struct MessageRow: View {
     let message: ChatMessage
     @ScaledMetric(relativeTo: .body) private var bubblePadding = 10
     @ScaledMetric(relativeTo: .body) private var bubbleSpacing = 5
-    @ScaledMetric(relativeTo: .body) private var sideSpacer = 24
-    @ScaledMetric(relativeTo: .body) private var maxBubbleWidth = 340
+    @ScaledMetric(relativeTo: .body) private var sideSpacer = 80
+    @ScaledMetric(relativeTo: .body) private var maxBubbleWidth = 760
 
     var body: some View {
         HStack(alignment: .top) {

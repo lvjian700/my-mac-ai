@@ -59,12 +59,16 @@ private struct WeekHeaderView: View {
     @EnvironmentObject private var model: AppModel
 
     var body: some View {
-        ZStack {
-            HStack {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
                 Text(Self.monthFormatter.string(from: model.displayedWeekStartDate))
                     .font(.largeTitle.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
 
                 Spacer()
+
+                navigationControls
             }
 
             Picker("Calendar View", selection: .constant(CalendarDisplayMode.week)) {
@@ -75,43 +79,43 @@ private struct WeekHeaderView: View {
             }
             .labelsHidden()
             .pickerStyle(.segmented)
-            .frame(width: 300)
+            .frame(maxWidth: 320)
             .help("Week view is available in this version")
+        }
+    }
 
-            HStack(spacing: 8) {
-                Spacer()
-
-                if model.isRefreshing {
-                    ProgressView()
-                        .controlSize(.small)
-                }
-
-                Button {
-                    Task { await model.moveDisplayedWeek(by: -1) }
-                } label: {
-                    Label("Previous Week", systemImage: "chevron.left")
-                }
-                .buttonStyle(.borderless)
-                .labelStyle(.iconOnly)
-                .disabled(model.isRefreshing)
-
-                Button {
-                    Task { await model.showToday() }
-                } label: {
-                    Text("Today")
-                }
-                .buttonStyle(.bordered)
-                .disabled(model.isRefreshing)
-
-                Button {
-                    Task { await model.moveDisplayedWeek(by: 1) }
-                } label: {
-                    Label("Next Week", systemImage: "chevron.right")
-                }
-                .buttonStyle(.borderless)
-                .labelStyle(.iconOnly)
-                .disabled(model.isRefreshing)
+    private var navigationControls: some View {
+        HStack(spacing: 8) {
+            if model.isRefreshing {
+                ProgressView()
+                    .controlSize(.small)
             }
+
+            Button {
+                Task { await model.moveDisplayedWeek(by: -1) }
+            } label: {
+                Label("Previous Week", systemImage: "chevron.left")
+            }
+            .buttonStyle(.borderless)
+            .labelStyle(.iconOnly)
+            .disabled(model.isRefreshing)
+
+            Button {
+                Task { await model.showToday() }
+            } label: {
+                Text("Today")
+            }
+            .buttonStyle(.bordered)
+            .disabled(model.isRefreshing)
+
+            Button {
+                Task { await model.moveDisplayedWeek(by: 1) }
+            } label: {
+                Label("Next Week", systemImage: "chevron.right")
+            }
+            .buttonStyle(.borderless)
+            .labelStyle(.iconOnly)
+            .disabled(model.isRefreshing)
         }
     }
 
