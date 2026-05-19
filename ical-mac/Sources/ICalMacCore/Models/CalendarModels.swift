@@ -11,17 +11,20 @@ public struct CalendarInfo: Identifiable, Codable, Equatable, Sendable {
     public var title: String
     public var accountName: String
     public var allowsContentModifications: Bool
+    public var colorHex: String?
 
     public init(
         id: String,
         title: String,
         accountName: String,
-        allowsContentModifications: Bool
+        allowsContentModifications: Bool,
+        colorHex: String? = nil
     ) {
         self.id = id
         self.title = title
         self.accountName = accountName
         self.allowsContentModifications = allowsContentModifications
+        self.colorHex = colorHex
     }
 }
 

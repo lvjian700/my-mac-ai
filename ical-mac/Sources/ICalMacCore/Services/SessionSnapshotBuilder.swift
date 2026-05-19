@@ -12,6 +12,10 @@ public struct SessionSnapshotBuilder {
 
     public func currentTwoWeekSnapshot(now: Date = Date()) throws -> SessionSnapshot {
         let range = twoWeekRange(now: now)
+        return try snapshot(range: range)
+    }
+
+    public func snapshot(range: CalendarQuery) throws -> SessionSnapshot {
         let events = try calendarStore.listEvents(range: range)
         return SessionSnapshot(events: events, syncedAt: Date(), range: range)
     }

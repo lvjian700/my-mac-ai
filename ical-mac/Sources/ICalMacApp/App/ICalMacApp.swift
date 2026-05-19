@@ -11,7 +11,7 @@ struct ICalMacApp: App {
         WindowGroup("ical-mac") {
             ContentView()
                 .environmentObject(model)
-                .frame(minWidth: 920, minHeight: 620)
+                .frame(minWidth: 1120, minHeight: 680)
                 .task {
                     await model.loadCalendarOnLaunch()
                 }

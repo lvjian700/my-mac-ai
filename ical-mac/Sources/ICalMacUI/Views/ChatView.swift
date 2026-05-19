@@ -1,6 +1,7 @@
 import ICalMacCore
 import SwiftUI
 
+#if DEBUG
 #Preview("With messages") {
     ChatView()
         .environmentObject(AppModel.preview())
@@ -14,6 +15,7 @@ import SwiftUI
         ]))
         .frame(width: 700, height: 500)
 }
+#endif
 
 struct ChatView: View {
     @EnvironmentObject private var model: AppModel
@@ -21,6 +23,15 @@ struct ChatView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            HStack {
+                Label("Assistant", systemImage: "sparkles")
+                    .font(.headline)
+                Spacer()
+            }
+            .padding()
+
+            Divider()
+
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 12) {
@@ -52,16 +63,15 @@ struct ChatView: View {
             }
             .padding()
         }
-        .navigationTitle("Assistant")
     }
 }
 
 private struct MessageRow: View {
     let message: ChatMessage
-    @ScaledMetric(relativeTo: .title3) private var bubblePadding = 12
-    @ScaledMetric(relativeTo: .title3) private var bubbleSpacing = 6
-    @ScaledMetric(relativeTo: .title3) private var sideSpacer = 80
-    @ScaledMetric(relativeTo: .title3) private var maxBubbleWidth = 760
+    @ScaledMetric(relativeTo: .body) private var bubblePadding = 10
+    @ScaledMetric(relativeTo: .body) private var bubbleSpacing = 5
+    @ScaledMetric(relativeTo: .body) private var sideSpacer = 24
+    @ScaledMetric(relativeTo: .body) private var maxBubbleWidth = 340
 
     var body: some View {
         HStack(alignment: .top) {
@@ -72,8 +82,7 @@ private struct MessageRow: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
                 Text(message.text)
-                    .font(.title3)
-                    .lineSpacing(3)
+                    .font(.body)
                     .textSelection(.enabled)
             }
             .padding(bubblePadding)
@@ -93,12 +102,11 @@ private struct ComposerView: View {
     @Binding var text: String
     var onSubmit: () -> Void
     @FocusState private var isFocused: Bool
-    @ScaledMetric(relativeTo: .title2) private var composerSpacing = 14
-    @ScaledMetric(relativeTo: .title2) private var horizontalPadding = 22
-    @ScaledMetric(relativeTo: .title2) private var verticalPadding = 18
-    @ScaledMetric(relativeTo: .title2) private var cornerRadius = 24
-    @ScaledMetric(relativeTo: .title3) private var accessoryButtonSide = 28
-    @ScaledMetric(relativeTo: .headline) private var sendButtonSide = 36
+    @ScaledMetric(relativeTo: .body) private var composerSpacing = 10
+    @ScaledMetric(relativeTo: .body) private var horizontalPadding = 12
+    @ScaledMetric(relativeTo: .body) private var verticalPadding = 10
+    @ScaledMetric(relativeTo: .body) private var cornerRadius = 12
+    @ScaledMetric(relativeTo: .headline) private var sendButtonSide = 30
 
     private var trimmedText: String {
         text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -112,38 +120,25 @@ private struct ComposerView: View {
         VStack(alignment: .leading, spacing: composerSpacing) {
             TextField("Ask anything", text: $text, axis: .vertical)
                 .textFieldStyle(.plain)
-                .font(.title2)
+                .font(.body)
                 .lineLimit(1...6)
                 .focused($isFocused)
                 .onSubmit(submitIfPossible)
                 .onAppear { isFocused = true }
 
-            HStack(spacing: 12) {
-                accessoryButton("Start scheduling", systemImage: "plus") {
-                    insertPromptStarter("Schedule ")
-                }
-                accessoryButton("Refresh calendar context", systemImage: "arrow.clockwise.circle") {
-                    Task { await model.refreshCalendar() }
-                }
-                .disabled(model.isRefreshing)
-                accessoryButton("Ask about today", systemImage: "calendar.badge.clock") {
-                    insertPromptStarter("What is on my calendar today?")
-                }
-
-                Text(model.modelNameLabel)
-                    .font(.callout.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(.tertiary, in: Capsule())
-
+            HStack(spacing: 8) {
                 Spacer(minLength: 16)
 
-                accessoryButton("Clear draft", systemImage: "xmark.circle") {
+                Button {
                     text = ""
                     isFocused = true
+                } label: {
+                    Label("Clear Draft", systemImage: "xmark.circle")
                 }
                 .disabled(text.isEmpty)
+                .labelStyle(.iconOnly)
+                .buttonStyle(.borderless)
+                .help("Clear draft")
 
                 Button(action: submitIfPossible) {
                     Image(systemName: model.isSending ? "hourglass" : "arrow.up")
@@ -168,43 +163,10 @@ private struct ComposerView: View {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .stroke(.white.opacity(0.28), lineWidth: 1)
         }
-        .shadow(color: .black.opacity(0.08), radius: 16, y: 6)
-    }
-
-    private func accessoryButton(_ help: String, systemImage: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.title3.weight(.medium))
-                .frame(width: accessoryButtonSide, height: accessoryButtonSide)
-                .foregroundStyle(.secondary)
-        }
-        .buttonStyle(.plain)
-        .help(help)
     }
 
     private func submitIfPossible() {
         guard canSubmit else { return }
         onSubmit()
-    }
-
-    private func insertPromptStarter(_ starter: String) {
-        if trimmedText.isEmpty {
-            text = starter
-        } else if !text.hasSuffix(" ") {
-            text += " "
-        }
-        isFocused = true
-    }
-}
-
-private extension AppModel {
-    var modelNameLabel: String {
-        if modelName.localizedCaseInsensitiveContains("haiku") {
-            return "Fast"
-        }
-        if modelName.localizedCaseInsensitiveContains("sonnet") {
-            return "Auto"
-        }
-        return "Model"
     }
 }

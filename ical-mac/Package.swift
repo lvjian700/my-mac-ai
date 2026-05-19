@@ -46,6 +46,11 @@ let package = Package(
             dependencies: ["ICalMacCore"],
             path: "Tests/ICalMacCoreTests"
         ),
+        .testTarget(
+            name: "ICalMacUITests",
+            dependencies: ["ICalMacUI", "ICalMacCore"],
+            path: "Tests/ICalMacUITests"
+        ),
     ],
     swiftLanguageModes: [.v6]
 )

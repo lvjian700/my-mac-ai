@@ -1,5 +1,8 @@
 @preconcurrency import EventKit
 import Foundation
+#if canImport(CoreGraphics)
+import CoreGraphics
+#endif
 
 @MainActor
 public final class EventKitCalendarStore: CalendarStore {
@@ -40,7 +43,8 @@ public final class EventKitCalendarStore: CalendarStore {
                     id: calendar.calendarIdentifier,
                     title: calendar.title,
                     accountName: calendar.source.title,
-                    allowsContentModifications: calendar.allowsContentModifications
+                    allowsContentModifications: calendar.allowsContentModifications,
+                    colorHex: calendar.cgColor.hexRGB
                 )
             }
     }
@@ -148,6 +152,40 @@ public final class EventKitCalendarStore: CalendarStore {
         return calendar
     }
 }
+
+#if canImport(CoreGraphics)
+private extension CGColor {
+    var hexRGB: String? {
+        let colorSpace = CGColorSpace(name: CGColorSpace.sRGB)
+        let color = colorSpace.flatMap { converted(to: $0, intent: .defaultIntent, options: nil) } ?? self
+        guard let components = color.components else { return nil }
+
+        let red: CGFloat
+        let green: CGFloat
+        let blue: CGFloat
+
+        switch components.count {
+        case 2:
+            red = components[0]
+            green = components[0]
+            blue = components[0]
+        case 3, 4:
+            red = components[0]
+            green = components[1]
+            blue = components[2]
+        default:
+            return nil
+        }
+
+        return String(
+            format: "#%02X%02X%02X",
+            Int((red * 255).rounded()),
+            Int((green * 255).rounded()),
+            Int((blue * 255).rounded())
+        )
+    }
+}
+#endif
 
 private extension CalendarEvent {
     init(event: EKEvent) {

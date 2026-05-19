@@ -77,4 +77,19 @@ struct CalendarToolExecutorTests {
 
         #expect((try String(contentsOf: root.appendingPathComponent("memory.yaml"))).contains("rules"))
     }
+
+    @Test func calendarInfoDecodesWhenColorIsMissing() throws {
+        let data = """
+        {
+          "id": "work",
+          "title": "Work",
+          "accountName": "iCloud",
+          "allowsContentModifications": true
+        }
+        """.data(using: .utf8)!
+
+        let calendar = try JSONDecoder().decode(CalendarInfo.self, from: data)
+
+        #expect(calendar.colorHex == nil)
+    }
 }
