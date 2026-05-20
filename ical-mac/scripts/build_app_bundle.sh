@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP="$ROOT/.build/ical-mac.app"
 EXEC="$ROOT/.build/release/ical-mac"
+CODESIGN_IDENTITY="${CODESIGN_IDENTITY:-Apple Development: lv jian (2JH6SCB777)}"
 
 if [[ ! -x "$EXEC" ]]; then
   echo "Missing release executable at $EXEC. Run make build first." >&2
@@ -15,6 +16,6 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$EXEC" "$APP/Contents/MacOS/ical-mac"
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
 chmod +x "$APP/Contents/MacOS/ical-mac"
-/usr/bin/codesign --force --sign - "$APP" >/dev/null
+/usr/bin/codesign --force --sign "$CODESIGN_IDENTITY" "$APP" >/dev/null
 
 echo "$APP"

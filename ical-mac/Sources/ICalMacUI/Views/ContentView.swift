@@ -21,10 +21,10 @@ public struct ContentView: View {
                 .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 320)
         } content: {
             ChatView()
-                .navigationSplitViewColumnWidth(min: 520, ideal: 760)
+                .navigationSplitViewColumnWidth(min: 320, ideal: 480)
         } detail: {
             WeekCalendarView()
-                .navigationSplitViewColumnWidth(min: 380, ideal: 560, max: 900)
+                .navigationSplitViewColumnWidth(min: 480, ideal: 760)
         }
         .onAppear {
             model.startAutoRefresh()
