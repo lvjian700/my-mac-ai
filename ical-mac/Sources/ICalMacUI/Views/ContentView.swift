@@ -5,7 +5,7 @@ import SwiftUI
 #Preview {
     ContentView()
         .environmentObject(AppModel.preview())
-        .frame(width: 800, height: 600)
+        .frame(width: 1400, height: 760)
 }
 #endif
 
@@ -18,13 +18,13 @@ public struct ContentView: View {
     public var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             CalendarsSidebarView()
-                .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 320)
+                .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 300)
         } content: {
             ChatView()
-                .navigationSplitViewColumnWidth(min: 320, ideal: 480)
+                .navigationSplitViewColumnWidth(min: 260, ideal: 420, max: 680)
         } detail: {
             WeekCalendarView()
-                .navigationSplitViewColumnWidth(min: 480, ideal: 760)
+                .navigationSplitViewColumnWidth(min: 480, ideal: 680, max: 960)
         }
         .onAppear {
             model.startAutoRefresh()
