@@ -5,7 +5,7 @@ import SwiftUI
 #Preview {
     WeekCalendarView()
         .environmentObject(AppModel.preview())
-        .frame(width: 820, height: 620)
+        .frame(width: 1180, height: 720)
 }
 #endif
 
@@ -16,7 +16,7 @@ struct WeekCalendarView: View {
         VStack(spacing: 0) {
             WeekHeaderView()
                 .padding(.horizontal)
-                .padding(.vertical, 12)
+                .padding(.bottom, 12)
 
             Divider()
 
@@ -31,6 +31,14 @@ struct WeekCalendarView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                CalendarModeSegmentedControl(selection: .week)
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Color.clear.frame(width: 28)
+            }
+        }
     }
 }
 
@@ -59,29 +67,17 @@ private struct WeekHeaderView: View {
     @EnvironmentObject private var model: AppModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Text(Self.monthFormatter.string(from: model.displayedWeekStartDate))
-                    .font(.largeTitle.weight(.semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+        HStack(spacing: 16) {
+            Text(Self.monthFormatter.string(from: model.displayedWeekStartDate))
+                .font(.largeTitle.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
 
-                Spacer()
+            Spacer()
 
-                navigationControls
-            }
-
-            Picker("Calendar View", selection: .constant(CalendarDisplayMode.week)) {
-                Text("Day").tag(CalendarDisplayMode.day)
-                Text("Week").tag(CalendarDisplayMode.week)
-                Text("Month").tag(CalendarDisplayMode.month)
-                Text("Year").tag(CalendarDisplayMode.year)
-            }
-            .labelsHidden()
-            .pickerStyle(.segmented)
-            .frame(maxWidth: 320)
-            .help("Week view is available in this version")
+            navigationControls
         }
+        .frame(maxWidth: .infinity, minHeight: 58, alignment: .center)
     }
 
     private var navigationControls: some View {
@@ -126,11 +122,39 @@ private struct WeekHeaderView: View {
     }()
 }
 
-private enum CalendarDisplayMode: Hashable {
+private enum CalendarDisplayMode: Hashable, CaseIterable {
     case day
     case week
     case month
     case year
+
+    var title: String {
+        switch self {
+        case .day: "Day"
+        case .week: "Week"
+        case .month: "Month"
+        case .year: "Year"
+        }
+    }
+}
+
+private struct CalendarModeSegmentedControl: View {
+    @State private var selection: CalendarDisplayMode
+
+    init(selection: CalendarDisplayMode) {
+        _selection = State(initialValue: selection)
+    }
+
+    var body: some View {
+        Picker("View Mode", selection: $selection) {
+            ForEach(CalendarDisplayMode.allCases, id: \.self) { mode in
+                Text(mode.title).tag(mode)
+            }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .frame(width: 260)
+    }
 }
 
 private struct WeekGridView: View {

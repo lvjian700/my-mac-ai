@@ -5,7 +5,7 @@ import SwiftUI
 #Preview("With messages") {
     ChatView()
         .environmentObject(AppModel.preview())
-        .frame(width: 700, height: 500)
+        .frame(width: 700, height: 720)
 }
 
 #Preview("Empty") {
@@ -13,25 +13,19 @@ import SwiftUI
         .environmentObject(AppModel.preview(messages: [
             ChatMessage(role: .assistant, text: "Ask about your calendar or tell me what to schedule.")
         ]))
-        .frame(width: 700, height: 500)
+        .frame(width: 700, height: 720)
 }
 #endif
 
 struct ChatView: View {
     @EnvironmentObject private var model: AppModel
     @State private var draft = ""
+    @ScaledMetric(relativeTo: .body) private var composerHorizontalPadding = 20
+    @ScaledMetric(relativeTo: .body) private var composerBottomPadding = 18
+    @ScaledMetric(relativeTo: .body) private var transcriptBottomPadding = 150
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Label("Assistant", systemImage: "sparkles")
-                    .font(.headline)
-                Spacer()
-            }
-            .padding()
-
-            Divider()
-
+        ZStack(alignment: .bottom) {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 12) {
@@ -39,32 +33,45 @@ struct ChatView: View {
                             MessageRow(message: message)
                                 .id(message.id)
                         }
+
                         if model.isSending {
                             ProgressView()
                                 .controlSize(.small)
                                 .padding(.horizontal)
+                                .id("sending")
                         }
                     }
-                    .padding()
+                    .padding(.horizontal, 24)
+                    .padding(.top, 18)
+                    .padding(.bottom, transcriptBottomPadding)
                 }
                 .onChange(of: model.messages.count) { _, _ in
                     if let last = model.messages.last {
-                        proxy.scrollTo(last.id, anchor: .bottom)
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            proxy.scrollTo(last.id, anchor: .bottom)
+                        }
+                    }
+                }
+                .onChange(of: model.isSending) { _, isSending in
+                    guard isSending else { return }
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        proxy.scrollTo("sending", anchor: .bottom)
                     }
                 }
             }
-
-            Divider()
 
             ComposerView(text: $draft) {
                 let text = draft
                 draft = ""
                 Task { await model.send(text) }
             }
-            .padding()
+            .padding(.horizontal, composerHorizontalPadding)
+            .padding(.bottom, composerBottomPadding)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
+
 
 private struct MessageRow: View {
     let message: ChatMessage
@@ -103,9 +110,9 @@ private struct ComposerView: View {
     var onSubmit: () -> Void
     @FocusState private var isFocused: Bool
     @ScaledMetric(relativeTo: .body) private var composerSpacing = 10
-    @ScaledMetric(relativeTo: .body) private var horizontalPadding = 12
-    @ScaledMetric(relativeTo: .body) private var verticalPadding = 10
-    @ScaledMetric(relativeTo: .body) private var cornerRadius = 12
+    @ScaledMetric(relativeTo: .body) private var horizontalPadding = 16
+    @ScaledMetric(relativeTo: .body) private var verticalPadding = 14
+    @ScaledMetric(relativeTo: .body) private var cornerRadius = 24
     @ScaledMetric(relativeTo: .headline) private var sendButtonSide = 30
 
     private var trimmedText: String {
@@ -125,6 +132,7 @@ private struct ComposerView: View {
                 .focused($isFocused)
                 .onSubmit(submitIfPossible)
                 .onAppear { isFocused = true }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             HStack(spacing: 8) {
                 Spacer(minLength: 16)
@@ -161,8 +169,9 @@ private struct ComposerView: View {
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .stroke(.white.opacity(0.28), lineWidth: 1)
+                .stroke(Color(nsColor: .separatorColor).opacity(0.35), lineWidth: 0.75)
         }
+        .shadow(color: .black.opacity(0.12), radius: 24, x: 0, y: 10)
     }
 
     private func submitIfPossible() {

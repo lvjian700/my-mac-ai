@@ -8,7 +8,7 @@ struct ICalMacApp: App {
     @StateObject private var model = AppModel()
 
     var body: some Scene {
-        WindowGroup("ical-mac") {
+        Window("ical-mac", id: "main")  {
             ContentView()
                 .environmentObject(model)
                 .frame(minWidth: 1120, minHeight: 680)
@@ -16,7 +16,10 @@ struct ICalMacApp: App {
                     await model.loadCalendarOnLaunch()
                 }
         }
+        .windowStyle(.hiddenTitleBar)
+        .windowToolbarStyle(.unified(showsTitle: false))
         .commands {
+            CommandGroup(replacing: .newItem) { }
             CommandGroup(after: .appInfo) {
                 Button("Refresh Calendar") {
                     Task { await model.refreshCalendar() }

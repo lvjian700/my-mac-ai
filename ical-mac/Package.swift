@@ -9,6 +9,9 @@ let package = Package(
     products: [
         .library(name: "ICalMacCore", targets: ["ICalMacCore"]),
         .library(name: "ICalMacUI", targets: ["ICalMacUI"]),
+        // SwiftPM has no macOS Application product type. Xcode opens this as a
+        // runnable executable package product; scripts/build_app_bundle.sh wraps
+        // the release binary into ical-mac.app for normal macOS app launches.
         .executable(name: "ical-mac", targets: ["ICalMacApp"]),
     ],
     targets: [
