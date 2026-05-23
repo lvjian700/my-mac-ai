@@ -19,16 +19,21 @@ import SwiftUI
 
 struct ChatView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.readingTextMetrics) private var textMetrics
     @State private var draft = ""
-    @ScaledMetric(relativeTo: .body) private var composerHorizontalPadding = 20
-    @ScaledMetric(relativeTo: .body) private var composerBottomPadding = 18
-    @ScaledMetric(relativeTo: .body) private var transcriptBottomPadding = 150
+
+    private var composerHorizontalPadding: CGFloat { textMetrics.layoutValue(20) }
+    private var composerBottomPadding: CGFloat { textMetrics.layoutValue(18) }
+    private var transcriptHorizontalPadding: CGFloat { textMetrics.layoutValue(24) }
+    private var transcriptTopPadding: CGFloat { textMetrics.layoutValue(18) }
+    private var transcriptBottomPadding: CGFloat { textMetrics.layoutValue(150) }
+    private var transcriptSpacing: CGFloat { textMetrics.layoutValue(12) }
 
     var body: some View {
         ZStack(alignment: .bottom) {
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 12) {
+                    LazyVStack(alignment: .leading, spacing: transcriptSpacing) {
                         ForEach(model.messages) { message in
                             MessageRow(message: message)
                                 .id(message.id)
@@ -41,8 +46,8 @@ struct ChatView: View {
                                 .id("sending")
                         }
                     }
-                    .padding(.horizontal, 24)
-                    .padding(.top, 18)
+                    .padding(.horizontal, transcriptHorizontalPadding)
+                    .padding(.top, transcriptTopPadding)
                     .padding(.bottom, transcriptBottomPadding)
                 }
                 .onChange(of: model.messages.count) { _, _ in
@@ -75,10 +80,12 @@ struct ChatView: View {
 
 private struct MessageRow: View {
     let message: ChatMessage
-    @ScaledMetric(relativeTo: .body) private var bubblePadding = 10
-    @ScaledMetric(relativeTo: .body) private var bubbleSpacing = 5
-    @ScaledMetric(relativeTo: .body) private var sideSpacer = 80
-    @ScaledMetric(relativeTo: .body) private var maxBubbleWidth = 760
+    @Environment(\.readingTextMetrics) private var textMetrics
+
+    private var bubblePadding: CGFloat { textMetrics.layoutValue(10) }
+    private var bubbleSpacing: CGFloat { textMetrics.layoutValue(5) }
+    private var sideSpacer: CGFloat { textMetrics.layoutValue(80) }
+    private var maxBubbleWidth: CGFloat { textMetrics.layoutValue(760) }
 
     var body: some View {
         HStack(alignment: .top) {
@@ -86,15 +93,15 @@ private struct MessageRow: View {
 
             VStack(alignment: .leading, spacing: bubbleSpacing) {
                 Text(message.role == .user ? "You" : "Cali")
-                    .font(.callout)
+                    .font(textMetrics.font(.callout))
                     .foregroundStyle(.secondary)
                 Text(message.text)
-                    .font(.body)
+                    .font(textMetrics.font(.body))
                     .textSelection(.enabled)
             }
             .padding(bubblePadding)
             .background {
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: textMetrics.layoutValue(8))
                     .fill(message.role == .user ? Color.accentColor.opacity(0.14) : Color.secondary.opacity(0.10))
             }
             .frame(maxWidth: maxBubbleWidth, alignment: message.role == .user ? .trailing : .leading)
@@ -106,14 +113,18 @@ private struct MessageRow: View {
 
 private struct ComposerView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.readingTextMetrics) private var textMetrics
     @Binding var text: String
     var onSubmit: () -> Void
     @FocusState private var isFocused: Bool
-    @ScaledMetric(relativeTo: .body) private var composerSpacing = 10
-    @ScaledMetric(relativeTo: .body) private var horizontalPadding = 16
-    @ScaledMetric(relativeTo: .body) private var verticalPadding = 14
-    @ScaledMetric(relativeTo: .body) private var cornerRadius = 24
-    @ScaledMetric(relativeTo: .headline) private var sendButtonSide = 30
+
+    private var composerSpacing: CGFloat { textMetrics.layoutValue(10) }
+    private var horizontalPadding: CGFloat { textMetrics.layoutValue(16) }
+    private var verticalPadding: CGFloat { textMetrics.layoutValue(14) }
+    private var cornerRadius: CGFloat { textMetrics.layoutValue(24) }
+    private var sendButtonSide: CGFloat { textMetrics.layoutValue(30) }
+    private var controlsSpacing: CGFloat { textMetrics.layoutValue(8) }
+    private var controlsLeadingSpace: CGFloat { textMetrics.layoutValue(16) }
 
     private var trimmedText: String {
         text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -127,15 +138,15 @@ private struct ComposerView: View {
         VStack(alignment: .leading, spacing: composerSpacing) {
             TextField("Ask anything", text: $text, axis: .vertical)
                 .textFieldStyle(.plain)
-                .font(.body)
+                .font(textMetrics.font(.body))
                 .lineLimit(1...6)
                 .focused($isFocused)
                 .onSubmit(submitIfPossible)
                 .onAppear { isFocused = true }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            HStack(spacing: 8) {
-                Spacer(minLength: 16)
+            HStack(spacing: controlsSpacing) {
+                Spacer(minLength: controlsLeadingSpace)
 
                 Button {
                     text = ""

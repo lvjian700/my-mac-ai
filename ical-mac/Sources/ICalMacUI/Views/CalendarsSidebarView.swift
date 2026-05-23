@@ -11,6 +11,7 @@ import SwiftUI
 
 struct CalendarsSidebarView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.readingTextMetrics) private var textMetrics
 
     private var accountGroups: [(account: String, calendars: [CalendarInfo])] {
         let grouped = Dictionary(grouping: model.calendars, by: \.accountName)
@@ -30,6 +31,7 @@ struct CalendarsSidebarView: View {
             if accountGroups.isEmpty {
                 Section("Calendars") {
                     Text("No calendars loaded")
+                        .font(textMetrics.font(.body))
                         .foregroundStyle(.secondary)
                 }
             } else {
@@ -60,9 +62,14 @@ struct CalendarsSidebarView: View {
 
 private struct SidebarFooter: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.readingTextMetrics) private var textMetrics
+
+    private var footerSpacing: CGFloat { textMetrics.layoutValue(8) }
+    private var horizontalPadding: CGFloat { textMetrics.layoutValue(14) }
+    private var verticalPadding: CGFloat { textMetrics.layoutValue(12) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: footerSpacing) {
             Divider()
 
             Label(model.statusText, systemImage: model.isRefreshing ? "arrow.triangle.2.circlepath" : "checkmark.circle")
@@ -81,9 +88,9 @@ private struct SidebarFooter: View {
             .buttonStyle(.borderless)
             .help("Open Settings")
         }
-        .font(.callout)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .font(textMetrics.font(.callout))
+        .padding(.horizontal, horizontalPadding)
+        .padding(.vertical, verticalPadding)
         .background(.bar)
     }
 }
@@ -91,25 +98,32 @@ private struct SidebarFooter: View {
 private struct CalendarToggleRow: View {
     let calendar: CalendarInfo
     @Binding var isSelected: Bool
+    @Environment(\.readingTextMetrics) private var textMetrics
 
     private var color: Color {
         Color(calendarHex: calendar.colorHex) ?? .accentColor
     }
 
+    private var swatchSize: CGFloat { textMetrics.layoutValue(9) }
+    private var rowSpacing: CGFloat { textMetrics.layoutValue(8) }
+    private var lockSpacing: CGFloat { textMetrics.layoutValue(4) }
+    private var titleSpacing: CGFloat { textMetrics.layoutValue(2) }
+
     var body: some View {
         Toggle(isOn: $isSelected) {
-            HStack(spacing: 8) {
+            HStack(spacing: rowSpacing) {
                 Circle()
                     .fill(color)
-                    .frame(width: 9, height: 9)
+                    .frame(width: swatchSize, height: swatchSize)
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: titleSpacing) {
                     Text(calendar.title)
+                        .font(textMetrics.font(.body))
                         .lineLimit(1)
                 }
 
                 if !calendar.allowsContentModifications {
-                    Spacer(minLength: 4)
+                    Spacer(minLength: lockSpacing)
                     Image(systemName: "lock")
                         .font(.caption)
                         .foregroundStyle(.secondary)

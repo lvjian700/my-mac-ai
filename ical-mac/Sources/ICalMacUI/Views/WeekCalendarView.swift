@@ -11,12 +11,15 @@ import SwiftUI
 
 struct WeekCalendarView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.readingTextMetrics) private var textMetrics
+
+    private var headerBottomPadding: CGFloat { textMetrics.layoutValue(12) }
 
     var body: some View {
         VStack(spacing: 0) {
             WeekHeaderView()
                 .padding(.horizontal)
-                .padding(.bottom, 12)
+                .padding(.bottom, headerBottomPadding)
 
             Divider()
 
@@ -35,9 +38,6 @@ struct WeekCalendarView: View {
             ToolbarItem(placement: .principal) {
                 CalendarModeSegmentedControl(selection: .week)
             }
-            ToolbarItem(placement: .primaryAction) {
-                Color.clear.frame(width: 28)
-            }
         }
     }
 }
@@ -46,16 +46,21 @@ private struct CalendarUnavailableView: View {
     let title: String
     let systemImage: String
     let detail: String
+    @Environment(\.readingTextMetrics) private var textMetrics
+
+    private var topSpacer: CGFloat { textMetrics.layoutValue(80) }
 
     var body: some View {
         VStack {
-            Spacer(minLength: 80)
+            Spacer(minLength: topSpacer)
 
-            ContentUnavailableView(
-                title,
-                systemImage: systemImage,
-                description: Text(detail)
-            )
+            ContentUnavailableView {
+                Label(title, systemImage: systemImage)
+                    .font(textMetrics.font(.title3, weight: .semibold))
+            } description: {
+                Text(detail)
+                    .font(textMetrics.font(.body))
+            }
 
             Spacer()
         }
@@ -65,11 +70,15 @@ private struct CalendarUnavailableView: View {
 
 private struct WeekHeaderView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.readingTextMetrics) private var textMetrics
+
+    private var headerSpacing: CGFloat { textMetrics.layoutValue(16) }
+    private var minHeight: CGFloat { textMetrics.layoutValue(58) }
 
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: headerSpacing) {
             Text(Self.monthFormatter.string(from: model.displayedWeekStartDate))
-                .font(.largeTitle.weight(.semibold))
+                .font(textMetrics.font(.largeTitle, weight: .semibold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.72)
 
@@ -77,7 +86,7 @@ private struct WeekHeaderView: View {
 
             navigationControls
         }
-        .frame(maxWidth: .infinity, minHeight: 58, alignment: .center)
+        .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .center)
     }
 
     private var navigationControls: some View {
@@ -87,30 +96,25 @@ private struct WeekHeaderView: View {
                     .controlSize(.small)
             }
 
-            Button {
-                Task { await model.moveDisplayedWeek(by: -1) }
-            } label: {
-                Label("Previous Week", systemImage: "chevron.left")
-            }
-            .buttonStyle(.borderless)
-            .labelStyle(.iconOnly)
-            .disabled(model.isRefreshing)
+            ControlGroup {
+                Button {
+                    Task { await model.moveDisplayedWeek(by: -1) }
+                } label: {
+                    Label("Previous Week", systemImage: "chevron.left")
+                }
 
-            Button {
-                Task { await model.showToday() }
-            } label: {
-                Text("Today")
-            }
-            .buttonStyle(.bordered)
-            .disabled(model.isRefreshing)
+                Button {
+                    Task { await model.showToday() }
+                } label: {
+                    Text("Today")
+                }
 
-            Button {
-                Task { await model.moveDisplayedWeek(by: 1) }
-            } label: {
-                Label("Next Week", systemImage: "chevron.right")
+                Button {
+                    Task { await model.moveDisplayedWeek(by: 1) }
+                } label: {
+                    Label("Next Week", systemImage: "chevron.right")
+                }
             }
-            .buttonStyle(.borderless)
-            .labelStyle(.iconOnly)
             .disabled(model.isRefreshing)
         }
     }
@@ -148,7 +152,8 @@ private struct CalendarModeSegmentedControl: View {
     var body: some View {
         Picker("View Mode", selection: $selection) {
             ForEach(CalendarDisplayMode.allCases, id: \.self) { mode in
-                Text(mode.title).tag(mode)
+                Text(mode.title)
+                    .tag(mode)
             }
         }
         .pickerStyle(.segmented)
@@ -159,11 +164,27 @@ private struct CalendarModeSegmentedControl: View {
 
 private struct WeekGridView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.readingTextMetrics) private var textMetrics
 
     private let calendar = Calendar.current
-    private let hourHeight: CGFloat = 58
-    private let timeColumnWidth: CGFloat = 72
-    private let minimumDayWidth: CGFloat = 92
+
+    private var hourHeight: CGFloat { 58 }
+    private var timeColumnWidth: CGFloat { textMetrics.layoutValue(72) }
+    private var minimumDayWidth: CGFloat { textMetrics.layoutValue(92) }
+    private var dayHeaderHeight: CGFloat { textMetrics.layoutValue(48) }
+    private var dayHeaderVerticalPadding: CGFloat { textMetrics.layoutValue(8) }
+    private var trailingPadding: CGFloat { 8 }
+    private var allDayLabelHeight: CGFloat { textMetrics.layoutValue(42) }
+    private var allDayLabelTopPadding: CGFloat { textMetrics.layoutValue(7) }
+    private var allDayEventHeight: CGFloat { textMetrics.layoutValue(34) }
+    private var allDayEventHorizontalPadding: CGFloat { 3 }
+    private var allDayEventVerticalPadding: CGFloat { 5 }
+    private var allDayRowHeight: CGFloat { textMetrics.layoutValue(44) }
+    private var hourLabelOffset: CGFloat { textMetrics.layoutValue(7) }
+    private var eventHorizontalInset: CGFloat { 4 }
+    private var eventVerticalInset: CGFloat { 3 }
+    private var minimumEventWidth: CGFloat { 44 }
+    private var minimumEventHeight: CGFloat { textMetrics.layoutValue(28) }
 
     private var days: [Date] {
         (0..<7).compactMap {
@@ -176,20 +197,23 @@ private struct WeekGridView: View {
             let dayWidth = max((geometry.size.width - timeColumnWidth) / 7, minimumDayWidth)
             let contentWidth = timeColumnWidth + dayWidth * 7
 
-            VStack(spacing: 0) {
-                dayHeader(dayWidth: dayWidth)
-                    .frame(width: contentWidth)
-                allDayRow(dayWidth: dayWidth)
-                    .frame(width: contentWidth)
-                Divider()
-                ScrollView(.vertical) {
-                    ZStack(alignment: .topLeading) {
-                        gridLines(dayWidth: dayWidth)
-                        eventBlocks(dayWidth: dayWidth)
+            ScrollView(.horizontal) {
+                VStack(spacing: 0) {
+                    dayHeader(dayWidth: dayWidth)
+                        .frame(width: contentWidth)
+                    allDayRow(dayWidth: dayWidth)
+                        .frame(width: contentWidth)
+                    Divider()
+                    ScrollView(.vertical) {
+                        ZStack(alignment: .topLeading) {
+                            gridLines(dayWidth: dayWidth)
+                            eventBlocks(dayWidth: dayWidth)
+                        }
+                        .frame(width: contentWidth, height: hourHeight * 24)
                     }
-                    .frame(width: contentWidth, height: hourHeight * 24)
+                    .frame(width: contentWidth)
                 }
-                .frame(width: contentWidth)
+                .frame(width: contentWidth, height: geometry.size.height, alignment: .topLeading)
             }
             .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
         }
@@ -202,21 +226,21 @@ private struct WeekGridView: View {
             ForEach(days, id: \.self) { day in
                 DayColumnHeader(day: day, calendar: calendar)
                 .frame(width: dayWidth)
-                .padding(.vertical, 8)
+                .padding(.vertical, dayHeaderVerticalPadding)
             }
         }
-        .frame(height: 48)
-        .padding(.trailing, 8)
+        .frame(height: dayHeaderHeight)
+        .padding(.trailing, trailingPadding)
     }
 
     private func allDayRow(dayWidth: CGFloat) -> some View {
         HStack(alignment: .top, spacing: 0) {
             Text("all-day")
-                .font(.caption)
+                .font(textMetrics.font(.caption))
                 .foregroundStyle(.secondary)
-                .frame(width: timeColumnWidth, height: 42, alignment: .topTrailing)
-                .padding(.trailing, 8)
-                .padding(.top, 7)
+                .frame(width: timeColumnWidth, height: allDayLabelHeight, alignment: .topTrailing)
+                .padding(.trailing, trailingPadding)
+                .padding(.top, allDayLabelTopPadding)
 
             ForEach(days, id: \.self) { day in
                 VStack(alignment: .leading, spacing: 4) {
@@ -224,13 +248,13 @@ private struct WeekGridView: View {
                         EventChip(event: event, color: Color(calendarHex: model.colorHex(for: event)) ?? .accentColor)
                     }
                 }
-                .frame(width: dayWidth, height: 34, alignment: .topLeading)
-                .padding(.horizontal, 3)
-                .padding(.vertical, 5)
+                .frame(width: dayWidth, height: allDayEventHeight, alignment: .topLeading)
+                .padding(.horizontal, allDayEventHorizontalPadding)
+                .padding(.vertical, allDayEventVerticalPadding)
             }
         }
-        .frame(height: 44, alignment: .top)
-        .padding(.trailing, 8)
+        .frame(height: allDayRowHeight, alignment: .top)
+        .padding(.trailing, trailingPadding)
     }
 
     private func gridLines(dayWidth: CGFloat) -> some View {
@@ -243,10 +267,10 @@ private struct WeekGridView: View {
 
                 if hour < 24 {
                     Text(Self.hourFormatter.string(from: dateForHour(hour)))
-                        .font(.caption)
+                        .font(textMetrics.font(.caption))
                         .foregroundStyle(.secondary)
-                        .frame(width: timeColumnWidth - 8, alignment: .trailing)
-                        .offset(y: hour == 0 ? 4 : CGFloat(hour) * hourHeight - 7)
+                        .frame(width: timeColumnWidth - trailingPadding, alignment: .trailing)
+                        .offset(y: hour == 0 ? eventHorizontalInset : CGFloat(hour) * hourHeight - hourLabelOffset)
                 }
             }
 
@@ -263,7 +287,7 @@ private struct WeekGridView: View {
         ForEach(model.visibleTimedEvents) { event in
             if let frame = frame(for: event, dayWidth: dayWidth) {
                 EventBlock(event: event, color: Color(calendarHex: model.colorHex(for: event)) ?? .accentColor)
-                    .frame(width: max(dayWidth - 8, 44), height: frame.height, alignment: .topLeading)
+                    .frame(width: max(dayWidth - trailingPadding, minimumEventWidth), height: frame.height, alignment: .topLeading)
                     .offset(x: frame.x, y: frame.y)
             }
         }
@@ -285,9 +309,9 @@ private struct WeekGridView: View {
         let duration = max(visibleEnd.timeIntervalSince(visibleStart), 30 * 60)
 
         return (
-            x: timeColumnWidth + CGFloat(dayIndex) * dayWidth + 4,
-            y: CGFloat(startOffset / 3600) * hourHeight + 3,
-            height: max(CGFloat(duration / 3600) * hourHeight - 6, 28)
+            x: timeColumnWidth + CGFloat(dayIndex) * dayWidth + eventHorizontalInset,
+            y: CGFloat(startOffset / 3600) * hourHeight + eventVerticalInset,
+            height: max(CGFloat(duration / 3600) * hourHeight - eventVerticalInset * 2, minimumEventHeight)
         )
     }
 
@@ -305,28 +329,32 @@ private struct WeekGridView: View {
 private struct DayColumnHeader: View {
     let day: Date
     let calendar: Calendar
+    @Environment(\.readingTextMetrics) private var textMetrics
 
     private var isToday: Bool {
         calendar.isDateInToday(day)
     }
 
+    private var headerSpacing: CGFloat { textMetrics.layoutValue(4) }
+    private var todayCircleSide: CGFloat { textMetrics.layoutValue(26) }
+
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: headerSpacing) {
             Text(Self.weekdayFormatter.string(from: day))
-                .font(.caption.weight(.medium))
+                .font(textMetrics.font(.caption, weight: .medium))
                 .foregroundStyle(isToday ? .red : .secondary)
 
             if isToday {
                 Text(Self.dayFormatter.string(from: day))
-                    .font(.headline.weight(.semibold))
+                    .font(textMetrics.font(.headline, weight: .semibold))
                     .foregroundStyle(.white)
-                    .frame(width: 26, height: 26)
+                    .frame(width: todayCircleSide, height: todayCircleSide)
                     .background(.red, in: Circle())
             } else {
                 Text(Self.dayFormatter.string(from: day))
-                    .font(.headline)
+                    .font(textMetrics.font(.headline))
                     .foregroundStyle(.primary)
-                    .frame(width: 26, height: 26)
+                    .frame(width: todayCircleSide, height: todayCircleSide)
             }
         }
     }
@@ -347,43 +375,53 @@ private struct DayColumnHeader: View {
 private struct EventChip: View {
     let event: CalendarEvent
     let color: Color
+    @Environment(\.readingTextMetrics) private var textMetrics
+
+    private var horizontalPadding: CGFloat { textMetrics.layoutValue(6) }
+    private var verticalPadding: CGFloat { textMetrics.layoutValue(3) }
+    private var cornerRadius: CGFloat { textMetrics.layoutValue(5) }
 
     var body: some View {
         Text(event.title)
-            .font(.caption.weight(.medium))
+            .font(textMetrics.font(.caption, weight: .medium))
             .lineLimit(1)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
+            .padding(.horizontal, horizontalPadding)
+            .padding(.vertical, verticalPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .foregroundStyle(color)
-            .background(color.opacity(0.14), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+            .background(color.opacity(0.14), in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 }
 
 private struct EventBlock: View {
     let event: CalendarEvent
     let color: Color
+    @Environment(\.readingTextMetrics) private var textMetrics
+
+    private var contentSpacing: CGFloat { textMetrics.layoutValue(3) }
+    private var contentPadding: CGFloat { textMetrics.layoutValue(6) }
+    private var cornerRadius: CGFloat { textMetrics.layoutValue(6) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: contentSpacing) {
             Text(event.title)
-                .font(.caption.weight(.semibold))
+                .font(textMetrics.font(.caption, weight: .semibold))
                 .lineLimit(2)
             Text(Self.intervalFormatter.string(from: event.startDate, to: event.endDate))
-                .font(.caption2)
+                .font(textMetrics.font(.caption2))
                 .lineLimit(1)
             if let location = event.location, !location.isEmpty {
                 Text(location)
-                    .font(.caption2)
+                    .font(textMetrics.font(.caption2))
                     .lineLimit(1)
             }
         }
-        .padding(6)
+        .padding(contentPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .foregroundStyle(color)
-        .background(color.opacity(0.13), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .background(color.opacity(0.13), in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .stroke(color.opacity(0.55), lineWidth: 1)
         }
         .help(event.title)
