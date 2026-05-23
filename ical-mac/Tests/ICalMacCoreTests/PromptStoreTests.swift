@@ -3,32 +3,31 @@ import Testing
 @testable import ICalMacCore
 
 struct PromptStoreTests {
-    @Test func promptLoaderStripsFrontmatterAndCommands() throws {
-        let root = try makeTempDirectory()
-        defer { try? FileManager.default.removeItem(at: root) }
-        let references = root.appendingPathComponent("references", isDirectory: true)
-        try FileManager.default.createDirectory(at: references, withIntermediateDirectories: true)
-        try """
-        ---
-        name: ical
-        ---
-        # Cali
+    @Test func systemPromptUsesNativeMacAppInstructions() throws {
+        let store = PromptStore()
 
-        Keep it short.
+        let prompt = store.buildSystemPrompt(
+            memory: "",
+            snapshot: nil,
+            now: makeDate(year: 2026, month: 5, day: 18, hour: 10),
+            timeZone: TimeZone(identifier: "Australia/Melbourne")!
+        )
 
-        ## Commands
-        ical events --format json
+        #expect(prompt.contains("native ical-mac app"))
+        #expect(prompt.contains("provided Apple Calendar tools"))
+        #expect(prompt.contains("write the full YAML memory file"))
+        #expect(prompt.contains("Today is 2026-05-18. Timezone: Australia/Melbourne."))
+    }
 
-        ## Memory
-        Use rules.
-        """.write(to: root.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
-        try "Calendar rules here.".write(to: references.appendingPathComponent("calendar_rules.md"), atomically: true, encoding: .utf8)
-        let store = PromptStore(skillDirectory: root)
+    @Test func systemPromptDoesNotIncludeCliSkillWorkflow() throws {
+        let store = PromptStore()
 
-        let prompt = store.loadSkillPrompt()
+        let prompt = store.buildSystemPrompt(memory: "", snapshot: nil)
 
-        #expect(prompt.contains("Keep it short."))
-        #expect(!prompt.contains("ical events --format json"))
-        #expect(prompt.contains("## Memory"))
+        #expect(!prompt.contains("ical events"))
+        #expect(!prompt.contains("ical add"))
+        #expect(!prompt.contains("scripts/ical-memory"))
+        #expect(!prompt.contains("Always call the `ical` CLI"))
+        #expect(!prompt.contains("Calendar Rules Reference"))
     }
 }

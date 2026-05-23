@@ -20,7 +20,7 @@ struct AssistantServiceTests {
             client: client,
             apiKeyStore: FakeAPIKeyStore(key: "test-key"),
             memoryStore: MemoryStore(rootURL: root),
-            promptStore: PromptStore(skillDirectory: nil),
+            promptStore: PromptStore(),
             toolExecutor: CalendarToolExecutor(calendarStore: calendarStore, memoryStore: MemoryStore(rootURL: root))
         )
 
@@ -48,7 +48,7 @@ struct AssistantServiceTests {
             client: client,
             apiKeyStore: FakeAPIKeyStore(key: nil),
             memoryStore: MemoryStore(rootURL: root),
-            promptStore: PromptStore(skillDirectory: nil),
+            promptStore: PromptStore(),
             toolExecutor: CalendarToolExecutor(calendarStore: FakeCalendarStore(), memoryStore: MemoryStore(rootURL: root))
         )
 
@@ -69,7 +69,7 @@ struct AssistantServiceTests {
             client: client,
             apiKeyStore: FakeAPIKeyStore(key: "test-key"),
             memoryStore: MemoryStore(rootURL: root),
-            promptStore: PromptStore(skillDirectory: nil),
+            promptStore: PromptStore(),
             toolExecutor: CalendarToolExecutor(calendarStore: FakeCalendarStore(), memoryStore: MemoryStore(rootURL: root))
         )
 
@@ -94,7 +94,7 @@ struct AssistantServiceTests {
             client: client,
             apiKeyStore: FakeAPIKeyStore(key: "test-key"),
             memoryStore: MemoryStore(rootURL: root),
-            promptStore: PromptStore(skillDirectory: nil),
+            promptStore: PromptStore(),
             toolExecutor: CalendarToolExecutor(calendarStore: FakeCalendarStore(), memoryStore: MemoryStore(rootURL: root)),
             maxToolRounds: 1
         )
