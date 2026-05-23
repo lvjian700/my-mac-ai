@@ -71,6 +71,20 @@ struct AppModelTests {
         #expect(store.listEventsCount == 1)
     }
 
+    @Test func initDoesNotReadAPIKeyUntilDraftLoads() throws {
+        let store = FakeUICalendarStore()
+        let keyStore = FakeUIAPIKeyStore(key: "test-key")
+        let model = try makeModel(store: store, apiKeyStore: keyStore)
+
+        #expect(keyStore.readCount == 0)
+        #expect(model.apiKeyDraft == "")
+
+        model.loadAPIKeyDraft()
+
+        #expect(keyStore.readCount == 1)
+        #expect(model.apiKeyDraft == "test-key")
+    }
+
     @Test func sendingMessageRefreshesCalendarAfterAssistantReply() async throws {
         let store = FakeUICalendarStore()
         store.calendars = [
@@ -94,6 +108,7 @@ struct AppModelTests {
 
     private func makeModel(
         store: FakeUICalendarStore,
+        apiKeyStore: APIKeyStore = FakeUIAPIKeyStore(key: "test-key"),
         client: FakeUIAnthropicClient = FakeUIAnthropicClient(responses: [
             AnthropicMessageResponse(content: [.text("OK")])
         ])
@@ -102,7 +117,7 @@ struct AppModelTests {
             calendarStore: store,
             memoryStore: MemoryStore(rootURL: try makeTempDirectory()),
             promptStore: PromptStore(),
-            apiKeyStore: FakeUIAPIKeyStore(key: "test-key"),
+            apiKeyStore: apiKeyStore,
             client: client
         )
     }
@@ -159,11 +174,17 @@ private final class FakeUICalendarStore: CalendarStore {
     }
 }
 
-private struct FakeUIAPIKeyStore: APIKeyStore {
+private final class FakeUIAPIKeyStore: APIKeyStore, @unchecked Sendable {
     var key: String?
+    var readCount = 0
+
+    init(key: String?) {
+        self.key = key
+    }
 
     func readAPIKey() -> String? {
-        key
+        readCount += 1
+        return key
     }
 
     func writeAPIKey(_ key: String) throws {}

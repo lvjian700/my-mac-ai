@@ -53,7 +53,6 @@ public final class AppModel: ObservableObject {
             ),
             configuration: AssistantConfiguration(model: UserDefaults.standard.string(forKey: "icalMac.model") ?? "claude-sonnet-4-6")
         )
-        self.apiKeyDraft = apiKeyStore.readAPIKey() ?? ""
         self.snapshot = memoryStore.readSnapshot()
         self.events = snapshot?.events ?? []
         self.isShowingCachedSnapshot = snapshot != nil
@@ -62,6 +61,10 @@ public final class AppModel: ObservableObject {
 
     public var hasAPIKey: Bool {
         !(apiKeyStore.readAPIKey() ?? "").isEmpty
+    }
+
+    public func loadAPIKeyDraft() {
+        apiKeyDraft = apiKeyStore.readAPIKey() ?? ""
     }
 
     public var displayedWeekRange: CalendarQuery {

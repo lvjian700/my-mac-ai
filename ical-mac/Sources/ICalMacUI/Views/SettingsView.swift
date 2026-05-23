@@ -10,6 +10,7 @@ import SwiftUI
 
 public struct SettingsView: View {
     @EnvironmentObject private var model: AppModel
+    @State private var hasLoadedAPIKey = false
 
     public init() {}
 
@@ -39,5 +40,10 @@ public struct SettingsView: View {
             }
         }
         .padding()
+        .onAppear {
+            guard !hasLoadedAPIKey else { return }
+            hasLoadedAPIKey = true
+            model.loadAPIKeyDraft()
+        }
     }
 }

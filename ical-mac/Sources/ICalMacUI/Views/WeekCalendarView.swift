@@ -78,7 +78,7 @@ private struct WeekHeaderView: View {
     var body: some View {
         HStack(spacing: headerSpacing) {
             Text(Self.monthFormatter.string(from: model.displayedWeekStartDate))
-                .font(textMetrics.font(.largeTitle, weight: .semibold))
+                .font(.system(size: 34, weight: .semibold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.72)
 
@@ -185,6 +185,9 @@ private struct WeekGridView: View {
     private var eventVerticalInset: CGFloat { 3 }
     private var minimumEventWidth: CGFloat { 44 }
     private var minimumEventHeight: CGFloat { textMetrics.layoutValue(28) }
+    private var currentTimeLabelHeight: CGFloat { textMetrics.layoutValue(28) }
+    private var currentTimeDotSide: CGFloat { textMetrics.layoutValue(9) }
+    private var currentTimeLineHeight: CGFloat { textMetrics.layoutValue(2) }
 
     private var days: [Date] {
         (0..<7).compactMap {
@@ -208,6 +211,13 @@ private struct WeekGridView: View {
                         ZStack(alignment: .topLeading) {
                             gridLines(dayWidth: dayWidth)
                             eventBlocks(dayWidth: dayWidth)
+                            TimelineView(.periodic(from: .now, by: 60)) { context in
+                                currentTimeIndicator(
+                                    now: context.date,
+                                    dayWidth: dayWidth,
+                                    contentWidth: contentWidth
+                                )
+                            }
                         }
                         .frame(width: contentWidth, height: hourHeight * 24)
                     }
@@ -283,6 +293,44 @@ private struct WeekGridView: View {
         }
     }
 
+    @ViewBuilder
+    private func currentTimeIndicator(now: Date, dayWidth: CGFloat, contentWidth: CGFloat) -> some View {
+        if let dayIndex = currentDayIndex(for: now) {
+            let yPosition = currentTimeYPosition(for: now)
+            let todayX = timeColumnWidth + CGFloat(dayIndex) * dayWidth
+            let gridWidth = max(contentWidth - timeColumnWidth, 0)
+            let labelY = min(max(yPosition - currentTimeLabelHeight / 2, 0), hourHeight * 24 - currentTimeLabelHeight)
+
+            ZStack(alignment: .topLeading) {
+                Rectangle()
+                    .fill(Color.red.opacity(0.16))
+                    .frame(width: gridWidth, height: 1)
+                    .offset(x: timeColumnWidth, y: yPosition)
+
+                Rectangle()
+                    .fill(Color.red)
+                    .frame(width: dayWidth, height: currentTimeLineHeight)
+                    .offset(x: todayX, y: yPosition - currentTimeLineHeight / 2)
+
+                Circle()
+                    .fill(Color.red)
+                    .frame(width: currentTimeDotSide, height: currentTimeDotSide)
+                    .offset(x: todayX - currentTimeDotSide / 2, y: yPosition - currentTimeDotSide / 2)
+
+                Text(Self.currentTimeFormatter.string(from: now))
+                    .font(textMetrics.font(.caption, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .padding(.horizontal, textMetrics.layoutValue(6))
+                    .frame(height: currentTimeLabelHeight)
+                    .background(Color.red, in: Capsule())
+                    .frame(width: timeColumnWidth - trailingPadding, alignment: .trailing)
+                    .offset(y: labelY)
+            }
+            .allowsHitTesting(false)
+        }
+    }
+
     private func eventBlocks(dayWidth: CGFloat) -> some View {
         ForEach(model.visibleTimedEvents) { event in
             if let frame = frame(for: event, dayWidth: dayWidth) {
@@ -315,6 +363,23 @@ private struct WeekGridView: View {
         )
     }
 
+    private func currentDayIndex(for date: Date) -> Int? {
+        let weekStart = calendar.startOfDay(for: model.displayedWeekStartDate)
+        let currentDayStart = calendar.startOfDay(for: date)
+        guard let dayIndex = calendar.dateComponents([.day], from: weekStart, to: currentDayStart).day,
+              dayIndex >= 0,
+              dayIndex < 7 else {
+            return nil
+        }
+        return dayIndex
+    }
+
+    private func currentTimeYPosition(for date: Date) -> CGFloat {
+        let components = calendar.dateComponents([.hour, .minute, .second], from: date)
+        let seconds = CGFloat((components.hour ?? 0) * 3600 + (components.minute ?? 0) * 60 + (components.second ?? 0))
+        return seconds / 3600 * hourHeight
+    }
+
     private func dateForHour(_ hour: Int) -> Date {
         calendar.date(bySettingHour: hour, minute: 0, second: 0, of: model.displayedWeekStartDate) ?? model.displayedWeekStartDate
     }
@@ -322,6 +387,12 @@ private struct WeekGridView: View {
     private static let hourFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "ha"
+        return formatter
+    }()
+
+    private static let currentTimeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm"
         return formatter
     }()
 }

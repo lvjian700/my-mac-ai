@@ -25,6 +25,10 @@ public struct AnthropicAPIKeyStore: APIKeyStore {
     public init() {}
 
     public func readAPIKey() -> String? {
+        if let apiKey = ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"], !apiKey.isEmpty {
+            return apiKey
+        }
+
         var query = baseQuery()
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
@@ -33,7 +37,7 @@ public struct AnthropicAPIKeyStore: APIKeyStore {
         let status = SecItemCopyMatching(query as CFDictionary, &item)
         guard status == errSecSuccess,
               let data = item as? Data else {
-            return ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"]
+            return nil
         }
         return String(data: data, encoding: .utf8)
     }

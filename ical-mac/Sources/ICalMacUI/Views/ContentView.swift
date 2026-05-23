@@ -25,18 +25,19 @@ public struct ContentView: View {
                     max: textMetrics.layoutValue(300)
                 )
         } content: {
-            ChatView()
-                .navigationSplitViewColumnWidth(
-                    min: textMetrics.layoutValue(260),
-                    ideal: textMetrics.layoutValue(420),
-                    max: textMetrics.layoutValue(680)
-                )
-        } detail: {
             WeekCalendarView()
                 .navigationSplitViewColumnWidth(
                     min: textMetrics.layoutValue(480),
-                    ideal: textMetrics.layoutValue(680),
+                    ideal: textMetrics.layoutValue(720),
                     max: textMetrics.layoutValue(960)
+                    
+                )
+        } detail: {
+            ChatView()
+                .navigationSplitViewColumnWidth(
+                    min: textMetrics.layoutValue(240),
+                    ideal: textMetrics.layoutValue(280),
+                    max: textMetrics.layoutValue(480)
                 )
         }
         .onAppear {
