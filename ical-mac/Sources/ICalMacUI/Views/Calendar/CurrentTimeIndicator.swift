@@ -11,7 +11,7 @@ import SwiftUI
             timeColumnWidth: 72,
             trailingPadding: 8,
             hourHeight: 58,
-            labelHeight: 28,
+            labelHeight: 20,
             dotSide: 9,
             lineHeight: 2,
             yPosition: 480
@@ -69,7 +69,7 @@ struct CurrentTimeIndicator: View {
                 .font(textMetrics.font(.caption, weight: .semibold))
                 .foregroundStyle(.white)
                 .lineLimit(1)
-                .padding(.horizontal, textMetrics.layoutValue(6))
+                .padding(.horizontal, textMetrics.layoutValue(4))
                 .frame(height: labelHeight)
                 .background(Color.red, in: Capsule())
                 .frame(width: timeColumnWidth - trailingPadding, alignment: .trailing)

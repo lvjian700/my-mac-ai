@@ -32,7 +32,7 @@ struct WeekGridView: View {
     private var eventVerticalInset: CGFloat { 1 }
     private var minimumEventWidth: CGFloat { 44 }
     private var minimumEventHeight: CGFloat { textMetrics.layoutValue(28) }
-    private var currentTimeLabelHeight: CGFloat { textMetrics.layoutValue(28) }
+    private var currentTimeLabelHeight: CGFloat { textMetrics.layoutValue(20) }
     private var currentTimeDotSide: CGFloat { textMetrics.layoutValue(9) }
     private var currentTimeLineHeight: CGFloat { textMetrics.layoutValue(2) }
     private var calendarBottomScrollPadding: CGFloat { textMetrics.layoutValue(12) }
