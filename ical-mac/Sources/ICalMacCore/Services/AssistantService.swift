@@ -2,8 +2,8 @@ import Foundation
 
 @MainActor
 public final class AssistantService {
-    private var messages: [AnthropicMessageParam] = []
-    private let client: AnthropicClient
+    private var inputHistory: [OpenAIInputItem] = []
+    private let client: OpenAIClient
     private let apiKeyStore: APIKeyStore
     private let memoryStore: MemoryStore
     private let promptStore: PromptStore
@@ -12,7 +12,7 @@ public final class AssistantService {
     private let maxToolRounds: Int
 
     public init(
-        client: AnthropicClient,
+        client: OpenAIClient,
         apiKeyStore: APIKeyStore,
         memoryStore: MemoryStore,
         promptStore: PromptStore,
@@ -30,16 +30,16 @@ public final class AssistantService {
     }
 
     public func clearHistory() {
-        messages.removeAll()
+        inputHistory.removeAll()
     }
 
     public func send(_ text: String, snapshot: SessionSnapshot?) async throws -> String {
         guard let apiKey = apiKeyStore.readAPIKey(), !apiKey.isEmpty else {
-            throw AnthropicError.missingAPIKey
+            throw OpenAIError.missingAPIKey
         }
 
-        messages.append(.init(role: "user", content: [.text(text)]))
-        let system = promptStore.buildSystemPrompt(
+        inputHistory.append(.message(role: "user", content: text))
+        let instructions = promptStore.buildSystemPrompt(
             memory: memoryStore.readMemory(),
             snapshot: snapshot,
             configuration: configuration
@@ -47,54 +47,42 @@ public final class AssistantService {
 
         var toolRounds = 0
         while true {
-            let request = AnthropicMessageRequest(
+            let request = OpenAIRequest(
                 model: configuration.model,
-                system: system,
+                instructions: instructions,
                 tools: CalendarToolExecutor.toolDefinitions,
-                messages: messages
+                input: inputHistory
             )
-            let response = try await client.createMessage(request, apiKey: apiKey)
-            messages.append(.init(role: "assistant", content: response.content))
+            let response = try await client.createResponse(request, apiKey: apiKey)
 
-            let toolUses = response.content.toolUses
-            if response.stopReason == "tool_use" || !toolUses.isEmpty {
+            let toolCalls = response.output.functionCalls
+            if !toolCalls.isEmpty {
                 guard toolRounds < maxToolRounds else {
-                    throw AnthropicError.toolLoopLimitExceeded(maxToolRounds)
+                    throw OpenAIError.toolLoopLimitExceeded(maxToolRounds)
                 }
                 toolRounds += 1
-                var toolResults: [AnthropicContentBlock] = []
-                for toolUse in toolUses {
-                    let output = await toolExecutor.execute(name: toolUse.name, input: toolUse.input)
-                    toolResults.append(.toolResult(toolUseID: toolUse.id, content: output))
+                for call in toolCalls {
+                    inputHistory.append(.functionCall(callId: call.callId, name: call.name, arguments: call.arguments))
                 }
-                messages.append(.init(role: "user", content: toolResults))
+                for call in toolCalls {
+                    let input = parseArguments(call.arguments)
+                    let output = await toolExecutor.execute(name: call.name, input: input)
+                    inputHistory.append(.functionCallOutput(callId: call.callId, output: output))
+                }
                 continue
             }
 
-            let output = response.content.text
+            let output = response.output.text
             guard !output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                throw AnthropicError.emptyResponse
+                throw OpenAIError.emptyResponse
             }
+            inputHistory.append(.message(role: "assistant", content: output))
             return output
         }
     }
-}
 
-private extension Array where Element == AnthropicContentBlock {
-    var text: String {
-        compactMap { block in
-            if case .text(let text) = block { return text }
-            return nil
-        }
-        .joined()
-    }
-
-    var toolUses: [(id: String, name: String, input: JSONValue)] {
-        compactMap { block in
-            if case .toolUse(let id, let name, let input) = block {
-                return (id, name, input)
-            }
-            return nil
-        }
+    private func parseArguments(_ arguments: String) -> JSONValue {
+        let data = Data(arguments.utf8)
+        return (try? JSONDecoder().decode(JSONValue.self, from: data)) ?? .object([:])
     }
 }

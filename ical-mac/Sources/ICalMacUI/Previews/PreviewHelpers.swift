@@ -55,9 +55,9 @@ struct PreviewAPIKeyStore: APIKeyStore {
     func deleteAPIKey() throws {}
 }
 
-struct PreviewAnthropicClient: AnthropicClient {
-    func createMessage(_ request: AnthropicMessageRequest, apiKey: String) async throws -> AnthropicMessageResponse {
-        AnthropicMessageResponse(content: [.text("Preview response")])
+struct PreviewOpenAIClient: OpenAIClient {
+    func createResponse(_ request: OpenAIRequest, apiKey: String) async throws -> OpenAIResponse {
+        OpenAIResponse(output: [.message(role: "assistant", content: [.init(type: "output_text", text: "Preview response")])])
     }
 }
 
@@ -121,7 +121,7 @@ extension AppModel {
             memoryStore: MemoryStore(rootURL: URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("ical-mac-preview")),
             promptStore: PromptStore(),
             apiKeyStore: PreviewAPIKeyStore(),
-            client: PreviewAnthropicClient()
+            client: PreviewOpenAIClient()
         )
         model.events = events
         model.calendars = calendars

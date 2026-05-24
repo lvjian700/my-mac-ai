@@ -73,15 +73,15 @@ final class FakeCalendarStore: CalendarStore {
     }
 }
 
-final class FakeAnthropicClient: AnthropicClient, @unchecked Sendable {
-    private var responses: [AnthropicMessageResponse]
-    private(set) var requests: [AnthropicMessageRequest] = []
+final class FakeOpenAIClient: OpenAIClient, @unchecked Sendable {
+    private var responses: [OpenAIResponse]
+    private(set) var requests: [OpenAIRequest] = []
 
-    init(responses: [AnthropicMessageResponse]) {
+    init(responses: [OpenAIResponse]) {
         self.responses = responses
     }
 
-    func createMessage(_ request: AnthropicMessageRequest, apiKey: String) async throws -> AnthropicMessageResponse {
+    func createResponse(_ request: OpenAIRequest, apiKey: String) async throws -> OpenAIResponse {
         requests.append(request)
         return responses.removeFirst()
     }

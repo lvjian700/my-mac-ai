@@ -16,9 +16,18 @@ public struct SettingsView: View {
 
     public var body: some View {
         Form {
-            Section("Anthropic") {
-                SecureField("API key", text: $model.apiKeyDraft)
+            Section("OpenAI") {
+                if model.isUsingEnvAPIKey {
+                    LabeledContent("API Key") {
+                        Label("Using OPENAI_API_KEY", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                            .font(.callout)
+                    }
+                } else {
+                    SecureField("API key", text: $model.apiKeyDraft)
+                }
                 TextField("Model", text: $model.modelName)
+                    .help("e.g. gpt-4.5-mini, gpt-4o, o3")
                 Button("Save Settings") {
                     model.saveSettings()
                 }

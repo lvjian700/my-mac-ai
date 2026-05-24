@@ -93,8 +93,8 @@ struct AppModelTests {
         store.events = [event(id: "standup", title: "Standup", calendarID: "work")]
         let model = try makeModel(
             store: store,
-            client: FakeUIAnthropicClient(responses: [
-                AnthropicMessageResponse(content: [.text("Done")])
+            client: FakeUIOpenAIClient(responses: [
+                OpenAIResponse(output: [.message(role: "assistant", content: [.init(type: "output_text", text: "Done")])])
             ])
         )
         model.displayedWeekStartDate = makeDate(year: 2026, month: 5, day: 18)
@@ -109,8 +109,8 @@ struct AppModelTests {
     private func makeModel(
         store: FakeUICalendarStore,
         apiKeyStore: APIKeyStore = FakeUIAPIKeyStore(key: "test-key"),
-        client: FakeUIAnthropicClient = FakeUIAnthropicClient(responses: [
-            AnthropicMessageResponse(content: [.text("OK")])
+        client: FakeUIOpenAIClient = FakeUIOpenAIClient(responses: [
+            OpenAIResponse(output: [.message(role: "assistant", content: [.init(type: "output_text", text: "OK")])])
         ])
     ) throws -> AppModel {
         AppModel(
@@ -191,14 +191,14 @@ private final class FakeUIAPIKeyStore: APIKeyStore, @unchecked Sendable {
     func deleteAPIKey() throws {}
 }
 
-private final class FakeUIAnthropicClient: AnthropicClient, @unchecked Sendable {
-    private var responses: [AnthropicMessageResponse]
+private final class FakeUIOpenAIClient: OpenAIClient, @unchecked Sendable {
+    private var responses: [OpenAIResponse]
 
-    init(responses: [AnthropicMessageResponse]) {
+    init(responses: [OpenAIResponse]) {
         self.responses = responses
     }
 
-    func createMessage(_ request: AnthropicMessageRequest, apiKey: String) async throws -> AnthropicMessageResponse {
+    func createResponse(_ request: OpenAIRequest, apiKey: String) async throws -> OpenAIResponse {
         responses.removeFirst()
     }
 }

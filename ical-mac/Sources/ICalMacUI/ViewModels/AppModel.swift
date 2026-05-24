@@ -13,7 +13,7 @@ public final class AppModel: ObservableObject {
     @Published public var isSending = false
     @Published public var isRefreshing = false
     @Published public var apiKeyDraft = ""
-    @Published public var modelName = UserDefaults.standard.string(forKey: "icalMac.model") ?? "claude-sonnet-4-6"
+    @Published public var modelName = UserDefaults.standard.string(forKey: "icalMac.model") ?? "gpt-4.5-mini"
     @Published public var defaultCalendarTitle = UserDefaults.standard.string(forKey: "icalMac.defaultCalendarTitle") ?? ""
     @Published public var isShowingCachedSnapshot = false
     @Published public var selectedCalendarIDs: Set<String> = []
@@ -23,7 +23,7 @@ public final class AppModel: ObservableObject {
     private let memoryStore: MemoryStore
     private let promptStore: PromptStore
     private let apiKeyStore: APIKeyStore
-    private let client: AnthropicClient
+    private let client: OpenAIClient
     private var assistant: AssistantService
     private var snapshot: SessionSnapshot?
     private var pollingTask: Task<Void, Never>?
@@ -33,8 +33,8 @@ public final class AppModel: ObservableObject {
         calendarStore: CalendarStore = EventKitCalendarStore(),
         memoryStore: MemoryStore = MemoryStore(),
         promptStore: PromptStore = PromptStore(),
-        apiKeyStore: APIKeyStore = AnthropicAPIKeyStore(),
-        client: AnthropicClient = URLSessionAnthropicClient()
+        apiKeyStore: APIKeyStore = OpenAIAPIKeyStore(),
+        client: OpenAIClient = URLSessionOpenAIClient()
     ) {
         self.calendarStore = calendarStore
         self.memoryStore = memoryStore
@@ -51,7 +51,7 @@ public final class AppModel: ObservableObject {
                 memoryStore: memoryStore,
                 defaultCalendarTitle: UserDefaults.standard.string(forKey: "icalMac.defaultCalendarTitle")
             ),
-            configuration: AssistantConfiguration(model: UserDefaults.standard.string(forKey: "icalMac.model") ?? "claude-sonnet-4-6")
+            configuration: AssistantConfiguration(model: UserDefaults.standard.string(forKey: "icalMac.model") ?? "gpt-4.5-mini")
         )
         self.snapshot = memoryStore.readSnapshot()
         self.events = snapshot?.events ?? []
@@ -59,11 +59,16 @@ public final class AppModel: ObservableObject {
         self.accessStatus = calendarStore.accessStatus()
     }
 
+    public var isUsingEnvAPIKey: Bool {
+        !(ProcessInfo.processInfo.environment["OPENAI_API_KEY"] ?? "").isEmpty
+    }
+
     public var hasAPIKey: Bool {
-        !(apiKeyStore.readAPIKey() ?? "").isEmpty
+        isUsingEnvAPIKey || !(apiKeyStore.readAPIKey() ?? "").isEmpty
     }
 
     public func loadAPIKeyDraft() {
+        guard !isUsingEnvAPIKey else { return }
         apiKeyDraft = apiKeyStore.readAPIKey() ?? ""
     }
 
@@ -186,18 +191,21 @@ public final class AppModel: ObservableObject {
         } else {
             UserDefaults.standard.set(defaultCalendar, forKey: "icalMac.defaultCalendarTitle")
         }
-        do {
-            let key = apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-            if key.isEmpty {
-                try apiKeyStore.deleteAPIKey()
-            } else {
-                try apiKeyStore.writeAPIKey(key)
+        if !isUsingEnvAPIKey {
+            do {
+                let key = apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                if key.isEmpty {
+                    try apiKeyStore.deleteAPIKey()
+                } else {
+                    try apiKeyStore.writeAPIKey(key)
+                }
+            } catch {
+                statusText = error.localizedDescription
+                return
             }
-            rebuildAssistant()
-            statusText = "Settings saved"
-        } catch {
-            statusText = error.localizedDescription
         }
+        rebuildAssistant()
+        statusText = "Settings saved"
     }
 
     public func clearChat() {

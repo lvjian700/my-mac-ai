@@ -23,17 +23,17 @@ public final class CalendarToolExecutor {
         self.encoder.dateEncodingStrategy = .iso8601
     }
 
-    public static var toolDefinitions: [AnthropicToolDefinition] {
+    public static var toolDefinitions: [OpenAIToolDefinition] {
         [
-            AnthropicToolDefinition(
+            OpenAIToolDefinition(
                 name: "list_calendars",
                 description: "List available Apple calendars.",
-                inputSchema: .object(["type": .string("object"), "properties": .object([:])])
+                parameters: .object(["type": .string("object"), "properties": .object([:])])
             ),
-            AnthropicToolDefinition(
+            OpenAIToolDefinition(
                 name: "list_events",
                 description: "List Apple Calendar events. Provide from/to as YYYY-MM-DD, ISO-8601, today, or tomorrow.",
-                inputSchema: .object([
+                parameters: .object([
                     "type": .string("object"),
                     "properties": .object([
                         "from": .object(["type": .string("string")]),
@@ -43,10 +43,10 @@ public final class CalendarToolExecutor {
                     "required": .array([.string("from"), .string("to")]),
                 ])
             ),
-            AnthropicToolDefinition(
+            OpenAIToolDefinition(
                 name: "create_event",
                 description: "Create an Apple Calendar event.",
-                inputSchema: .object([
+                parameters: .object([
                     "type": .string("object"),
                     "properties": .object([
                         "title": .object(["type": .string("string")]),
@@ -60,10 +60,10 @@ public final class CalendarToolExecutor {
                     "required": .array([.string("title"), .string("start"), .string("end")]),
                 ])
             ),
-            AnthropicToolDefinition(
+            OpenAIToolDefinition(
                 name: "update_event",
                 description: "Update an existing Apple Calendar event by id.",
-                inputSchema: .object([
+                parameters: .object([
                     "type": .string("object"),
                     "properties": .object([
                         "id": .object(["type": .string("string")]),
@@ -78,10 +78,10 @@ public final class CalendarToolExecutor {
                     "required": .array([.string("id")]),
                 ])
             ),
-            AnthropicToolDefinition(
+            OpenAIToolDefinition(
                 name: "write_memory",
                 description: "Write the full YAML calendar memory content.",
-                inputSchema: .object([
+                parameters: .object([
                     "type": .string("object"),
                     "properties": .object(["content": .object(["type": .string("string")])]),
                     "required": .array([.string("content")]),

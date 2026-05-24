@@ -7,12 +7,13 @@ struct AssistantServiceTests {
     @Test func toolLoopSendsToolResultThenReturnsFinalText() async throws {
         let calendarStore = FakeCalendarStore()
         calendarStore.calendars = [CalendarInfo(id: "cal-1", title: "Work", accountName: "iCloud", allowsContentModifications: true)]
-        let client = FakeAnthropicClient(responses: [
-            AnthropicMessageResponse(
-                content: [.toolUse(id: "tool-1", name: "list_calendars", input: .object([:]))],
-                stopReason: "tool_use"
-            ),
-            AnthropicMessageResponse(content: [.text("Work calendar is available.")], stopReason: "end_turn"),
+        let client = FakeOpenAIClient(responses: [
+            OpenAIResponse(output: [
+                .functionCall(callId: "fc-1", name: "list_calendars", arguments: "{}")
+            ]),
+            OpenAIResponse(output: [
+                .message(role: "assistant", content: [.init(type: "output_text", text: "Work calendar is available.")])
+            ]),
         ])
         let root = try makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
@@ -28,22 +29,18 @@ struct AssistantServiceTests {
 
         #expect(text == "Work calendar is available.")
         #expect(client.requests.count == 2)
-        #expect(client.requests[1].messages.last?.content == [.toolResult(toolUseID: "tool-1", content: """
-        [
-          {
-            "accountName" : "iCloud",
-            "allowsContentModifications" : true,
-            "id" : "cal-1",
-            "title" : "Work"
-          }
-        ]
-        """)])
+        let secondInput = client.requests[1].input
+        #expect(secondInput.contains(.functionCall(callId: "fc-1", name: "list_calendars", arguments: "{}")))
+        #expect(secondInput.contains(where: { item in
+            if case .functionCallOutput(let callId, _) = item { return callId == "fc-1" }
+            return false
+        }))
     }
 
     @Test func missingAPIKeyThrowsBeforeNetwork() async throws {
         let root = try makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
-        let client = FakeAnthropicClient(responses: [])
+        let client = FakeOpenAIClient(responses: [])
         let service = AssistantService(
             client: client,
             apiKeyStore: FakeAPIKeyStore(key: nil),
@@ -52,7 +49,7 @@ struct AssistantServiceTests {
             toolExecutor: CalendarToolExecutor(calendarStore: FakeCalendarStore(), memoryStore: MemoryStore(rootURL: root))
         )
 
-        await #expect(throws: AnthropicError.missingAPIKey) {
+        await #expect(throws: OpenAIError.missingAPIKey) {
             _ = try await service.send("hi", snapshot: nil)
         }
         #expect(client.requests.isEmpty)
@@ -61,9 +58,9 @@ struct AssistantServiceTests {
     @Test func reusedServicePreservesConversationHistoryAcrossTurns() async throws {
         let root = try makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
-        let client = FakeAnthropicClient(responses: [
-            AnthropicMessageResponse(content: [.text("First answer.")], stopReason: "end_turn"),
-            AnthropicMessageResponse(content: [.text("Second answer.")], stopReason: "end_turn"),
+        let client = FakeOpenAIClient(responses: [
+            OpenAIResponse(output: [.message(role: "assistant", content: [.init(type: "output_text", text: "First answer.")])]),
+            OpenAIResponse(output: [.message(role: "assistant", content: [.init(type: "output_text", text: "Second answer.")])]),
         ])
         let service = AssistantService(
             client: client,
@@ -76,19 +73,19 @@ struct AssistantServiceTests {
         _ = try await service.send("first question", snapshot: nil)
         _ = try await service.send("second question", snapshot: nil)
 
-        let secondRequestMessages = client.requests[1].messages
-        #expect(secondRequestMessages.count == 3)
-        #expect(secondRequestMessages[0].content == [.text("first question")])
-        #expect(secondRequestMessages[1].content == [.text("First answer.")])
-        #expect(secondRequestMessages[2].content == [.text("second question")])
+        let secondInput = client.requests[1].input
+        #expect(secondInput.count == 3)
+        #expect(secondInput[0] == .message(role: "user", content: "first question"))
+        #expect(secondInput[1] == .message(role: "assistant", content: "First answer."))
+        #expect(secondInput[2] == .message(role: "user", content: "second question"))
     }
 
     @Test func repeatedToolUseStopsAtConfiguredLimit() async throws {
         let root = try makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
-        let client = FakeAnthropicClient(responses: [
-            AnthropicMessageResponse(content: [.toolUse(id: "tool-1", name: "list_calendars", input: .object([:]))], stopReason: "tool_use"),
-            AnthropicMessageResponse(content: [.toolUse(id: "tool-2", name: "list_calendars", input: .object([:]))], stopReason: "tool_use"),
+        let client = FakeOpenAIClient(responses: [
+            OpenAIResponse(output: [.functionCall(callId: "fc-1", name: "list_calendars", arguments: "{}")]),
+            OpenAIResponse(output: [.functionCall(callId: "fc-2", name: "list_calendars", arguments: "{}")]),
         ])
         let service = AssistantService(
             client: client,
@@ -99,7 +96,7 @@ struct AssistantServiceTests {
             maxToolRounds: 1
         )
 
-        await #expect(throws: AnthropicError.toolLoopLimitExceeded(1)) {
+        await #expect(throws: OpenAIError.toolLoopLimitExceeded(1)) {
             _ = try await service.send("loop", snapshot: nil)
         }
     }

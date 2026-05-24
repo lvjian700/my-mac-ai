@@ -71,3 +71,57 @@ public struct AnthropicAPIKeyStore: APIKeyStore {
         ]
     }
 }
+
+public struct OpenAIAPIKeyStore: APIKeyStore {
+    private let service = "ai.my-mac.ical-mac"
+    private let account = "openai-api-key"
+
+    public init() {}
+
+    public func readAPIKey() -> String? {
+        if let apiKey = ProcessInfo.processInfo.environment["OPENAI_API_KEY"], !apiKey.isEmpty {
+            return apiKey
+        }
+
+        var query = baseQuery()
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        guard status == errSecSuccess,
+              let data = item as? Data else {
+            return nil
+        }
+        return String(data: data, encoding: .utf8)
+    }
+
+    public func writeAPIKey(_ key: String) throws {
+        try deleteAPIKey(allowMissing: true)
+        var item = baseQuery()
+        item[kSecValueData as String] = Data(key.utf8)
+        let status = SecItemAdd(item as CFDictionary, nil)
+        guard status == errSecSuccess else {
+            throw KeychainStoreError.unhandledStatus(status)
+        }
+    }
+
+    public func deleteAPIKey() throws {
+        try deleteAPIKey(allowMissing: true)
+    }
+
+    private func deleteAPIKey(allowMissing: Bool) throws {
+        let status = SecItemDelete(baseQuery() as CFDictionary)
+        guard status == errSecSuccess || (allowMissing && status == errSecItemNotFound) else {
+            throw KeychainStoreError.unhandledStatus(status)
+        }
+    }
+
+    private func baseQuery() -> [String: Any] {
+        [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+        ]
+    }
+}
