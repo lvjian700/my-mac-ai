@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" rx="220" fill="#f97316"/>
+  <rect x="142" y="268" width="740" height="488" rx="154" fill="#fff7ed"/>
+  <text x="512" y="585" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif" font-size="214" font-weight="800" letter-spacing="-8" fill="#f97316">Cali</text>
+  <circle cx="776" cy="300" r="58" fill="#fb923c"/>
+  <path d="M776 267V333" stroke="#fff7ed" stroke-width="16" stroke-linecap="round"/>
+  <path d="M743 300H809" stroke="#fff7ed" stroke-width="16" stroke-linecap="round"/>
+</svg>

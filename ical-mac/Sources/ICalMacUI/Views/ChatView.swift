@@ -22,46 +22,45 @@ struct ChatView: View {
     @Environment(\.readingTextMetrics) private var textMetrics
     @State private var draft = ""
 
-    private var composerHorizontalPadding: CGFloat { textMetrics.layoutValue(20) }
-    private var composerBottomPadding: CGFloat { textMetrics.layoutValue(18) }
+    private var composerLeadingPadding: CGFloat { textMetrics.layoutValue(10) }
+    private var composerTrailingPadding: CGFloat { textMetrics.layoutValue(30) }
+    private var composerBottomPadding: CGFloat { textMetrics.layoutValue(10) }
     private var transcriptHorizontalPadding: CGFloat { textMetrics.layoutValue(24) }
     private var transcriptTopPadding: CGFloat { textMetrics.layoutValue(18) }
-    private var transcriptBottomPadding: CGFloat { textMetrics.layoutValue(150) }
+    private var transcriptBottomPadding: CGFloat { textMetrics.layoutValue(220) }
     private var transcriptSpacing: CGFloat { textMetrics.layoutValue(12) }
 
     var body: some View {
         ZStack(alignment: .bottom) {
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: transcriptSpacing) {
-                        ForEach(model.messages) { message in
-                            MessageRow(message: message)
-                                .id(message.id)
-                        }
+                    VStack(spacing: 0) {
+                        LazyVStack(alignment: .leading, spacing: transcriptSpacing) {
+                            ForEach(model.messages) { message in
+                                MessageRow(message: message)
+                                    .id(message.id)
+                            }
 
-                        if model.isSending {
-                            ProgressView()
-                                .controlSize(.small)
-                                .padding(.horizontal)
-                                .id("sending")
+                            if model.isSending {
+                                ProgressView()
+                                    .controlSize(.small)
+                                    .padding(.horizontal)
+                            }
                         }
+                        .padding(.horizontal, transcriptHorizontalPadding)
+                        .padding(.top, transcriptTopPadding)
+
+                        Color.clear
+                            .frame(height: transcriptBottomPadding)
+                            .id(Self.transcriptBottomID)
                     }
-                    .padding(.horizontal, transcriptHorizontalPadding)
-                    .padding(.top, transcriptTopPadding)
-                    .padding(.bottom, transcriptBottomPadding)
                 }
                 .onChange(of: model.messages.count) { _, _ in
-                    if let last = model.messages.last {
-                        withAnimation(.easeOut(duration: 0.2)) {
-                            proxy.scrollTo(last.id, anchor: .bottom)
-                        }
-                    }
+                    scrollToTranscriptBottom(proxy)
                 }
                 .onChange(of: model.isSending) { _, isSending in
                     guard isSending else { return }
-                    withAnimation(.easeOut(duration: 0.2)) {
-                        proxy.scrollTo("sending", anchor: .bottom)
-                    }
+                    scrollToTranscriptBottom(proxy)
                 }
             }
 
@@ -70,11 +69,22 @@ struct ChatView: View {
                 draft = ""
                 Task { await model.send(text) }
             }
-            .padding(.horizontal, composerHorizontalPadding)
+            .padding(.leading, composerLeadingPadding)
+            .padding(.trailing, composerTrailingPadding)
             .padding(.bottom, composerBottomPadding)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+
+    private func scrollToTranscriptBottom(_ proxy: ScrollViewProxy) {
+        DispatchQueue.main.async {
+            withAnimation(.easeOut(duration: 0.2)) {
+                proxy.scrollTo(Self.transcriptBottomID, anchor: .bottom)
+            }
+        }
+    }
+
+    private static let transcriptBottomID = "transcript-bottom"
 }
 
 
@@ -120,11 +130,23 @@ private struct ComposerView: View {
 
     private var composerSpacing: CGFloat { textMetrics.layoutValue(10) }
     private var horizontalPadding: CGFloat { textMetrics.layoutValue(16) }
-    private var verticalPadding: CGFloat { textMetrics.layoutValue(14) }
-    private var cornerRadius: CGFloat { textMetrics.layoutValue(24) }
+    private var verticalPadding: CGFloat { textMetrics.layoutValue(12) }
+    private var cornerRadius: CGFloat { textMetrics.layoutValue(12) }
     private var sendButtonSide: CGFloat { textMetrics.layoutValue(30) }
     private var controlsSpacing: CGFloat { textMetrics.layoutValue(8) }
     private var controlsLeadingSpace: CGFloat { textMetrics.layoutValue(16) }
+
+    private var composerFill: Color {
+        isFocused ? Color(nsColor: .textBackgroundColor) : Color(nsColor: .controlBackgroundColor)
+    }
+
+    private var composerStroke: Color {
+        isFocused ? Color.accentColor.opacity(0.20) : Color(nsColor: .separatorColor).opacity(0.30)
+    }
+
+    private var composerShadowOpacity: Double {
+        isFocused ? 0.10 : 0.06
+    }
 
     private var trimmedText: String {
         text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -177,12 +199,16 @@ private struct ComposerView: View {
         }
         .padding(.horizontal, horizontalPadding)
         .padding(.vertical, verticalPadding)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .background {
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .fill(composerFill)
+        }
         .overlay {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .stroke(Color(nsColor: .separatorColor).opacity(0.35), lineWidth: 0.75)
+                .stroke(composerStroke, lineWidth: isFocused ? 1 : 0.75)
         }
-        .shadow(color: .black.opacity(0.12), radius: 24, x: 0, y: 10)
+        .shadow(color: .black.opacity(composerShadowOpacity), radius: isFocused ? 18 : 12, x: 0, y: 6)
+        .animation(.easeOut(duration: 0.16), value: isFocused)
     }
 
     private func submitIfPossible() {

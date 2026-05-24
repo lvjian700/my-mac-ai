@@ -15,6 +15,7 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$EXEC" "$APP/Contents/MacOS/ical-mac"
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
+cp "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 chmod +x "$APP/Contents/MacOS/ical-mac"
 /usr/bin/codesign --force --sign "$CODESIGN_IDENTITY" "$APP" >/dev/null
 
