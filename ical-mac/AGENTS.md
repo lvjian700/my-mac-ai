@@ -38,7 +38,7 @@ so breakpoints in `Sources/ICalMacApp` and `Sources/ICalMacCore` work normally.
 
 **Boundaries:**
 - `ICalMacCore` owns calendar models, EventKit access, Anthropic API/tool loop, memory files, prompt loading, and Keychain storage.
-- `ICalMacUI` owns `AppModel`, SwiftUI views, settings, chat transcript, calendar sidebar, and the read-only week calendar surface.
+- `ICalMacUI` owns `AppModel`, SwiftUI views, settings, chat transcript, conversation sidebar, and the read-only week calendar surface.
 - `ICalMacApp` owns the SwiftUI app entrypoint, app delegate, main window scene, and settings scene.
 
 Use fakes for tests. Do not depend on real Calendar data or live Anthropic calls in unit tests.
@@ -46,7 +46,8 @@ Use fakes for tests. Do not depend on real Calendar data or live Anthropic calls
 ## UI & Calendar Behavior
 
 - Use native macOS SwiftUI patterns first: `NavigationSplitView`, `.sidebar` `List`, `SettingsLink`, toolbars, and system controls.
-- Keep the left calendar pane as a standard navigation/sidebar list. Avoid custom card-like sidebar containers unless the user explicitly asks for a non-native design.
+- Keep the left pane as a standard navigation/sidebar list for conversations. Do not put the calendar account list or calendar filter toggles there.
+- Keep default calendar selection in Settings unless the product flow is intentionally redesigned.
 - The middle calendar surface is read-only. Event creation and updates should stay agent-driven through Cali and `CalendarToolExecutor`.
 - Launch should request Calendar permission through EventKit when needed, then load calendars and the displayed week's events.
 - Empty weeks should still render the week grid; only denied Calendar access should replace the grid with an unavailable state.

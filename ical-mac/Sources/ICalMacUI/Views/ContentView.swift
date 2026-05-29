@@ -18,11 +18,11 @@ public struct ContentView: View {
 
     public var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
-            CalendarsSidebarView()
+            ConversationHistorySidebarView()
                 .navigationSplitViewColumnWidth(
-                    min: textMetrics.layoutValue(180),
-                    ideal: textMetrics.layoutValue(220),
-                    max: textMetrics.layoutValue(300)
+                    min: textMetrics.layoutValue(200),
+                    ideal: textMetrics.layoutValue(240),
+                    max: textMetrics.layoutValue(320)
                 )
         } content: {
             ChatView()
