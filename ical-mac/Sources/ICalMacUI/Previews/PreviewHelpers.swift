@@ -72,7 +72,110 @@ enum PreviewData {
         CalendarInfo(id: "3", title: "Holidays", accountName: "iCloud", allowsContentModifications: false),
     ]
 
-    static let events: [CalendarEvent] = rsvpEvents
+    static let events: [CalendarEvent] = categoryEvents
+
+    static let categoryEvents: [CalendarEvent] = [
+        event(
+            id: "cat-focus",
+            title: "Focus - Planning",
+            dayOffset: 0,
+            hour: 9,
+            duration: 60
+        ),
+        event(
+            id: "cat-focus-time",
+            title: "Focus time - Deep work",
+            dayOffset: 0,
+            hour: 11,
+            duration: 90
+        ),
+        event(
+            id: "cat-catchup",
+            title: "Catchup - Design sync",
+            dayOffset: 1,
+            hour: 9,
+            duration: 45
+        ),
+        event(
+            id: "cat-sync",
+            title: "Sync: Launch notes",
+            dayOffset: 1,
+            hour: 11,
+            duration: 45
+        ),
+        event(
+            id: "cat-tech-huddle",
+            title: "Tech Huddle - Runtime",
+            dayOffset: 1,
+            hour: 14,
+            duration: 45
+        ),
+        event(
+            id: "cat-support",
+            title: "Support - Rotation handoff",
+            dayOffset: 2,
+            hour: 9,
+            duration: 60
+        ),
+        event(
+            id: "cat-cop",
+            title: "Cop - Incident review",
+            dayOffset: 2,
+            hour: 11,
+            duration: 60
+        ),
+        event(
+            id: "cat-oncall",
+            title: "Oncall - Primary",
+            dayOffset: 2,
+            hour: 14,
+            duration: 60
+        ),
+        event(
+            id: "cat-meeting",
+            title: "Product review",
+            dayOffset: 3,
+            hour: 10,
+            duration: 60
+        ),
+        event(
+            id: "cat-lunch",
+            title: "Lunch with Sarah",
+            dayOffset: 4,
+            hour: 12,
+            duration: 60,
+            calendarTitle: "Personal",
+            calendarIdentifier: "1"
+        ),
+        event(
+            id: "cat-personal",
+            title: "Personal - School pickup",
+            dayOffset: 4,
+            hour: 15,
+            duration: 45,
+            calendarTitle: "Personal",
+            calendarIdentifier: "1"
+        ),
+        event(
+            id: "cat-break",
+            title: "Break - Walk",
+            dayOffset: 5,
+            hour: 11,
+            duration: 30
+        ),
+        event(
+            id: "cat-offscreen",
+            title: "Offscreen - Writing",
+            dayOffset: 5,
+            hour: 14,
+            duration: 60
+        ),
+        allDayEvent(
+            id: "cat-out-of-office",
+            title: "Out of office - Travel day",
+            dayOffset: 6
+        ),
+    ]
 
     static let rsvpEvents: [CalendarEvent] = [
         CalendarEvent(
@@ -130,6 +233,62 @@ enum PreviewData {
             currentUserName: "Me",
             attendeeCount: 3
         )
+    }
+
+    private static let calendar = Calendar.current
+    private static let weekStart = startOfWeek(containing: now)
+
+    private static func event(
+        id: String,
+        title: String,
+        dayOffset: Int,
+        hour: Int,
+        duration: TimeInterval,
+        calendarTitle: String = "Work",
+        calendarIdentifier: String = "2"
+    ) -> CalendarEvent {
+        let start = date(dayOffset: dayOffset, hour: hour)
+        return CalendarEvent(
+            id: id,
+            title: title,
+            startDate: start,
+            endDate: start.addingTimeInterval(duration * 60),
+            isAllDay: false,
+            calendarTitle: calendarTitle,
+            calendarIdentifier: calendarIdentifier
+        )
+    }
+
+    private static func allDayEvent(
+        id: String,
+        title: String,
+        dayOffset: Int,
+        calendarTitle: String = "Work",
+        calendarIdentifier: String = "2"
+    ) -> CalendarEvent {
+        let start = calendar.date(byAdding: .day, value: dayOffset, to: weekStart) ?? weekStart
+        let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start.addingTimeInterval(86400)
+        return CalendarEvent(
+            id: id,
+            title: title,
+            startDate: start,
+            endDate: end,
+            isAllDay: true,
+            calendarTitle: calendarTitle,
+            calendarIdentifier: calendarIdentifier
+        )
+    }
+
+    private static func date(dayOffset: Int, hour: Int) -> Date {
+        let day = calendar.date(byAdding: .day, value: dayOffset, to: weekStart) ?? weekStart
+        return calendar.date(bySettingHour: hour, minute: 0, second: 0, of: day) ?? day
+    }
+
+    private static func startOfWeek(containing date: Date) -> Date {
+        let day = calendar.component(.weekday, from: date)
+        let daysFromMonday = day == 1 ? 6 : day - 2
+        let startOfDay = calendar.startOfDay(for: date)
+        return calendar.date(byAdding: .day, value: -daysFromMonday, to: startOfDay) ?? startOfDay
     }
 }
 

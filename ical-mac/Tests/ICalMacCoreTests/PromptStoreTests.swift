@@ -30,4 +30,26 @@ struct PromptStoreTests {
         #expect(!prompt.contains("Always call the `ical` CLI"))
         #expect(!prompt.contains("Calendar Rules Reference"))
     }
+
+    @Test func systemPromptIncludesEventCategoryTitleRules() throws {
+        let store = PromptStore()
+
+        let prompt = store.buildSystemPrompt(memory: "", snapshot: nil)
+
+        #expect(prompt.contains("When creating events, choose the title prefix"))
+        #expect(prompt.contains("Focus - ..."))
+        #expect(prompt.contains("Focus time - ..."))
+        #expect(prompt.contains("Catchup - ..."))
+        #expect(prompt.contains("Sync - ..."))
+        #expect(prompt.contains("Tech Huddle - ..."))
+        #expect(prompt.contains("Support - ..."))
+        #expect(prompt.contains("Cop - ..."))
+        #expect(prompt.contains("Oncall - ..."))
+        #expect(prompt.contains("Lunch - ..."))
+        #expect(prompt.contains("Personal - ..."))
+        #expect(prompt.contains("Break - ..."))
+        #expect(prompt.contains("Offscreen - ..."))
+        #expect(prompt.contains("Out of office - ..."))
+        #expect(!prompt.contains("Force - ..."))
+    }
 }

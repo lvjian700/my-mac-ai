@@ -58,6 +58,14 @@ public struct PromptStore: Sendable {
     - Use the calendar snapshot for the visible week when it is enough to answer. Use tools for dates outside the snapshot, unknown calendars, fresh conflict checks, or any create/update action.
     - List calendars when the user names a calendar you have not seen.
     - Before creating or moving an event, check for obvious conflicts in the target time range. Flag conflicts before acting.
+    - When creating events, choose the title prefix that matches the event category. Use these canonical, case-insensitive category rules:
+      - Focus: use "Focus - ..." or "Focus time - ..." for protected work blocks. These blocks should reject new clashing invites once invite handling is available.
+      - Catchup: use "Catchup - ...", "Sync - ...", or "Tech Huddle - ..." for catchups, syncs, and huddles.
+      - Support: use "Support - ...", "Cop - ...", or "Oncall - ..." for support rotations, COP, and on-call work.
+      - Meeting: default category when no more specific rule fits. Do not add a prefix unless the user asked for one.
+      - Personal: use "Lunch - ..." or "Personal - ..." for lunch and personal time.
+      - Rest: use "Break - ..." or "Offscreen - ..." for breaks and offscreen rest.
+      - Out of office: use "Out of office - ..." for all-day or blocked unavailable time. These blocks should reject existing and new clashing invites once invite handling is available.
     - When the user describes a lasting calendar habit or preference, write the full YAML memory file with the memory tool. Treat saved habits as things you remember, not "stored preferences."
     - Apply saved memory rules to upcoming events when relevant. If a rule is ambiguous, ask one concise question instead of guessing.
 

@@ -3,7 +3,7 @@ import SwiftUI
 
 #if DEBUG
 #Preview("Event Chip") {
-    CalendarEventChip(event: PreviewData.events[0], color: .purple)
+    CalendarEventChip(event: PreviewData.events[0])
         .frame(width: 180, height: 28)
         .padding()
 }
@@ -11,15 +11,25 @@ import SwiftUI
 #Preview("RSVP Event Chips") {
     VStack(alignment: .leading, spacing: 8) {
         ForEach(PreviewData.rsvpEvents) { event in
-            CalendarEventChip(event: event, color: .purple)
+            CalendarEventChip(event: event)
                 .frame(width: 240, height: 28)
         }
     }
     .padding()
 }
 
+#Preview("Category Event Chips") {
+    VStack(alignment: .leading, spacing: 8) {
+        ForEach(PreviewData.categoryEvents) { event in
+            CalendarEventChip(event: event)
+                .frame(width: 260, height: 28)
+        }
+    }
+    .padding()
+}
+
 #Preview("Event Block") {
-    CalendarEventBlock(event: PreviewData.events[0], color: .purple)
+    CalendarEventBlock(event: PreviewData.events[0])
         .frame(width: 180, height: 64)
         .padding()
 }
@@ -27,8 +37,18 @@ import SwiftUI
 #Preview("RSVP Event Blocks") {
     VStack(alignment: .leading, spacing: 8) {
         ForEach(PreviewData.rsvpEvents) { event in
-            CalendarEventBlock(event: event, color: .purple)
+            CalendarEventBlock(event: event)
                 .frame(width: 240, height: 44)
+        }
+    }
+    .padding()
+}
+
+#Preview("Category Event Blocks") {
+    VStack(alignment: .leading, spacing: 8) {
+        ForEach(PreviewData.categoryEvents) { event in
+            CalendarEventBlock(event: event)
+                .frame(width: 260, height: 44)
         }
     }
     .padding()
@@ -37,15 +57,18 @@ import SwiftUI
 
 struct CalendarEventChip: View {
     let event: CalendarEvent
-    let color: Color
     @Environment(\.readingTextMetrics) private var textMetrics
 
     private var horizontalPadding: CGFloat { textMetrics.layoutValue(6) }
     private var verticalPadding: CGFloat { textMetrics.layoutValue(3) }
     private var cornerRadius: CGFloat { textMetrics.layoutValue(5) }
+    private var categoryPresentation: CalendarEventCategoryPresentation {
+        CalendarEventCategoryPresentation.make(for: event)
+    }
     private var statusPresentation: CalendarInvitationStatusPresentation? {
         event.invitation.flatMap { CalendarInvitationStatusPresentation.make(for: $0.responseStatus) }
     }
+    private var eventColor: Color { categoryPresentation.color }
 
     var body: some View {
         Text(event.title)
@@ -55,10 +78,10 @@ struct CalendarEventChip: View {
             .padding(.horizontal, horizontalPadding)
             .padding(.vertical, verticalPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .foregroundStyle(statusPresentation?.usesGrayTitle == true ? .secondary : color)
+            .foregroundStyle(statusPresentation?.usesGrayTitle == true ? .secondary : eventColor)
             .background {
                 CalendarEventStatusBackground(
-                    eventColor: color,
+                    eventColor: eventColor,
                     presentation: statusPresentation,
                     baseOpacity: 0.14
                 )
@@ -69,14 +92,15 @@ struct CalendarEventChip: View {
     }
 
     private var helpText: String {
-        guard let statusPresentation else { return event.title }
-        return "\(event.title) - \(statusPresentation.label)"
+        if let statusPresentation {
+            return "\(event.title) - \(categoryPresentation.label), \(statusPresentation.label)"
+        }
+        return "\(event.title) - \(categoryPresentation.label)"
     }
 }
 
 struct CalendarEventBlock: View {
     let event: CalendarEvent
-    let color: Color
     @Environment(\.readingTextMetrics) private var textMetrics
 
     private var railWidth: CGFloat { textMetrics.layoutValue(4) }
@@ -84,20 +108,24 @@ struct CalendarEventBlock: View {
     private var contentTrailingPadding: CGFloat { textMetrics.layoutValue(5) }
     private var regularVerticalPadding: CGFloat { textMetrics.layoutValue(4) }
     private var cornerRadius: CGFloat { textMetrics.layoutValue(5) }
+    private var categoryPresentation: CalendarEventCategoryPresentation {
+        CalendarEventCategoryPresentation.make(for: event)
+    }
     private var statusPresentation: CalendarInvitationStatusPresentation? {
         event.invitation.flatMap { CalendarInvitationStatusPresentation.make(for: $0.responseStatus) }
     }
+    private var eventColor: Color { categoryPresentation.color }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
             CalendarEventStatusBackground(
-                eventColor: color,
+                eventColor: eventColor,
                 presentation: statusPresentation,
                 baseOpacity: 0.16
             )
 
             Rectangle()
-                .fill(statusPresentation?.isDeclined == true ? Color.secondary.opacity(0.55) : color)
+                .fill(statusPresentation?.isDeclined == true ? Color.secondary.opacity(0.55) : eventColor)
                 .frame(width: railWidth)
 
             Text(event.title)
@@ -105,7 +133,7 @@ struct CalendarEventBlock: View {
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .strikethrough(statusPresentation?.isDeclined == true, color: .secondary)
-                .foregroundStyle(statusPresentation?.usesGrayTitle == true ? .secondary : color)
+                .foregroundStyle(statusPresentation?.usesGrayTitle == true ? .secondary : eventColor)
                 .padding(.leading, railWidth + contentLeadingPadding)
                 .padding(.trailing, contentTrailingPadding)
                 .padding(.vertical, regularVerticalPadding)
@@ -118,8 +146,10 @@ struct CalendarEventBlock: View {
     }
 
     private var helpText: String {
-        guard let statusPresentation else { return event.title }
-        return "\(event.title) - \(statusPresentation.label)"
+        if let statusPresentation {
+            return "\(event.title) - \(categoryPresentation.label), \(statusPresentation.label)"
+        }
+        return "\(event.title) - \(categoryPresentation.label)"
     }
 }
 
