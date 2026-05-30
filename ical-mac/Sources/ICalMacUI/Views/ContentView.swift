@@ -5,7 +5,7 @@ import SwiftUI
 #Preview {
     ContentView()
         .environmentObject(AppModel.preview(events: PreviewData.events))
-        .frame(width: 1400, height: 760)
+        .frame(width: 1400, height: 920)
 }
 #endif
 
