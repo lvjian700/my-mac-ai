@@ -198,7 +198,52 @@ private extension CalendarEvent {
             calendarTitle: event.calendar?.title ?? "",
             calendarIdentifier: event.calendar?.calendarIdentifier,
             location: event.location,
-            notes: event.notes
+            notes: event.notes,
+            invitation: CalendarInvitationInfo(event: event)
         )
+    }
+}
+
+private extension CalendarInvitationInfo {
+    init?(event: EKEvent) {
+        guard event.hasAttendees else { return nil }
+        let attendees = event.attendees ?? []
+        let organizer = event.organizer
+        guard organizer?.isCurrentUser != true else { return nil }
+        guard let currentUser = attendees.first(where: \.isCurrentUser) else { return nil }
+
+        self.init(
+            currentUserStatus: CalendarParticipantStatus(status: currentUser.participantStatus),
+            organizerName: organizer?.name,
+            organizerURL: organizer?.url.absoluteString,
+            currentUserName: currentUser.name,
+            currentUserURL: currentUser.url.absoluteString,
+            attendeeCount: attendees.count
+        )
+    }
+}
+
+private extension CalendarParticipantStatus {
+    init(status: EKParticipantStatus) {
+        switch status {
+        case .unknown:
+            self = .unknown
+        case .pending:
+            self = .pending
+        case .accepted:
+            self = .accepted
+        case .declined:
+            self = .declined
+        case .tentative:
+            self = .tentative
+        case .delegated:
+            self = .delegated
+        case .completed:
+            self = .completed
+        case .inProcess:
+            self = .inProcess
+        @unknown default:
+            self = .unknown
+        }
     }
 }

@@ -1,5 +1,6 @@
 import Foundation
 import ICalMacCore
+import os
 
 @MainActor
 public final class AppModel: ObservableObject {
@@ -28,14 +29,18 @@ public final class AppModel: ObservableObject {
     private var snapshot: SessionSnapshot?
     private var pollingTask: Task<Void, Never>?
     private var hasInitializedCalendarSelection = false
+    private var loggedInvitationEventIDs: Set<String>
+    private let invitationLogger: @MainActor (CalendarEvent) -> Void
 
     public init(
         calendarStore: CalendarStore = EventKitCalendarStore(),
         memoryStore: MemoryStore = MemoryStore(),
         promptStore: PromptStore = PromptStore(),
         apiKeyStore: APIKeyStore = OpenAIAPIKeyStore(),
-        client: OpenAIClient = URLSessionOpenAIClient()
+        client: OpenAIClient = URLSessionOpenAIClient(),
+        invitationLogger: @escaping @MainActor (CalendarEvent) -> Void = AppModel.logCalendarInvitation
     ) {
+        let cachedSnapshot = memoryStore.readSnapshot()
         self.calendarStore = calendarStore
         self.memoryStore = memoryStore
         self.promptStore = promptStore
@@ -53,10 +58,12 @@ public final class AppModel: ObservableObject {
             ),
             configuration: AssistantConfiguration(model: UserDefaults.standard.string(forKey: "icalMac.model") ?? "gpt-4.5-mini")
         )
-        self.snapshot = memoryStore.readSnapshot()
-        self.events = snapshot?.events ?? []
-        self.isShowingCachedSnapshot = snapshot != nil
+        self.snapshot = cachedSnapshot
+        self.events = cachedSnapshot?.events ?? []
+        self.isShowingCachedSnapshot = cachedSnapshot != nil
         self.accessStatus = calendarStore.accessStatus()
+        self.loggedInvitationEventIDs = Set(cachedSnapshot?.events.compactMap { $0.invitation == nil ? nil : $0.id } ?? [])
+        self.invitationLogger = invitationLogger
     }
 
     public var isUsingEnvAPIKey: Bool {
@@ -114,6 +121,7 @@ public final class AppModel: ObservableObject {
             reconcileSelectedCalendars()
             let builder = SessionSnapshotBuilder(calendarStore: calendarStore)
             let nextSnapshot = try builder.snapshot(range: displayedWeekRange)
+            logNewInvitations(in: nextSnapshot.events)
             try memoryStore.writeSnapshot(nextSnapshot)
             snapshot = nextSnapshot
             events = nextSnapshot.events
@@ -213,6 +221,27 @@ public final class AppModel: ObservableObject {
         messages = [ChatMessage(role: .assistant, text: "Fresh thread. What should we do with your calendar?")]
     }
 
+    public static func logCalendarInvitation(_ event: CalendarEvent) {
+        guard let invitation = event.invitation else { return }
+
+        let organizer = invitation.organizerName
+            ?? invitation.organizerURL
+            ?? "unknown organizer"
+        let message = [
+            "New calendar invitation",
+            "title=\(event.title)",
+            "start=\(Self.logDateFormatter.string(from: event.startDate))",
+            "calendar=\(event.calendarTitle)",
+            "organizer=\(organizer)",
+            "responseStatus=\(invitation.responseStatus.rawValue)",
+            "eventKitStatus=\(invitation.currentUserStatus.rawValue)",
+            "attendees=\(invitation.attendeeCount)",
+        ].joined(separator: " ")
+
+        calendarInvitationLogger.notice("\(message, privacy: .public)")
+        print("[ical-mac] \(message)")
+    }
+
     public static func startOfWeek(containing date: Date, calendar: Calendar = .current) -> Date {
         let day = calendar.component(.weekday, from: date)
         let daysFromMonday = day == 1 ? 6 : day - 2
@@ -260,12 +289,30 @@ public final class AppModel: ObservableObject {
         )
     }
 
+    private func logNewInvitations(in events: [CalendarEvent]) {
+        for event in events where event.invitation != nil && !loggedInvitationEventIDs.contains(event.id) {
+            invitationLogger(event)
+            loggedInvitationEventIDs.insert(event.id)
+        }
+    }
+
     private static let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.timeStyle = .short
         formatter.dateStyle = .none
         return formatter
     }()
+
+    private static let logDateFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    private static let calendarInvitationLogger = Logger(
+        subsystem: "com.jlyu.ical-mac",
+        category: "CalendarInvitations"
+    )
 }
 
 private extension CalendarEvent {

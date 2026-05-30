@@ -106,23 +106,52 @@ struct AppModelTests {
         #expect(model.messages.last?.text == "Done")
     }
 
+    @Test func refreshLogsNewInvitationsOnce() async throws {
+        let store = FakeUICalendarStore()
+        store.calendars = [
+            CalendarInfo(id: "work", title: "Work", accountName: "iCloud", allowsContentModifications: true)
+        ]
+        store.events = [
+            event(id: "invite-1", title: "Roadmap Review", calendarID: "work", invitationStatus: .pending)
+        ]
+        var loggedEventIDs: [String] = []
+        let model = try makeModel(store: store, invitationLogger: { event in
+            loggedEventIDs.append(event.id)
+        })
+        model.displayedWeekStartDate = makeDate(year: 2026, month: 5, day: 18)
+
+        await model.refreshCalendar()
+        await model.refreshCalendar()
+        store.events.append(event(id: "invite-2", title: "Design Crit", calendarID: "work", invitationStatus: .tentative))
+        await model.refreshCalendar()
+
+        #expect(loggedEventIDs == ["invite-1", "invite-2"])
+    }
+
     private func makeModel(
         store: FakeUICalendarStore,
         apiKeyStore: APIKeyStore = FakeUIAPIKeyStore(key: "test-key"),
         client: FakeUIOpenAIClient = FakeUIOpenAIClient(responses: [
             OpenAIResponse(output: [.message(role: "assistant", content: [.init(type: "output_text", text: "OK")])])
-        ])
+        ]),
+        invitationLogger: @escaping @MainActor (CalendarEvent) -> Void = { _ in }
     ) throws -> AppModel {
         AppModel(
             calendarStore: store,
             memoryStore: MemoryStore(rootURL: try makeTempDirectory()),
             promptStore: PromptStore(),
             apiKeyStore: apiKeyStore,
-            client: client
+            client: client,
+            invitationLogger: invitationLogger
         )
     }
 
-    private func event(id: String, title: String, calendarID: String) -> CalendarEvent {
+    private func event(
+        id: String,
+        title: String,
+        calendarID: String,
+        invitationStatus: CalendarParticipantStatus? = nil
+    ) -> CalendarEvent {
         CalendarEvent(
             id: id,
             title: title,
@@ -130,7 +159,15 @@ struct AppModelTests {
             endDate: makeDate(year: 2026, month: 5, day: 18, hour: 11),
             isAllDay: false,
             calendarTitle: calendarID.capitalized,
-            calendarIdentifier: calendarID
+            calendarIdentifier: calendarID,
+            invitation: invitationStatus.map {
+                CalendarInvitationInfo(
+                    currentUserStatus: $0,
+                    organizerName: "Alice",
+                    currentUserName: "Me",
+                    attendeeCount: 3
+                )
+            }
         )
     }
 }

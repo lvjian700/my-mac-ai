@@ -1,4 +1,5 @@
 import AppKit
+import EventKit
 import ICalMacUI
 import SwiftUI
 
@@ -28,6 +29,9 @@ struct ICalMacApp: App {
                     NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
                 ) { _ in
                     textMetrics = preferredReadingTextMetrics()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .EKEventStoreChanged)) { _ in
+                    Task { await model.refreshCalendar() }
                 }
         }
         .windowStyle(.hiddenTitleBar)
