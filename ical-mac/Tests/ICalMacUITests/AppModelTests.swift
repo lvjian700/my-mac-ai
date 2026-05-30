@@ -138,7 +138,7 @@ struct AppModelTests {
         #expect(visibleRecurringEventIDs.contains("recurring-school-pickup-tue-fri-1"))
         #expect(visibleRecurringEventIDs.contains("recurring-school-pickup-monday"))
         #expect(visibleRecurringEventIDs.contains("recurring-focus-meeting-free-day"))
-        #expect(visibleRecurringEventIDs.contains("recurring-meet-free-wenesday"))
+        #expect(visibleRecurringEventIDs.contains("recurring-meet-free-wednesday"))
     }
 
     @Test func previewTimedEventsDoNotOverlapWithinADay() async throws {

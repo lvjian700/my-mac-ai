@@ -217,7 +217,7 @@ enum PreviewData {
                 isRecurring: true
             ),
             event(
-                id: "recurring-meet-free-wenesday",
+                id: "recurring-meet-free-wednesday",
                 title: "Meet Free Wednesday",
                 dayOffset: 2,
                 hour: 12,
