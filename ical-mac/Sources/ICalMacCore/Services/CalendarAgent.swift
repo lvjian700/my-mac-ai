@@ -36,7 +36,7 @@ final class CalendarAgent {
 
         while true {
             let request = OpenAIRequest(
-                model: configuration.model,
+                model: configuration.resolvedCalendarAgentModel,
                 instructions: instructions,
                 tools: CalendarToolExecutor.toolDefinitions,
                 input: history
