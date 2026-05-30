@@ -32,4 +32,10 @@ struct CalendarEventCategoryPresentationTests {
         #expect(CalendarEventCategory.detected(in: "OFFSCREEN - Writing") == .rest)
         #expect(CalendarEventCategory.detected(in: "OUT OF OFFICE - Travel") == .outOfOffice)
     }
+
+    @Test func mapsInlineSymbolsForBlockingCategories() {
+        #expect(CalendarEventCategoryPresentation.make(forTitle: "Focus - Planning").symbolName == "bell.slash.fill")
+        #expect(CalendarEventCategoryPresentation.make(forTitle: "Out of office - Travel").symbolName == "minus.circle.fill")
+        #expect(CalendarEventCategoryPresentation.make(forTitle: "Sync - Launch notes").symbolName == nil)
+    }
 }

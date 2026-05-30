@@ -5,6 +5,7 @@ struct CalendarEventCategoryPresentation: Equatable {
     var category: CalendarEventCategory
     var label: String
     var color: Color
+    var symbolName: String?
 
     static func make(for event: CalendarEvent) -> CalendarEventCategoryPresentation {
         make(forTitle: event.title)
@@ -15,7 +16,8 @@ struct CalendarEventCategoryPresentation: Equatable {
         return CalendarEventCategoryPresentation(
             category: category,
             label: category.label,
-            color: category.color
+            color: category.color,
+            symbolName: category.symbolName
         )
     }
 }
@@ -64,6 +66,17 @@ enum CalendarEventCategory: String, Equatable, CaseIterable {
             Color(red: 0.88, green: 0.36, blue: 0.05)
         case .outOfOffice:
             Color(red: 0.76, green: 0.16, blue: 0.22)
+        }
+    }
+
+    var symbolName: String? {
+        switch self {
+        case .focus:
+            "bell.slash.fill"
+        case .outOfOffice:
+            "minus.circle.fill"
+        case .catchup, .support, .meeting, .personal, .rest:
+            nil
         }
     }
 

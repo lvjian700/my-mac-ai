@@ -71,10 +71,15 @@ struct CalendarEventChip: View {
     private var eventColor: Color { categoryPresentation.color }
 
     var body: some View {
-        Text(event.title)
-            .font(textMetrics.font(.caption, weight: .medium))
+        CalendarEventTitleLabel(
+            title: event.title,
+            symbolName: categoryPresentation.symbolName,
+            font: textMetrics.font(.caption, weight: .medium),
+            iconWidth: textMetrics.layoutValue(12),
+            spacing: textMetrics.layoutValue(3),
+            isDeclined: statusPresentation?.isDeclined == true
+        )
             .lineLimit(1)
-            .strikethrough(statusPresentation?.isDeclined == true, color: .secondary)
             .padding(.horizontal, horizontalPadding)
             .padding(.vertical, verticalPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -128,11 +133,16 @@ struct CalendarEventBlock: View {
                 .fill(statusPresentation?.isDeclined == true ? Color.secondary.opacity(0.55) : eventColor)
                 .frame(width: railWidth)
 
-            Text(event.title)
-                .font(textMetrics.font(.caption, weight: .semibold))
+            CalendarEventTitleLabel(
+                title: event.title,
+                symbolName: categoryPresentation.symbolName,
+                font: textMetrics.font(.caption, weight: .semibold),
+                iconWidth: textMetrics.layoutValue(12),
+                spacing: textMetrics.layoutValue(3),
+                isDeclined: statusPresentation?.isDeclined == true
+            )
                 .lineLimit(1)
                 .truncationMode(.tail)
-                .strikethrough(statusPresentation?.isDeclined == true, color: .secondary)
                 .foregroundStyle(statusPresentation?.usesGrayTitle == true ? .secondary : eventColor)
                 .padding(.leading, railWidth + contentLeadingPadding)
                 .padding(.trailing, contentTrailingPadding)
@@ -150,6 +160,33 @@ struct CalendarEventBlock: View {
             return "\(event.title) - \(categoryPresentation.label), \(statusPresentation.label)"
         }
         return "\(event.title) - \(categoryPresentation.label)"
+    }
+}
+
+private struct CalendarEventTitleLabel: View {
+    let title: String
+    let symbolName: String?
+    let font: Font
+    let iconWidth: CGFloat
+    let spacing: CGFloat
+    let isDeclined: Bool
+
+    var body: some View {
+        HStack(spacing: spacing) {
+            if let symbolName {
+                Image(systemName: symbolName)
+                    .font(font)
+                    .imageScale(.small)
+                    .frame(width: iconWidth)
+                    .accessibilityHidden(true)
+            }
+
+            Text(title)
+                .font(font)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .strikethrough(isDeclined, color: .secondary)
+        }
     }
 }
 
