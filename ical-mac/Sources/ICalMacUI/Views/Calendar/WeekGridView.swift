@@ -90,7 +90,10 @@ struct WeekGridView: View {
 
             ForEach(days, id: \.self) { day in
                 VStack(alignment: .leading, spacing: 4) {
-                    ForEach(model.visibleAllDayEvents.filter { $0.intersectsDay(day, calendar: calendar) }) { event in
+                    ForEach(
+                        model.visibleAllDayEvents.filter { $0.intersectsDay(day, calendar: calendar) },
+                        id: \.weekOccurrenceID
+                    ) { event in
                         CalendarEventChip(event: event)
                             .eventDetailInteraction(
                                 event: event,
@@ -187,7 +190,7 @@ struct WeekGridView: View {
     }
 
     private func eventBlocks(dayWidth: CGFloat) -> some View {
-        ForEach(model.visibleTimedEvents) { event in
+        ForEach(model.visibleTimedEvents, id: \.weekOccurrenceID) { event in
             if let frame = frame(for: event, dayWidth: dayWidth) {
                 CalendarEventBlock(event: event)
                     .frame(width: max(dayWidth - trailingPadding, minimumEventWidth), height: frame.height, alignment: .topLeading)

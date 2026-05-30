@@ -163,6 +163,30 @@ struct AppModelTests {
         }
     }
 
+    @Test func weekOccurrenceIDsDifferentiateRecurringOccurrencesWithSharedEventID() {
+        let mondayOccurrence = CalendarEvent(
+            id: "eventkit-recurring-id",
+            title: "Out of office - pickup",
+            startDate: makeDate(year: 2026, month: 5, day: 18, hour: 8),
+            endDate: makeDate(year: 2026, month: 5, day: 18, hour: 9),
+            isAllDay: false,
+            isRecurring: true,
+            calendarTitle: "Work"
+        )
+        let tuesdayOccurrence = CalendarEvent(
+            id: "eventkit-recurring-id",
+            title: "Out of office - pickup",
+            startDate: makeDate(year: 2026, month: 5, day: 19, hour: 8),
+            endDate: makeDate(year: 2026, month: 5, day: 19, hour: 9),
+            isAllDay: false,
+            isRecurring: true,
+            calendarTitle: "Work"
+        )
+
+        #expect(mondayOccurrence.id == tuesdayOccurrence.id)
+        #expect(mondayOccurrence.weekOccurrenceID != tuesdayOccurrence.weekOccurrenceID)
+    }
+
     private func makeModel(
         store: FakeUICalendarStore,
         apiKeyStore: APIKeyStore = FakeUIAPIKeyStore(key: "test-key"),
