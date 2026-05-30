@@ -195,12 +195,19 @@ private extension CalendarEvent {
             startDate: event.startDate,
             endDate: event.endDate,
             isAllDay: event.isAllDay,
+            isRecurring: event.isRecurringOccurrence,
             calendarTitle: event.calendar?.title ?? "",
             calendarIdentifier: event.calendar?.calendarIdentifier,
             location: event.location,
             notes: event.notes,
             invitation: CalendarInvitationInfo(event: event)
         )
+    }
+}
+
+private extension EKEvent {
+    var isRecurringOccurrence: Bool {
+        recurrenceRules?.isEmpty == false || isDetached
     }
 }
 
