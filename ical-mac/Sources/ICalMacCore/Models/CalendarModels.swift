@@ -34,6 +34,7 @@ public struct CalendarEvent: Identifiable, Codable, Equatable, Sendable {
     public var startDate: Date
     public var endDate: Date
     public var isAllDay: Bool
+    public var isRecurring: Bool
     public var calendarTitle: String
     public var calendarIdentifier: String?
     public var location: String?
@@ -46,6 +47,7 @@ public struct CalendarEvent: Identifiable, Codable, Equatable, Sendable {
         startDate: Date,
         endDate: Date,
         isAllDay: Bool,
+        isRecurring: Bool = false,
         calendarTitle: String,
         calendarIdentifier: String? = nil,
         location: String? = nil,
@@ -57,11 +59,43 @@ public struct CalendarEvent: Identifiable, Codable, Equatable, Sendable {
         self.startDate = startDate
         self.endDate = endDate
         self.isAllDay = isAllDay
+        self.isRecurring = isRecurring
         self.calendarTitle = calendarTitle
         self.calendarIdentifier = calendarIdentifier
         self.location = location
         self.notes = notes
         self.invitation = invitation
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case startDate
+        case endDate
+        case isAllDay
+        case isRecurring
+        case calendarTitle
+        case calendarIdentifier
+        case location
+        case notes
+        case invitation
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            id: try container.decode(String.self, forKey: .id),
+            title: try container.decode(String.self, forKey: .title),
+            startDate: try container.decode(Date.self, forKey: .startDate),
+            endDate: try container.decode(Date.self, forKey: .endDate),
+            isAllDay: try container.decode(Bool.self, forKey: .isAllDay),
+            isRecurring: try container.decodeIfPresent(Bool.self, forKey: .isRecurring) ?? false,
+            calendarTitle: try container.decode(String.self, forKey: .calendarTitle),
+            calendarIdentifier: try container.decodeIfPresent(String.self, forKey: .calendarIdentifier),
+            location: try container.decodeIfPresent(String.self, forKey: .location),
+            notes: try container.decodeIfPresent(String.self, forKey: .notes),
+            invitation: try container.decodeIfPresent(CalendarInvitationInfo.self, forKey: .invitation)
+        )
     }
 }
 

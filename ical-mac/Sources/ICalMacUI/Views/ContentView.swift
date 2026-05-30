@@ -4,7 +4,7 @@ import SwiftUI
 #if DEBUG
 #Preview {
     ContentView()
-        .environmentObject(AppModel.preview())
+        .environmentObject(AppModel.preview(events: PreviewData.events))
         .frame(width: 1400, height: 760)
 }
 #endif

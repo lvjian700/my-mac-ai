@@ -28,6 +28,16 @@ import SwiftUI
     .padding()
 }
 
+#Preview("Recurring Event Chips") {
+    VStack(alignment: .leading, spacing: 8) {
+        ForEach(PreviewData.recurringEventSamples) { event in
+            CalendarEventChip(event: event)
+                .frame(width: 260, height: 28)
+        }
+    }
+    .padding()
+}
+
 #Preview("Event Block") {
     CalendarEventBlock(event: PreviewData.events[0])
         .frame(width: 180, height: 64)
@@ -39,6 +49,16 @@ import SwiftUI
         ForEach(PreviewData.rsvpEvents) { event in
             CalendarEventBlock(event: event)
                 .frame(width: 240, height: 44)
+        }
+    }
+    .padding()
+}
+
+#Preview("Recurring Event Blocks") {
+    VStack(alignment: .leading, spacing: 8) {
+        ForEach(PreviewData.recurringEventSamples) { event in
+            CalendarEventBlock(event: event)
+                .frame(width: 260, height: 44)
         }
     }
     .padding()
@@ -77,6 +97,7 @@ struct CalendarEventChip: View {
             font: textMetrics.font(.caption, weight: .medium),
             iconWidth: textMetrics.layoutValue(12),
             spacing: textMetrics.layoutValue(3),
+            showsRecurrenceIcon: event.isRecurring,
             isDeclined: statusPresentation?.isDeclined == true
         )
             .lineLimit(1)
@@ -97,10 +118,14 @@ struct CalendarEventChip: View {
     }
 
     private var helpText: String {
-        if let statusPresentation {
-            return "\(event.title) - \(categoryPresentation.label), \(statusPresentation.label)"
+        var details = [categoryPresentation.label]
+        if event.isRecurring {
+            details.append("repeats")
         }
-        return "\(event.title) - \(categoryPresentation.label)"
+        if let statusPresentation {
+            details.append(statusPresentation.label)
+        }
+        return "\(event.title) - \(details.joined(separator: ", "))"
     }
 }
 
@@ -139,6 +164,7 @@ struct CalendarEventBlock: View {
                 font: textMetrics.font(.caption, weight: .semibold),
                 iconWidth: textMetrics.layoutValue(12),
                 spacing: textMetrics.layoutValue(3),
+                showsRecurrenceIcon: event.isRecurring,
                 isDeclined: statusPresentation?.isDeclined == true
             )
                 .lineLimit(1)
@@ -156,10 +182,14 @@ struct CalendarEventBlock: View {
     }
 
     private var helpText: String {
-        if let statusPresentation {
-            return "\(event.title) - \(categoryPresentation.label), \(statusPresentation.label)"
+        var details = [categoryPresentation.label]
+        if event.isRecurring {
+            details.append("repeats")
         }
-        return "\(event.title) - \(categoryPresentation.label)"
+        if let statusPresentation {
+            details.append(statusPresentation.label)
+        }
+        return "\(event.title) - \(details.joined(separator: ", "))"
     }
 }
 
@@ -169,6 +199,7 @@ private struct CalendarEventTitleLabel: View {
     let font: Font
     let iconWidth: CGFloat
     let spacing: CGFloat
+    let showsRecurrenceIcon: Bool
     let isDeclined: Bool
 
     var body: some View {
@@ -186,6 +217,16 @@ private struct CalendarEventTitleLabel: View {
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .strikethrough(isDeclined, color: .secondary)
+
+            if showsRecurrenceIcon {
+                Spacer(minLength: spacing)
+
+                Image(systemName: "repeat")
+                    .font(font)
+                    .imageScale(.small)
+                    .frame(width: iconWidth)
+                    .accessibilityLabel("Repeats")
+            }
         }
     }
 }

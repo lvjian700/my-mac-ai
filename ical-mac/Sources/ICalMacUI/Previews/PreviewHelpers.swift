@@ -72,7 +72,7 @@ enum PreviewData {
         CalendarInfo(id: "3", title: "Holidays", accountName: "iCloud", allowsContentModifications: false),
     ]
 
-    static let events: [CalendarEvent] = categoryEvents
+    static let events: [CalendarEvent] = categoryEvents + recurringEvents
 
     static let categoryEvents: [CalendarEvent] = [
         event(
@@ -177,6 +177,80 @@ enum PreviewData {
         ),
     ]
 
+    static let recurringEvents: [CalendarEvent] =
+        weekdayRecurringEvents(
+            idPrefix: "recurring-school-time",
+            title: "Out of office - school time",
+            dayOffsets: 0...4,
+            hour: 8,
+            duration: 90
+        )
+        + weekdayRecurringEvents(
+            idPrefix: "recurring-school-pickup-tue-fri",
+            title: "Out of office - school pickup",
+            dayOffsets: 1...4,
+            hour: 15,
+            duration: 60
+        )
+        + [
+            event(
+                id: "recurring-school-pickup-monday",
+                title: "Out of office - school pickup",
+                dayOffset: 0,
+                hour: 16,
+                minute: 45,
+                duration: 135,
+                isRecurring: true
+            ),
+            event(
+                id: "recurring-focus-meeting-free-day",
+                title: "Focus - meeting free day",
+                dayOffset: 2,
+                hour: 9,
+                minute: 30,
+                duration: 150,
+                isRecurring: true
+            ),
+            event(
+                id: "recurring-meet-free-wenesday",
+                title: "Meet Free Wenesday",
+                dayOffset: 2,
+                hour: 12,
+                duration: 300,
+                isRecurring: true
+            ),
+        ]
+
+    static let recurringEventSamples: [CalendarEvent] = [
+        event(
+            id: "recurring-sample-school-time",
+            title: "Out of office - school time",
+            dayOffset: 0,
+            hour: 8,
+            duration: 90,
+            isRecurring: true
+        ),
+        event(
+            id: "recurring-sample-school-pickup",
+            title: "Out of office - school pickup",
+            dayOffset: 1,
+            hour: 15,
+            duration: 60,
+            isRecurring: true
+        ),
+        event(
+            id: "recurring-sample-focus-meeting-free-day",
+            title: "Focus - meeting free day",
+            dayOffset: 2,
+            hour: 9,
+            minute: 30,
+            duration: 150,
+            isRecurring: true
+        ),
+    ]
+
+    static let visibleWeekStart = weekStart
+
     static let rsvpEvents: [CalendarEvent] = [
         CalendarEvent(
             id: "e1",
@@ -243,26 +317,51 @@ enum PreviewData {
         title: String,
         dayOffset: Int,
         hour: Int,
+        minute: Int = 0,
         duration: TimeInterval,
+        isRecurring: Bool = false,
         calendarTitle: String = "Work",
         calendarIdentifier: String = "2"
     ) -> CalendarEvent {
-        let start = date(dayOffset: dayOffset, hour: hour)
+        let start = date(dayOffset: dayOffset, hour: hour, minute: minute)
         return CalendarEvent(
             id: id,
             title: title,
             startDate: start,
             endDate: start.addingTimeInterval(duration * 60),
             isAllDay: false,
+            isRecurring: isRecurring,
             calendarTitle: calendarTitle,
             calendarIdentifier: calendarIdentifier
         )
+    }
+
+    private static func weekdayRecurringEvents(
+        idPrefix: String,
+        title: String,
+        dayOffsets: ClosedRange<Int>,
+        hour: Int,
+        minute: Int = 0,
+        duration: TimeInterval
+    ) -> [CalendarEvent] {
+        dayOffsets.map { dayOffset in
+            event(
+                id: "\(idPrefix)-\(dayOffset)",
+                title: title,
+                dayOffset: dayOffset,
+                hour: hour,
+                minute: minute,
+                duration: duration,
+                isRecurring: true
+            )
+        }
     }
 
     private static func allDayEvent(
         id: String,
         title: String,
         dayOffset: Int,
+        isRecurring: Bool = false,
         calendarTitle: String = "Work",
         calendarIdentifier: String = "2"
     ) -> CalendarEvent {
@@ -274,14 +373,15 @@ enum PreviewData {
             startDate: start,
             endDate: end,
             isAllDay: true,
+            isRecurring: isRecurring,
             calendarTitle: calendarTitle,
             calendarIdentifier: calendarIdentifier
         )
     }
 
-    private static func date(dayOffset: Int, hour: Int) -> Date {
+    private static func date(dayOffset: Int, hour: Int, minute: Int = 0) -> Date {
         let day = calendar.date(byAdding: .day, value: dayOffset, to: weekStart) ?? weekStart
-        return calendar.date(bySettingHour: hour, minute: 0, second: 0, of: day) ?? day
+        return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day) ?? day
     }
 
     private static func startOfWeek(containing date: Date) -> Date {
@@ -312,6 +412,7 @@ extension AppModel {
         model.events = events
         model.calendars = calendars
         model.accessStatus = status
+        model.displayedWeekStartDate = PreviewData.visibleWeekStart
         model.statusText = "Synced 9:00 AM"
         model.messages = messages
         model.apiKeyDraft = "preview-key"

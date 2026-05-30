@@ -128,6 +128,19 @@ struct AppModelTests {
         #expect(loggedEventIDs == ["invite-1", "invite-2"])
     }
 
+    @Test func previewModelRefreshShowsRecurringEventsInVisibleWeek() async throws {
+        let model = AppModel.preview()
+
+        await model.refreshCalendar()
+
+        let visibleRecurringEventIDs = Set(model.visibleEvents.filter(\.isRecurring).map(\.id))
+        #expect(visibleRecurringEventIDs.contains("recurring-school-time-0"))
+        #expect(visibleRecurringEventIDs.contains("recurring-school-pickup-tue-fri-1"))
+        #expect(visibleRecurringEventIDs.contains("recurring-school-pickup-monday"))
+        #expect(visibleRecurringEventIDs.contains("recurring-focus-meeting-free-day"))
+        #expect(visibleRecurringEventIDs.contains("recurring-meet-free-wenesday"))
+    }
+
     private func makeModel(
         store: FakeUICalendarStore,
         apiKeyStore: APIKeyStore = FakeUIAPIKeyStore(key: "test-key"),
