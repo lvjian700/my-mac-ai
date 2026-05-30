@@ -37,11 +37,38 @@ so breakpoints in `Sources/ICalMacApp` and `Sources/ICalMacCore` work normally.
 **Tech stack:** Swift 6, SwiftUI, EventKit, Security/Keychain, URLSession.
 
 **Boundaries:**
-- `ICalMacCore` owns calendar models, EventKit access, Anthropic API/tool loop, memory files, prompt loading, and Keychain storage.
+- `ICalMacCore` owns calendar models, EventKit access, OpenAI API/tool loop, memory files, prompt loading, and Keychain storage.
 - `ICalMacUI` owns `AppModel`, SwiftUI views, settings, chat transcript, conversation sidebar, and the read-only week calendar surface.
 - `ICalMacApp` owns the SwiftUI app entrypoint, app delegate, main window scene, and settings scene.
 
-Use fakes for tests. Do not depend on real Calendar data or live Anthropic calls in unit tests.
+Use fakes for tests. Do not depend on real Calendar data or live API calls in unit tests.
+
+### Agent Flow (tool-as-agent pattern)
+
+The app uses a two-level sub-agent architecture. Both agents share the same `OpenAIClient` and are wired together inside `AssistantService`.
+
+```
+User message
+  └─► AssistantService  (ChatAgent — Cali persona)
+        ├─ tool: calendar_agent(task)  ──► CalendarAgent
+        │                                   ├─ tool: list_calendars
+        │                                   ├─ tool: list_events
+        │                                   ├─ tool: create_event
+        │                                   ├─ tool: update_event
+        │                                   └─ tool: write_memory
+        │                                   └─ returns result text
+        └─ synthesises result → user response
+```
+
+**`AssistantService`** (`Services/AssistantService.swift`) — ChatAgent wrapper. Maintains multi-turn `inputHistory`. Exposes a single `calendar_agent` tool to the model; all calendar work is delegated through it. Creates `CalendarAgent` internally during init.
+
+**`CalendarAgent`** (`Services/CalendarAgent.swift`) — Calendar specialist. Stateless (fresh history per call). Receives a task description, runs its own tool loop with all five calendar tools via `CalendarToolExecutor`, and returns plain-text result.
+
+**`PromptStore`** (`Stores/PromptStore.swift`) — Two prompts:
+- `buildSystemPrompt(...)` — Cali personality + orchestration guidance (tells ChatAgent to delegate via `calendar_agent`).
+- `buildCalendarAgentPrompt(task:snapshot:configuration:)` — Calendar-expert persona; task-focused; no personality.
+
+Adding a new specialist agent follows the same pattern: create a `*Agent.swift` class with its own tool loop, add a tool definition to `AssistantService`, and add a prompt builder to `PromptStore`.
 
 ## UI & Calendar Behavior
 
