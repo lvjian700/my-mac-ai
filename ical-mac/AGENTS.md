@@ -37,11 +37,32 @@ so breakpoints in `Sources/ICalMacApp` and `Sources/ICalMacCore` work normally.
 **Tech stack:** Swift 6, SwiftUI, EventKit, Security/Keychain, URLSession.
 
 **Boundaries:**
-- `ICalMacCore` owns calendar models, EventKit access, Anthropic API/tool loop, memory files, prompt loading, and Keychain storage.
+- `ICalMacCore` owns calendar models, EventKit access, OpenAI API/tool loop, memory files, prompt loading, and Keychain storage.
 - `ICalMacUI` owns `AppModel`, SwiftUI views, settings, chat transcript, conversation sidebar, and the read-only week calendar surface.
 - `ICalMacApp` owns the SwiftUI app entrypoint, app delegate, main window scene, and settings scene.
 
-Use fakes for tests. Do not depend on real Calendar data or live Anthropic calls in unit tests.
+Use fakes for tests. Do not depend on real Calendar data or live API calls in unit tests.
+
+### Agent Flow
+
+Single-agent design. `AssistantService` runs a tool loop with Cali as the sole agent and all five calendar tools exposed directly.
+
+```
+User message
+  └─► AssistantService  (Cali — single agent)
+        ├─ tool: list_calendars
+        ├─ tool: list_events
+        ├─ tool: create_event
+        ├─ tool: update_event
+        └─ tool: write_memory
+        └─ returns response
+```
+
+**`AssistantService`** (`Services/AssistantService.swift`) — Maintains multi-turn `inputHistory`. Builds the system prompt each turn, runs the tool loop via `CalendarToolExecutor`, and returns the final assistant text.
+
+**`PromptStore`** (`Stores/PromptStore.swift`) — Builds Cali's system prompt: personality, calendar tool guidance, loaded memory, session context (date/timezone/name), and calendar snapshot.
+
+**When to introduce multi-agent:** Only when a task genuinely requires parallel exploration, exceeds the context window, or involves a distinct new specialist (e.g. an async MemoryAgent, EmailAgent). For sequential calendar CRUD, a single agent with direct tool access is faster, cheaper, and simpler — the orchestrator-subagent pattern adds 2–3× API call overhead with no benefit for this problem size.
 
 ## UI & Calendar Behavior
 
