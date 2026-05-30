@@ -72,30 +72,48 @@ enum PreviewData {
         CalendarInfo(id: "3", title: "Holidays", accountName: "iCloud", allowsContentModifications: false),
     ]
 
-    static let events: [CalendarEvent] = [
+    static let events: [CalendarEvent] = rsvpEvents
+
+    static let rsvpEvents: [CalendarEvent] = [
         CalendarEvent(
             id: "e1",
-            title: "Team Standup",
+            title: "Pending: Team Standup",
             startDate: now,
             endDate: now.addingTimeInterval(1800),
             isAllDay: false,
-            calendarTitle: "Work"
+            calendarTitle: "Work",
+            calendarIdentifier: "2",
+            invitation: invitation(status: .pending, organizer: "Alex")
         ),
         CalendarEvent(
             id: "e2",
-            title: "Lunch with Sarah",
+            title: "Accepted: Lunch with Sarah",
             startDate: now.addingTimeInterval(14400),
             endDate: now.addingTimeInterval(18000),
             isAllDay: false,
-            calendarTitle: "Personal"
+            calendarTitle: "Personal",
+            calendarIdentifier: "1",
+            invitation: invitation(status: .accepted, organizer: "Sarah")
         ),
         CalendarEvent(
             id: "e3",
-            title: "Product Review",
+            title: "Tentative: Product Review",
             startDate: now.addingTimeInterval(86400),
             endDate: now.addingTimeInterval(90000),
             isAllDay: false,
-            calendarTitle: "Work"
+            calendarTitle: "Work",
+            calendarIdentifier: "2",
+            invitation: invitation(status: .tentative, organizer: "Mina")
+        ),
+        CalendarEvent(
+            id: "e4",
+            title: "Declined: Vendor Sync",
+            startDate: now.addingTimeInterval(18000),
+            endDate: now.addingTimeInterval(21600),
+            isAllDay: false,
+            calendarTitle: "Work",
+            calendarIdentifier: "2",
+            invitation: invitation(status: .declined, organizer: "Taylor")
         ),
     ]
 
@@ -104,6 +122,15 @@ enum PreviewData {
         ChatMessage(role: .user, text: "What's on my calendar today?"),
         ChatMessage(role: .assistant, text: "You have Team Standup now and Lunch with Sarah at 1 PM."),
     ]
+
+    private static func invitation(status: CalendarParticipantStatus, organizer: String) -> CalendarInvitationInfo {
+        CalendarInvitationInfo(
+            currentUserStatus: status,
+            organizerName: organizer,
+            currentUserName: "Me",
+            attendeeCount: 3
+        )
+    }
 }
 
 // MARK: - AppModel factory

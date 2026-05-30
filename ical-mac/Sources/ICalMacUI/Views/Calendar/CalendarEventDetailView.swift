@@ -2,10 +2,39 @@ import ICalMacCore
 import SwiftUI
 
 #if DEBUG
-#Preview {
+#Preview("Default") {
     CalendarEventDetailView(event: PreviewData.events[0])
         .padding()
         .frame(width: 420, height: 320)
+}
+
+#Preview("RSVP Status Details") {
+    ScrollView {
+        VStack(spacing: 12) {
+            ForEach(PreviewData.rsvpEvents) { event in
+                CalendarEventDetailView(event: event)
+            }
+        }
+        .padding()
+    }
+    .frame(width: 420, height: 640)
+}
+
+#Preview("Multiline Title and Location") {
+    CalendarEventDetailView(
+        event: CalendarEvent(
+            id: "preview-multiline-detail",
+            title: "Uber to airport with a very long pickup reminder",
+            startDate: PreviewData.now,
+            endDate: PreviewData.now.addingTimeInterval(3600),
+            isAllDay: false,
+            calendarTitle: "Personal",
+            location: "Melbourne Airport, Terminal 1 (Qantas Domestic Terminal)",
+            notes: "Leave enough time for traffic and airport check-in."
+        )
+    )
+    .padding()
+    .frame(width: 420, height: 360)
 }
 #endif
 
@@ -32,15 +61,26 @@ struct CalendarEventDetailView: View {
         hasText(event.notes)
     }
 
+    private var invitationStatus: CalendarInvitationStatusPresentation? {
+        event.invitation.flatMap { CalendarInvitationStatusPresentation.make(for: $0.responseStatus) }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             titleAndLocationSegment
 
             CalendarEventDetailSegment(text: formattedTime, isPlaceholder: false)
 
-            CalendarEventDetailSegment(text: "Add Invitees", isPlaceholder: true)
+            if let invitationStatus {
+                CalendarEventInvitationSegment(
+                    presentation: invitationStatus,
+                    organizerName: event.invitation?.organizerName
+                )
+            } else {
+                CalendarEventDetailSegment(text: "Add Invitees", isPlaceholder: true)
+            }
 
-            CalendarEventDetailSegment(text: notesText, isPlaceholder: !hasNotes)
+            CalendarEventDetailSegment(text: notesText, isPlaceholder: !hasNotes, lineLimit: hasNotes ? nil : 1)
         }
         .padding(12)
         .frame(width: 320, alignment: .leading)
@@ -52,29 +92,32 @@ struct CalendarEventDetailView: View {
                 Text(event.title)
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.82)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Spacer(minLength: 0)
             }
-            .frame(height: 40)
             .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
 
             Divider()
                 .padding(.horizontal, 14)
 
-            HStack(spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
                 Text(locationText)
                     .font(.system(size: 14, weight: .regular))
                     .foregroundStyle(hasLocation ? .primary : .tertiary)
-                    .lineLimit(1)
+                    .lineLimit(hasLocation ? nil : 1)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Spacer(minLength: 12)
 
                 CalendarEventDetailAccessory(systemImage: "video.fill")
             }
-            .frame(height: 40)
             .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, minHeight: 40, alignment: .topLeading)
         }
         .background(CalendarEventDetailStyle.segmentFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
@@ -114,15 +157,46 @@ struct CalendarEventDetailAccessory: View {
 struct CalendarEventDetailSegment: View {
     let text: String
     let isPlaceholder: Bool
+    var lineLimit: Int? = 1
 
     var body: some View {
         Text(text)
             .font(.system(size: 14, weight: .regular))
             .foregroundStyle(isPlaceholder ? .tertiary : .primary)
-            .lineLimit(1)
+            .lineLimit(lineLimit)
+            .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, 14)
+            .padding(.vertical, 10)
             .frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
             .background(CalendarEventDetailStyle.segmentFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
+struct CalendarEventInvitationSegment: View {
+    let presentation: CalendarInvitationStatusPresentation
+    let organizerName: String?
+
+    private var detailText: String {
+        if let organizerName, !organizerName.isEmpty {
+            return "\(presentation.label) invite from \(organizerName)"
+        }
+        return "\(presentation.label) invite"
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(detailText)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(presentation.isDeclined ? .secondary : .primary)
+                .lineLimit(1)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
+        .background(CalendarEventDetailStyle.segmentFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .accessibilityLabel(detailText)
     }
 }
 
