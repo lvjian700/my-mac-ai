@@ -102,9 +102,11 @@ private struct MessageRow: View {
             if message.role == .user { Spacer(minLength: sideSpacer) }
 
             VStack(alignment: .leading, spacing: bubbleSpacing) {
-                Text(message.role == .user ? "You" : "Cali")
-                    .font(textMetrics.font(.callout))
-                    .foregroundStyle(.secondary)
+                if message.role != .user {
+                    Text("Cali")
+                        .font(textMetrics.font(.callout))
+                        .foregroundStyle(.secondary)
+                }
                 Text(message.text)
                     .font(textMetrics.font(.body))
                     .textSelection(.enabled)
@@ -135,6 +137,8 @@ private struct ComposerView: View {
     private var sendButtonSide: CGFloat { textMetrics.layoutValue(30) }
     private var controlsSpacing: CGFloat { textMetrics.layoutValue(8) }
     private var controlsLeadingSpace: CGFloat { textMetrics.layoutValue(16) }
+    private var inputLineHeight: CGFloat { textMetrics.value(20) }
+    private var minimumInputHeight: CGFloat { inputLineHeight * 2 }
 
     private var composerFill: Color {
         isFocused ? Color(nsColor: .textBackgroundColor) : Color(nsColor: .controlBackgroundColor)
@@ -165,7 +169,8 @@ private struct ComposerView: View {
                 .focused($isFocused)
                 .onSubmit(submitIfPossible)
                 .onAppear { isFocused = true }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, minHeight: minimumInputHeight, alignment: .topLeading)
 
             HStack(spacing: controlsSpacing) {
                 Spacer(minLength: controlsLeadingSpace)
