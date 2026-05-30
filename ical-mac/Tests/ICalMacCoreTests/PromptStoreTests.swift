@@ -14,8 +14,8 @@ struct PromptStoreTests {
         )
 
         #expect(prompt.contains("native ical-mac app"))
-        #expect(prompt.contains("calendar_agent"))
-        #expect(prompt.contains("delegate all calendar queries and mutations"))
+        #expect(prompt.contains("provided calendar tools"))
+        #expect(prompt.contains("write the full YAML memory file"))
         #expect(prompt.contains("Today is 2026-05-18. Timezone: Australia/Melbourne."))
     }
 

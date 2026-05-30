@@ -43,32 +43,26 @@ so breakpoints in `Sources/ICalMacApp` and `Sources/ICalMacCore` work normally.
 
 Use fakes for tests. Do not depend on real Calendar data or live API calls in unit tests.
 
-### Agent Flow (tool-as-agent pattern)
+### Agent Flow
 
-The app uses a two-level sub-agent architecture. Both agents share the same `OpenAIClient` and are wired together inside `AssistantService`.
+Single-agent design. `AssistantService` runs a tool loop with Cali as the sole agent and all five calendar tools exposed directly.
 
 ```
 User message
-  └─► AssistantService  (ChatAgent — Cali persona)
-        ├─ tool: calendar_agent(task)  ──► CalendarAgent
-        │                                   ├─ tool: list_calendars
-        │                                   ├─ tool: list_events
-        │                                   ├─ tool: create_event
-        │                                   ├─ tool: update_event
-        │                                   └─ tool: write_memory
-        │                                   └─ returns result text
-        └─ synthesises result → user response
+  └─► AssistantService  (Cali — single agent)
+        ├─ tool: list_calendars
+        ├─ tool: list_events
+        ├─ tool: create_event
+        ├─ tool: update_event
+        └─ tool: write_memory
+        └─ returns response
 ```
 
-**`AssistantService`** (`Services/AssistantService.swift`) — ChatAgent wrapper. Maintains multi-turn `inputHistory`. Exposes a single `calendar_agent` tool to the model; all calendar work is delegated through it. Creates `CalendarAgent` internally during init.
+**`AssistantService`** (`Services/AssistantService.swift`) — Maintains multi-turn `inputHistory`. Builds the system prompt each turn, runs the tool loop via `CalendarToolExecutor`, and returns the final assistant text.
 
-**`CalendarAgent`** (`Services/CalendarAgent.swift`) — Calendar specialist. Stateless (fresh history per call). Receives a task description, runs its own tool loop with all five calendar tools via `CalendarToolExecutor`, and returns plain-text result.
+**`PromptStore`** (`Stores/PromptStore.swift`) — Builds Cali's system prompt: personality, calendar tool guidance, loaded memory, session context (date/timezone/name), and calendar snapshot.
 
-**`PromptStore`** (`Stores/PromptStore.swift`) — Two prompts:
-- `buildSystemPrompt(...)` — Cali personality + orchestration guidance (tells ChatAgent to delegate via `calendar_agent`).
-- `buildCalendarAgentPrompt(task:snapshot:configuration:)` — Calendar-expert persona; task-focused; no personality.
-
-Adding a new specialist agent follows the same pattern: create a `*Agent.swift` class with its own tool loop, add a tool definition to `AssistantService`, and add a prompt builder to `PromptStore`.
+**When to introduce multi-agent:** Only when a task genuinely requires parallel exploration, exceeds the context window, or involves a distinct new specialist (e.g. an async MemoryAgent, EmailAgent). For sequential calendar CRUD, a single agent with direct tool access is faster, cheaper, and simpler — the orchestrator-subagent pattern adds 2–3× API call overhead with no benefit for this problem size.
 
 ## UI & Calendar Behavior
 

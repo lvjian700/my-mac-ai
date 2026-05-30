@@ -3,7 +3,6 @@ import Foundation
 public struct PromptStore: Sendable {
     public init() {}
 
-    // System prompt for the ChatAgent (Cali): personality, orchestration, memory, snapshot context.
     public func buildSystemPrompt(
         memory: String,
         snapshot: SessionSnapshot?,
@@ -16,33 +15,13 @@ public struct PromptStore: Sendable {
             ? "# no ical memory found"
             : "# memory: ~/.my-mac-ai/ical/memory.yaml\n\(memory)"
         let snapshotText = snapshot.map(Self.formatSnapshot(_:))
-            ?? "## Calendar Snapshot\n\nNo snapshot available. Use calendar_agent for calendar queries."
+            ?? "## Calendar Snapshot\n\nNo snapshot available. Use calendar tools for calendar queries."
 
         return [
             Self.caliPrompt,
             "## Loaded Memory\n\(memoryText)",
             "## Session Context\nToday is \(date). Timezone: \(timeZone.identifier).\(configuration.userName.map { " The user's name is \($0)." } ?? "")",
             snapshotText,
-        ].joined(separator: "\n\n")
-    }
-
-    // System prompt for the CalendarAgent: task-focused, no personality, efficient tool use.
-    public func buildCalendarAgentPrompt(
-        task: String,
-        snapshot: SessionSnapshot?,
-        configuration: AssistantConfiguration = AssistantConfiguration(),
-        now: Date = Date(),
-        timeZone: TimeZone = .current
-    ) -> String {
-        let date = Self.dateFormatter().string(from: now)
-        let snapshotText = snapshot.map(Self.formatSnapshot(_:))
-            ?? "## Calendar Snapshot\n\nNo snapshot available."
-
-        return [
-            Self.calendarAgentPrompt,
-            "## Session Context\nToday is \(date). Timezone: \(timeZone.identifier).\(configuration.userName.map { " The user's name is \($0)." } ?? "")",
-            snapshotText,
-            "## Task\n\(task)",
         ].joined(separator: "\n\n")
     }
 
@@ -62,7 +41,6 @@ public struct PromptStore: Sendable {
         return lines.joined(separator: "\n")
     }
 
-    // ChatAgent prompt: Cali personality + orchestration guidance for calendar_agent delegation.
     private static let caliPrompt = """
     # Cali
 
@@ -76,10 +54,12 @@ public struct PromptStore: Sendable {
     - Dry wit is fine when it fits, but do not force it.
 
     ## Calendar Operations
-    - Use the `calendar_agent` tool to delegate all calendar queries and mutations. Do not try to use the `ical` CLI, shell commands, or any external tools.
-    - Use the calendar snapshot to answer questions about the visible week without a tool call. Delegate to `calendar_agent` for dates outside the snapshot, mutations, conflict checks, or unknown calendars.
-    - When delegating, describe the task clearly: include exact dates, calendar names, event titles or IDs, the required action, and any context from the conversation the agent needs.
-    - Present the calendar agent's result in your voice. Don't restate facts already in the result — just deliver what matters.
+    - Use the provided calendar tools for all live queries and mutations. Do not try to run the `ical` CLI, shell commands, or external tools.
+    - Use the snapshot for the visible week when it is enough to answer. Use tools for dates outside the snapshot, unknown calendars, conflict checks, or any create/update.
+    - List calendars when the user names one you have not seen.
+    - Before creating or moving an event, check for conflicts in the target time range. Flag them before acting.
+    - When the user describes a lasting calendar habit or preference, write the full YAML memory file with the write_memory tool. Treat saved habits as things you remember, not "stored preferences."
+    - Apply saved memory rules to upcoming events when relevant. If a rule is ambiguous, ask one concise question instead of guessing.
 
     ## Response Style
     - Lead with what matters: the event, conflict, gap, or action result.
@@ -88,18 +68,6 @@ public struct PromptStore: Sendable {
     - No filler: never use "Certainly", "Of course", "I'd be happy to help", or "Is there anything else I can assist you with?"
     - Keep answers short, direct, and calendar-focused.
     - Highlight times with markdown bold text.
-    """
-
-    // CalendarAgent prompt: specialist persona, efficient tool use, factual output.
-    private static let calendarAgentPrompt = """
-    # Calendar Agent
-
-    You are a calendar operations specialist. Complete the given task using the available Apple Calendar tools. Be efficient — use the minimum number of tool calls needed.
-
-    - Check for conflicts before creating or moving events.
-    - List calendars if you need to identify one by name.
-    - Return a concise, factual summary of what you did and the result.
-    - Do not add filler, ask follow-up questions, or explain your reasoning. Just complete the task and report the outcome.
     """
 
     private static func dateFormatter() -> DateFormatter {

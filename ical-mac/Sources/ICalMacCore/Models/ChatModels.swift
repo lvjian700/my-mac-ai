@@ -35,15 +35,10 @@ public struct ToolCall: Identifiable, Codable, Equatable, Sendable {
 
 public struct AssistantConfiguration: Codable, Equatable, Sendable {
     public var model: String
-    /// Model used by CalendarAgent. Defaults to `model` when nil.
-    public var calendarAgentModel: String?
     public var userName: String?
 
-    public init(model: String = "gpt-4.5-mini", calendarAgentModel: String? = nil, userName: String? = nil) {
+    public init(model: String = "gpt-4.5-mini", userName: String? = nil) {
         self.model = model
-        self.calendarAgentModel = calendarAgentModel
         self.userName = userName
     }
-
-    public var resolvedCalendarAgentModel: String { calendarAgentModel ?? model }
 }

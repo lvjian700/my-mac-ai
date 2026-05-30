@@ -7,7 +7,7 @@ public final class AssistantService {
     private let apiKeyStore: APIKeyStore
     private let memoryStore: MemoryStore
     private let promptStore: PromptStore
-    private let calendarAgent: CalendarAgent
+    private let toolExecutor: CalendarToolExecutor
     private let configuration: AssistantConfiguration
     private let maxToolRounds: Int
 
@@ -24,12 +24,7 @@ public final class AssistantService {
         self.apiKeyStore = apiKeyStore
         self.memoryStore = memoryStore
         self.promptStore = promptStore
-        self.calendarAgent = CalendarAgent(
-            client: client,
-            toolExecutor: toolExecutor,
-            configuration: configuration,
-            maxToolRounds: maxToolRounds
-        )
+        self.toolExecutor = toolExecutor
         self.configuration = configuration
         self.maxToolRounds = maxToolRounds
     }
@@ -43,10 +38,9 @@ public final class AssistantService {
             throw OpenAIError.missingAPIKey
         }
 
-        let memory = memoryStore.readMemory()
         inputHistory.append(.message(role: "user", content: text))
         let instructions = promptStore.buildSystemPrompt(
-            memory: memory,
+            memory: memoryStore.readMemory(),
             snapshot: snapshot,
             configuration: configuration
         )
@@ -56,7 +50,7 @@ public final class AssistantService {
             let request = OpenAIRequest(
                 model: configuration.model,
                 instructions: instructions,
-                tools: [Self.calendarAgentTool],
+                tools: CalendarToolExecutor.toolDefinitions,
                 input: inputHistory
             )
             let response = try await client.createResponse(request, apiKey: apiKey)
@@ -72,14 +66,8 @@ public final class AssistantService {
                 }
                 for call in toolCalls {
                     let input = parseArguments(call.arguments)
-                    let task = input.objectValue?["task"]?.stringValue ?? call.arguments
-                    let result = try await calendarAgent.run(
-                        task: task,
-                        snapshot: snapshot,
-                        memory: memory,
-                        apiKey: apiKey
-                    )
-                    inputHistory.append(.functionCallOutput(callId: call.callId, output: result))
+                    let output = await toolExecutor.execute(name: call.name, input: input)
+                    inputHistory.append(.functionCallOutput(callId: call.callId, output: output))
                 }
                 continue
             }
@@ -92,22 +80,6 @@ public final class AssistantService {
             return output
         }
     }
-
-    // The single tool exposed to the ChatAgent — all calendar work is delegated through here.
-    private static let calendarAgentTool = OpenAIToolDefinition(
-        name: "calendar_agent",
-        description: "Delegate a calendar task to the calendar specialist agent. The agent has full access to Apple Calendar tools (list, create, update events; write memory). Describe the task clearly — include dates, calendar names, event details, and any relevant context from the conversation.",
-        parameters: .object([
-            "type": .string("object"),
-            "properties": .object([
-                "task": .object([
-                    "type": .string("string"),
-                    "description": .string("A clear description of the calendar work to perform."),
-                ]),
-            ]),
-            "required": .array([.string("task")]),
-        ])
-    )
 
     private func parseArguments(_ arguments: String) -> JSONValue {
         let data = Data(arguments.utf8)
