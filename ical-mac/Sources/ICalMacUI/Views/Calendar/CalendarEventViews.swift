@@ -109,7 +109,7 @@ struct CalendarEventChip: View {
                 CalendarEventStatusBackground(
                     eventColor: eventColor,
                     presentation: statusPresentation,
-                    baseOpacity: 0.14
+                    baseOpacity: categoryPresentation.fillOpacity * 0.875
                 )
                 .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             }
@@ -145,18 +145,23 @@ struct CalendarEventBlock: View {
         event.invitation.flatMap { CalendarInvitationStatusPresentation.make(for: $0.responseStatus) }
     }
     private var eventColor: Color { categoryPresentation.color }
+    private var titleLeadingPadding: CGFloat {
+        categoryPresentation.showsLeadingRail ? railWidth + contentLeadingPadding : contentLeadingPadding
+    }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
             CalendarEventStatusBackground(
                 eventColor: eventColor,
                 presentation: statusPresentation,
-                baseOpacity: 0.16
+                baseOpacity: categoryPresentation.fillOpacity
             )
 
-            Rectangle()
-                .fill(statusPresentation?.isDeclined == true ? Color.secondary.opacity(0.55) : eventColor)
-                .frame(width: railWidth)
+            if categoryPresentation.showsLeadingRail {
+                Rectangle()
+                    .fill(statusPresentation?.isDeclined == true ? Color.secondary.opacity(0.55) : eventColor)
+                    .frame(width: railWidth)
+            }
 
             CalendarEventTitleLabel(
                 title: event.title,
@@ -170,7 +175,7 @@ struct CalendarEventBlock: View {
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .foregroundStyle(statusPresentation?.usesGrayTitle == true ? .secondary : eventColor)
-                .padding(.leading, railWidth + contentLeadingPadding)
+                .padding(.leading, titleLeadingPadding)
                 .padding(.trailing, contentTrailingPadding)
                 .padding(.vertical, regularVerticalPadding)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

@@ -5,6 +5,8 @@ struct CalendarEventCategoryPresentation: Equatable {
     var category: CalendarEventCategory
     var label: String
     var color: Color
+    var fillOpacity: Double
+    var showsLeadingRail: Bool
     var symbolName: String?
 
     static func make(for event: CalendarEvent) -> CalendarEventCategoryPresentation {
@@ -17,6 +19,8 @@ struct CalendarEventCategoryPresentation: Equatable {
             category: category,
             label: category.label,
             color: category.color,
+            fillOpacity: category.fillOpacity,
+            showsLeadingRail: category.showsLeadingRail,
             symbolName: category.symbolName
         )
     }
@@ -65,14 +69,27 @@ enum CalendarEventCategory: String, Equatable, CaseIterable {
         case .rest:
             Color(red: 0.88, green: 0.36, blue: 0.05)
         case .outOfOffice:
-            Color(red: 0.76, green: 0.16, blue: 0.22)
+            Color(red: 0.30, green: 0.56, blue: 0.76)
         }
+    }
+
+    var fillOpacity: Double {
+        switch self {
+        case .outOfOffice:
+            0.08
+        case .focus, .catchup, .support, .meeting, .personal, .rest:
+            0.16
+        }
+    }
+
+    var showsLeadingRail: Bool {
+        !Self.leadingRailDisabledCategories.contains(self)
     }
 
     var symbolName: String? {
         switch self {
         case .focus:
-            "bell.slash.fill"
+            "scope"
         case .outOfOffice:
             "minus.circle.fill"
         case .catchup, .support, .meeting, .personal, .rest:
@@ -95,6 +112,10 @@ enum CalendarEventCategory: String, Equatable, CaseIterable {
         (.support, ["support", "cop", "oncall"]),
         (.personal, ["lunch", "personal"]),
         (.rest, ["break", "offscreen"]),
+    ]
+
+    private static let leadingRailDisabledCategories: Set<CalendarEventCategory> = [
+        .outOfOffice,
     ]
 
     private static func hasPrefix(_ prefix: String, in title: String) -> Bool {

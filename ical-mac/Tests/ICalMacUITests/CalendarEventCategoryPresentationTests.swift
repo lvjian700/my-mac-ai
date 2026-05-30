@@ -34,7 +34,7 @@ struct CalendarEventCategoryPresentationTests {
     }
 
     @Test func mapsInlineSymbolsForBlockingCategories() {
-        #expect(CalendarEventCategoryPresentation.make(forTitle: "Focus - Planning").symbolName == "bell.slash.fill")
+        #expect(CalendarEventCategoryPresentation.make(forTitle: "Focus - Planning").symbolName == "scope")
         #expect(CalendarEventCategoryPresentation.make(forTitle: "Out of office - Travel").symbolName == "minus.circle.fill")
         #expect(CalendarEventCategoryPresentation.make(forTitle: "Sync - Launch notes").symbolName == nil)
     }
