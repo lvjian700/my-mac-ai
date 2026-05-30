@@ -80,13 +80,14 @@ enum PreviewData {
             title: "Focus - Planning",
             dayOffset: 0,
             hour: 9,
+            minute: 45,
             duration: 60
         ),
         event(
             id: "cat-focus-time",
             title: "Focus time - Deep work",
             dayOffset: 0,
-            hour: 11,
+            hour: 13,
             duration: 90
         ),
         event(
@@ -94,6 +95,7 @@ enum PreviewData {
             title: "Catchup - Design sync",
             dayOffset: 1,
             hour: 9,
+            minute: 45,
             duration: 45
         ),
         event(
@@ -107,28 +109,29 @@ enum PreviewData {
             id: "cat-tech-huddle",
             title: "Tech Huddle - Runtime",
             dayOffset: 1,
-            hour: 14,
+            hour: 13,
             duration: 45
         ),
         event(
             id: "cat-support",
             title: "Support - Rotation handoff",
-            dayOffset: 2,
-            hour: 9,
+            dayOffset: 3,
+            hour: 11,
+            minute: 30,
             duration: 60
         ),
         event(
             id: "cat-cop",
             title: "Cop - Incident review",
-            dayOffset: 2,
-            hour: 11,
+            dayOffset: 3,
+            hour: 13,
             duration: 60
         ),
         event(
             id: "cat-oncall",
             title: "Oncall - Primary",
-            dayOffset: 2,
-            hour: 14,
+            dayOffset: 4,
+            hour: 11,
             duration: 60
         ),
         event(
@@ -143,6 +146,7 @@ enum PreviewData {
             title: "Lunch with Sarah",
             dayOffset: 4,
             hour: 12,
+            minute: 15,
             duration: 60,
             calendarTitle: "Personal",
             calendarIdentifier: "1"
@@ -151,7 +155,8 @@ enum PreviewData {
             id: "cat-personal",
             title: "Personal - School pickup",
             dayOffset: 4,
-            hour: 15,
+            hour: 13,
+            minute: 30,
             duration: 45,
             calendarTitle: "Personal",
             calendarIdentifier: "1"
@@ -213,10 +218,10 @@ enum PreviewData {
             ),
             event(
                 id: "recurring-meet-free-wenesday",
-                title: "Meet Free Wenesday",
+                title: "Meet Free Wednesday",
                 dayOffset: 2,
                 hour: 12,
-                duration: 300,
+                duration: 180,
                 isRecurring: true
             ),
         ]

@@ -141,6 +141,28 @@ struct AppModelTests {
         #expect(visibleRecurringEventIDs.contains("recurring-meet-free-wenesday"))
     }
 
+    @Test func previewTimedEventsDoNotOverlapWithinADay() async throws {
+        let model = AppModel.preview()
+        let calendar = Calendar.current
+
+        await model.refreshCalendar()
+
+        let eventsByDay = Dictionary(grouping: model.visibleTimedEvents) { event in
+            calendar.startOfDay(for: event.startDate)
+        }
+        for dayEvents in eventsByDay.values {
+            let sortedEvents = dayEvents.sorted { $0.startDate < $1.startDate }
+            for index in sortedEvents.indices.dropFirst() {
+                let previousEvent = sortedEvents[sortedEvents.index(before: index)]
+                let event = sortedEvents[index]
+                #expect(
+                    previousEvent.endDate <= event.startDate,
+                    "\(previousEvent.title) overlaps \(event.title)"
+                )
+            }
+        }
+    }
+
     private func makeModel(
         store: FakeUICalendarStore,
         apiKeyStore: APIKeyStore = FakeUIAPIKeyStore(key: "test-key"),
