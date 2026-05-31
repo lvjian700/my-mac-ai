@@ -473,69 +473,52 @@ private struct VoiceTimelineWaveform: View {
     let levels: [Double]
     let isPreparing: Bool
 
+    private let barWidth: CGFloat = 3.0
+    private let barSpacing: CGFloat = 2.0
+
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
-            GeometryReader { proxy in
-                ZStack(alignment: .trailing) {
-                    VoiceTimelineBaseline()
-
-                    let spacing: CGFloat = 2.5
-                    let visibleLevels = visibleLevels(at: timeline.date)
-                    let barWidth = barWidth(levelCount: visibleLevels.count, availableWidth: proxy.size.width, spacing: spacing)
-
-                    HStack(alignment: .center, spacing: spacing) {
-                        ForEach(Array(visibleLevels.enumerated()), id: \.offset) { _, level in
-                            Capsule(style: .continuous)
-                                .fill(Color.primary.opacity(level > 0.04 ? 0.88 : 0.18))
-                                .frame(width: barWidth, height: barHeight(level: level, availableHeight: proxy.size.height))
-                        }
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-                }
+        TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { context in
+            Canvas { ctx, size in
+                drawBaseline(in: ctx, size: size)
+                drawBars(in: ctx, size: size, date: context.date)
             }
         }
-        .clipped()
-        .animation(.easeOut(duration: 0.12), value: levels)
     }
 
-    private func barWidth(levelCount: Int, availableWidth: CGFloat, spacing: CGFloat) -> CGFloat {
-        guard levelCount > 0 else { return 2.4 }
-        let totalSpacing = spacing * CGFloat(max(0, levelCount - 1))
-        return max(2, (availableWidth - totalSpacing) / CGFloat(levelCount))
+    private func drawBaseline(in ctx: GraphicsContext, size: CGSize) {
+        var path = Path()
+        path.move(to: CGPoint(x: 0, y: size.height / 2))
+        path.addLine(to: CGPoint(x: size.width, y: size.height / 2))
+        ctx.stroke(path, with: .color(.secondary.opacity(0.35)),
+                   style: StrokeStyle(lineWidth: 1.2, lineCap: .round, dash: [2.2, 4]))
     }
 
-    private func visibleLevels(at date: Date) -> [Double] {
-        guard isPreparing || !hasLiveLevels else { return levels }
-        let count = max(levels.count, 72)
-        let phase = date.timeIntervalSinceReferenceDate * 4.8
-        return (0..<count).map { index in
-            let wave = sin(phase + Double(index) * 0.48)
-            let ripple = sin(phase * 1.7 + Double(index) * 0.17)
-            return max(0.08, 0.18 + 0.12 * wave + 0.05 * ripple)
+    private func drawBars(in ctx: GraphicsContext, size: CGSize, date: Date) {
+        let count = max(1, Int(size.width / (barWidth + barSpacing)))
+        let bars = displayLevels(count: count, at: date)
+        let totalWidth = CGFloat(count) * barWidth + CGFloat(count - 1) * barSpacing
+        let startX = (size.width - totalWidth) / 2
+
+        for (i, level) in bars.enumerated() {
+            let h = barHeight(level: level, totalHeight: size.height)
+            let x = startX + CGFloat(i) * (barWidth + barSpacing)
+            let y = (size.height - h) / 2
+            let rect = CGRect(x: x, y: y, width: barWidth, height: h)
+            let path = Path(roundedRect: rect, cornerRadius: barWidth / 2)
+            ctx.fill(path, with: .color(.primary.opacity(0.80)))
         }
     }
 
-    private var hasLiveLevels: Bool {
-        levels.contains { $0 > 0.05 }
-    }
-
-    private func barHeight(level: Double, availableHeight: CGFloat) -> CGFloat {
-        let scaledLevel = max(0.06, min(1, level))
-        return max(3, availableHeight * CGFloat(0.18 + scaledLevel * 0.82))
-    }
-}
-
-private struct VoiceTimelineBaseline: View {
-    var body: some View {
-        Canvas { context, size in
-            var path = Path()
-            path.move(to: CGPoint(x: 0, y: size.height / 2))
-            path.addLine(to: CGPoint(x: size.width, y: size.height / 2))
-            context.stroke(
-                path,
-                with: .color(Color.secondary.opacity(0.42)),
-                style: StrokeStyle(lineWidth: 1.2, lineCap: .round, dash: [2.2, 4])
-            )
+    private func displayLevels(count: Int, at date: Date) -> [Double] {
+        let recent = Array(levels.suffix(count))
+        if recent.count < count {
+            return Array(repeating: 0.0, count: count - recent.count) + recent
         }
+        return recent
+    }
+
+    private func barHeight(level: Double, totalHeight: CGFloat) -> CGFloat {
+        let clamped = max(0, min(1, level))
+        return max(2, totalHeight * CGFloat(0.08 + clamped * 0.92))
     }
 }

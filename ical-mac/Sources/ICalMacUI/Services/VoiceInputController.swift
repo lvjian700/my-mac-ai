@@ -218,9 +218,9 @@ final class VoiceInputController: ObservableObject {
             expandedLevel = 0
         }
 
-        smoothedAudioLevel = smoothedAudioLevel * 0.58 + min(1, expandedLevel) * 0.42
+        smoothedAudioLevel = smoothedAudioLevel * 0.35 + min(1, expandedLevel) * 0.65
         if expandedLevel == 0 {
-            smoothedAudioLevel *= 0.72
+            smoothedAudioLevel *= 0.55
         }
         return max(0, min(1, smoothedAudioLevel))
     }
