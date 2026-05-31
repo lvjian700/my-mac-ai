@@ -26,7 +26,12 @@ let package = Package(
         .target(
             name: "ICalMacUI",
             dependencies: ["ICalMacCore"],
-            path: "Sources/ICalMacUI"
+            path: "Sources/ICalMacUI",
+            linkerSettings: [
+                .linkedFramework("AppKit"),
+                .linkedFramework("AVFoundation"),
+                .linkedFramework("Speech"),
+            ]
         ),
         .executableTarget(
             name: "ICalMacApp",

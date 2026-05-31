@@ -24,6 +24,10 @@
     <string>ical-mac reads and updates your calendar when you ask the assistant to manage events.</string>
     <key>NSCalendarsFullAccessUsageDescription</key>
     <string>ical-mac needs full Calendar access to create, update, and summarize events.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>ical-mac records your voice when you hold Fn to dictate a message draft.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>ical-mac uses Apple Speech Recognition to turn your dictated message into text.</string>
     <key>NSHighResolutionCapable</key>
     <true/>
 </dict>
