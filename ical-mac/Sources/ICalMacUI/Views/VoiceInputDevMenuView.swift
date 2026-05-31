@@ -64,17 +64,16 @@ public struct VoiceInputDevMenuView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Replay").font(.headline)
 
-            TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { _ in
-                Canvas { ctx, size in
-                    let t = isPlaying ? (player?.currentTime ?? currentTime) : currentTime
-                    let maxCount = max(1, Int(size.width / (settings.barWidth + settings.barSpacing)))
-                    let levels = capture.levelsArray(at: t, maxCount: maxCount)
-                    drawWaveform(in: ctx, size: size, levels: levels)
-                }
-                .frame(height: 44)
-                .background(Color(nsColor: .controlBackgroundColor))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-            }
+            VoiceTimelineWaveform(
+                levels: replayLevels,
+                isPreparing: false,
+                barWidth: CGFloat(settings.barWidth),
+                barSpacing: CGFloat(settings.barSpacing),
+                barMinHeight: settings.barMinHeight
+            )
+            .frame(height: 44)
+            .background(Color(nsColor: .controlBackgroundColor))
+            .clipShape(RoundedRectangle(cornerRadius: 6))
 
             Slider(
                 value: Binding(
@@ -135,28 +134,9 @@ public struct VoiceInputDevMenuView: View {
         }
     }
 
-    // MARK: - Canvas Draw
-
-    private func drawWaveform(in ctx: GraphicsContext, size: CGSize, levels: [Double]) {
-        var baseline = Path()
-        baseline.move(to: CGPoint(x: 0, y: size.height / 2))
-        baseline.addLine(to: CGPoint(x: size.width, y: size.height / 2))
-        ctx.stroke(baseline, with: .color(.secondary.opacity(0.35)),
-                   style: StrokeStyle(lineWidth: 1.2, lineCap: .round, dash: [2.2, 4]))
-
-        let bw = CGFloat(settings.barWidth)
-        let bs = CGFloat(settings.barSpacing)
-        let minH = settings.barMinHeight
-
-        for (i, level) in levels.enumerated() {
-            let clamped = max(0, min(1, level))
-            let h = max(2, size.height * CGFloat(minH + clamped * (1 - minH)))
-            let x = CGFloat(i) * (bw + bs)
-            let y = (size.height - h) / 2
-            let path = Path(roundedRect: CGRect(x: x, y: y, width: bw, height: h),
-                            cornerRadius: bw / 2)
-            ctx.fill(path, with: .color(.primary.opacity(0.80)))
-        }
+    private var replayLevels: [Double] {
+        let t = isPlaying ? (player?.currentTime ?? currentTime) : currentTime
+        return capture.samples.filter { $0.timestamp <= t }.map { $0.level }
     }
 
     // MARK: - Playback
