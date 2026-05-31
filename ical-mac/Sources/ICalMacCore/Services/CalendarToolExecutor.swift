@@ -87,6 +87,21 @@ public final class CalendarToolExecutor {
                     "required": .array([.string("content")]),
                 ])
             ),
+            OpenAIToolDefinition(
+                name: "respond_to_invite",
+                description: "Accept, decline, or tentatively accept a calendar invitation by event id.",
+                parameters: .object([
+                    "type": .string("object"),
+                    "properties": .object([
+                        "id": .object(["type": .string("string")]),
+                        "response": .object([
+                            "type": .string("string"),
+                            "enum": .array([.string("accept"), .string("decline"), .string("tentative")]),
+                        ]),
+                    ]),
+                    "required": .array([.string("id"), .string("response")]),
+                ])
+            ),
         ]
     }
 
@@ -108,6 +123,14 @@ public final class CalendarToolExecutor {
             case "write_memory":
                 try memoryStore.writeMemory(requiredString("content", in: object))
                 return "Saved to \(memoryStore.memoryURL.path)"
+            case "respond_to_invite":
+                let id = try requiredString("id", in: object)
+                let responseStr = try requiredString("response", in: object)
+                guard let response = CalendarInvitationResponse(rawValue: responseStr) else {
+                    return "Error: invalid response '\(responseStr)'. Use accept, decline, or tentative."
+                }
+                let event = try await calendarStore.respondToInvitation(id: id, response: response)
+                return try encode(event)
             default:
                 return "Unknown tool: \(name)"
             }

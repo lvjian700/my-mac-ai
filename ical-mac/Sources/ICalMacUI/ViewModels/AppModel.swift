@@ -122,12 +122,18 @@ public final class AppModel: ObservableObject {
             reconcileSelectedCalendars()
             let builder = SessionSnapshotBuilder(calendarStore: calendarStore)
             let nextSnapshot = try await builder.snapshot(range: displayedWeekRange)
+            let newInvites = nextSnapshot.events.filter {
+                $0.invitation?.needsResponse == true && !loggedInvitationEventIDs.contains($0.id)
+            }
             logNewInvitations(in: nextSnapshot.events)
             try memoryStore.writeSnapshot(nextSnapshot)
             snapshot = nextSnapshot
             events = nextSnapshot.events
             isShowingCachedSnapshot = false
             statusText = "Synced \(Self.timeFormatter.string(from: nextSnapshot.syncedAt))"
+            Task { @MainActor [weak self] in
+                await self?.handleNewInvitations(newInvites)
+            }
         } catch {
             statusText = error.localizedDescription
             accessStatus = calendarStore.accessStatus()
@@ -307,6 +313,18 @@ public final class AppModel: ObservableObject {
             syncedAt: snapshot.syncedAt,
             range: displayedWeekRange
         )
+    }
+
+    private func handleNewInvitations(_ invitations: [CalendarEvent]) async {
+        guard !invitations.isEmpty else { return }
+        do {
+            let evaluation = try await assistant.evaluateInvitations(invitations, snapshot: snapshot)
+            if !evaluation.isEmpty {
+                messages.append(ChatMessage(role: .assistant, text: evaluation))
+            }
+        } catch {
+            // silent — proactive notifications should not surface errors to chat
+        }
     }
 
     private func logNewInvitations(in events: [CalendarEvent]) {

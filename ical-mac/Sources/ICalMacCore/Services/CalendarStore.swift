@@ -31,6 +31,7 @@ public protocol CalendarStore: AnyObject {
     func listEvents(range: CalendarQuery) async throws -> [CalendarEvent]
     func createEvent(_ draft: EventDraft) async throws -> CalendarEvent
     func updateEvent(_ update: EventUpdate) async throws -> CalendarEvent
+    func respondToInvitation(id: String, response: CalendarInvitationResponse) async throws -> CalendarEvent
 }
 
 public extension CalendarStore {

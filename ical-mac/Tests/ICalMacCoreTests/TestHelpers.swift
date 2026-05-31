@@ -71,6 +71,13 @@ final class FakeCalendarStore: CalendarStore {
         if let endDate = update.endDate { event.endDate = endDate }
         return event
     }
+
+    func respondToInvitation(id: String, response: CalendarInvitationResponse) async throws -> CalendarEvent {
+        guard let event = events.first(where: { $0.id == id }) else {
+            throw CalendarStoreError.eventNotFound(id)
+        }
+        return event
+    }
 }
 
 final class FakeOpenAIClient: OpenAIClient, @unchecked Sendable {

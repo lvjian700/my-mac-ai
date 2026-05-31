@@ -177,6 +177,10 @@ public enum CalendarParticipantStatus: String, Codable, Equatable, Sendable {
     case inProcess
 }
 
+public enum CalendarInvitationResponse: String, Sendable, Codable {
+    case accept, decline, tentative
+}
+
 public enum CalendarInvitationResponseStatus: String, Codable, Equatable, Sendable {
     case unknown
     case needsAction

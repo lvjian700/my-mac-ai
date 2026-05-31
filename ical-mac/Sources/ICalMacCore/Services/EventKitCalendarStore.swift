@@ -60,6 +60,20 @@ actor CalendarActor {
         return CalendarEvent(event: event)
     }
 
+    func respondToInvitation(id: String, response: CalendarInvitationResponse) throws -> CalendarEvent {
+        try requireAccess()
+        guard let ekEvent = store.event(withIdentifier: id) else {
+            throw CalendarStoreError.eventNotFound(id)
+        }
+        switch response {
+        case .accept, .tentative:
+            try store.save(ekEvent, span: .thisEvent, commit: true)
+        case .decline:
+            try store.remove(ekEvent, span: .thisEvent, commit: true)
+        }
+        return CalendarEvent(event: ekEvent)
+    }
+
     func saveUpdatedEvent(_ update: EventUpdate) throws -> CalendarEvent {
         try requireAccess()
         guard let event = store.event(withIdentifier: update.id) else {
@@ -157,6 +171,10 @@ public final class EventKitCalendarStore: CalendarStore {
 
     public func updateEvent(_ update: EventUpdate) async throws -> CalendarEvent {
         try await calendarActor.saveUpdatedEvent(update)
+    }
+
+    public func respondToInvitation(id: String, response: CalendarInvitationResponse) async throws -> CalendarEvent {
+        try await calendarActor.respondToInvitation(id: id, response: response)
     }
 }
 

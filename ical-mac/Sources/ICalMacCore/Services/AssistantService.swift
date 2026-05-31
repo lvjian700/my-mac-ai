@@ -81,6 +81,43 @@ public final class AssistantService {
         }
     }
 
+    public func evaluateInvitations(
+        _ invitations: [CalendarEvent],
+        snapshot: SessionSnapshot?
+    ) async throws -> String {
+        guard let apiKey = apiKeyStore.readAPIKey(), !apiKey.isEmpty else {
+            throw OpenAIError.missingAPIKey
+        }
+        let systemPrompt = promptStore.buildSystemPrompt(
+            memory: memoryStore.readMemory(),
+            snapshot: snapshot,
+            configuration: configuration
+        )
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "EEEE, MMM d 'at' h:mm a"
+        let lines = invitations.map { inv -> String in
+            let from = inv.invitation?.organizerName ?? inv.invitation?.organizerURL ?? "unknown"
+            let status = inv.invitation?.responseStatus.rawValue ?? "pending"
+            return "- \"\(inv.title)\" from \(from) — \(dateFormatter.string(from: inv.startDate)) [\(status)]"
+        }.joined(separator: "\n")
+        let userMessage = """
+            New calendar invitations detected. Based on your memory and preferences, \
+            evaluate each one briefly. If you have a relevant rule, recommend accept / decline / tentative \
+            and explain why. If not, just summarize: how many and from whom.
+
+            Invitations:
+            \(lines)
+            """
+        let request = OpenAIRequest(
+            model: configuration.model,
+            instructions: systemPrompt,
+            tools: [],
+            input: [.message(role: "user", content: userMessage)]
+        )
+        let response = try await client.createResponse(request, apiKey: apiKey)
+        return response.output.text
+    }
+
     private func parseArguments(_ arguments: String) -> JSONValue {
         let data = Data(arguments.utf8)
         return (try? JSONDecoder().decode(JSONValue.self, from: data)) ?? .object([:])

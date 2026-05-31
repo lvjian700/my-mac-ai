@@ -47,6 +47,13 @@ final class PreviewCalendarStore: CalendarStore {
         if let end = update.endDate { event.endDate = end }
         return event
     }
+
+    func respondToInvitation(id: String, response: CalendarInvitationResponse) async throws -> CalendarEvent {
+        guard let event = events.first(where: { $0.id == id }) else {
+            throw CalendarStoreError.eventNotFound(id)
+        }
+        return event
+    }
 }
 
 struct PreviewAPIKeyStore: APIKeyStore {

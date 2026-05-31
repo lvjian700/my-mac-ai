@@ -268,6 +268,13 @@ private final class FakeUICalendarStore: CalendarStore {
     func updateEvent(_ update: EventUpdate) async throws -> CalendarEvent {
         throw CalendarStoreError.eventNotFound(update.id)
     }
+
+    func respondToInvitation(id: String, response: CalendarInvitationResponse) async throws -> CalendarEvent {
+        guard let event = events.first(where: { $0.id == id }) else {
+            throw CalendarStoreError.eventNotFound(id)
+        }
+        return event
+    }
 }
 
 private final class FakeUIAPIKeyStore: APIKeyStore, @unchecked Sendable {
