@@ -3,7 +3,7 @@ APP_DIR ?= $(HOME)/Applications
 BUILD_DIR := .build/release
 APP_BUNDLE := .build/ical-mac.app
 
-.PHONY: build test run app install uninstall clean xcode xcode-build xcode-test
+.PHONY: build test run app dmg install uninstall clean xcode xcode-build xcode-test
 
 build:
 	swift build -c release
@@ -16,6 +16,9 @@ run:
 
 app: build
 	./scripts/build_app_bundle.sh
+
+dmg: build
+	./scripts/build_dmg.sh
 
 install: app
 	mkdir -p "$(APP_DIR)"
