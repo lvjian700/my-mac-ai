@@ -27,10 +27,10 @@ public enum CalendarStoreError: LocalizedError, Equatable {
 public protocol CalendarStore: AnyObject {
     func accessStatus() -> CalendarAccessStatus
     func requestAccess() async throws
-    func listCalendars() throws -> [CalendarInfo]
-    func listEvents(range: CalendarQuery) throws -> [CalendarEvent]
-    func createEvent(_ draft: EventDraft) throws -> CalendarEvent
-    func updateEvent(_ update: EventUpdate) throws -> CalendarEvent
+    func listCalendars() async throws -> [CalendarInfo]
+    func listEvents(range: CalendarQuery) async throws -> [CalendarEvent]
+    func createEvent(_ draft: EventDraft) async throws -> CalendarEvent
+    func updateEvent(_ update: EventUpdate) async throws -> CalendarEvent
 }
 
 public extension CalendarStore {

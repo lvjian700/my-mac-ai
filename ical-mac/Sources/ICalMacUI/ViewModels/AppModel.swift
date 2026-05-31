@@ -28,6 +28,7 @@ public final class AppModel: ObservableObject {
     private var assistant: AssistantService
     private var snapshot: SessionSnapshot?
     private var pollingTask: Task<Void, Never>?
+    private var storeChangedDebounceTask: Task<Void, Never>?
     private var hasInitializedCalendarSelection = false
     private var loggedInvitationEventIDs: Set<String>
     private let invitationLogger: @MainActor (CalendarEvent) -> Void
@@ -117,10 +118,10 @@ public final class AppModel: ObservableObject {
                 try await calendarStore.requestAccess()
                 accessStatus = calendarStore.accessStatus()
             }
-            calendars = try calendarStore.listCalendars()
+            calendars = try await calendarStore.listCalendars()
             reconcileSelectedCalendars()
             let builder = SessionSnapshotBuilder(calendarStore: calendarStore)
-            let nextSnapshot = try builder.snapshot(range: displayedWeekRange)
+            let nextSnapshot = try await builder.snapshot(range: displayedWeekRange)
             logNewInvitations(in: nextSnapshot.events)
             try memoryStore.writeSnapshot(nextSnapshot)
             snapshot = nextSnapshot
@@ -133,7 +134,26 @@ public final class AppModel: ObservableObject {
         }
     }
 
-    public func startAutoRefresh(interval: Duration = .seconds(60)) {
+    public func handleStoreChanged() {
+        storeChangedDebounceTask?.cancel()
+        storeChangedDebounceTask = Task { @MainActor [weak self] in
+            do {
+                try await Task.sleep(for: .milliseconds(500))
+            } catch {
+                return
+            }
+            await self?.refreshCalendar()
+            self?.resetPollingTimer()
+        }
+    }
+
+    private func resetPollingTimer() {
+        guard pollingTask != nil else { return }
+        stopAutoRefresh()
+        startAutoRefresh()
+    }
+
+    public func startAutoRefresh(interval: Duration = .seconds(300)) {
         guard pollingTask == nil else { return }
         pollingTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {

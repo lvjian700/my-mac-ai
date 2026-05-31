@@ -95,15 +95,15 @@ public final class CalendarToolExecutor {
             let object = input.objectValue ?? [:]
             switch name {
             case "list_calendars":
-                return try encode(calendarStore.listCalendars())
+                return try await encode(calendarStore.listCalendars())
             case "list_events":
                 let query = try makeQuery(from: object)
-                return try encode(calendarStore.listEvents(range: query))
+                return try await encode(calendarStore.listEvents(range: query))
             case "create_event":
-                let event = try calendarStore.createEvent(makeDraft(from: object))
+                let event = try await calendarStore.createEvent(makeDraft(from: object))
                 return try encode(event)
             case "update_event":
-                let event = try calendarStore.updateEvent(makeUpdate(from: object))
+                let event = try await calendarStore.updateEvent(makeUpdate(from: object))
                 return try encode(event)
             case "write_memory":
                 try memoryStore.writeMemory(requiredString("content", in: object))

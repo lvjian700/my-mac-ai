@@ -252,20 +252,20 @@ private final class FakeUICalendarStore: CalendarStore {
         status = .granted
     }
 
-    func listCalendars() throws -> [CalendarInfo] {
+    func listCalendars() async throws -> [CalendarInfo] {
         calendars
     }
 
-    func listEvents(range: CalendarQuery) throws -> [CalendarEvent] {
+    func listEvents(range: CalendarQuery) async throws -> [CalendarEvent] {
         listEventsCount += 1
         return events
     }
 
-    func createEvent(_ draft: EventDraft) throws -> CalendarEvent {
+    func createEvent(_ draft: EventDraft) async throws -> CalendarEvent {
         throw CalendarStoreError.noWritableCalendar
     }
 
-    func updateEvent(_ update: EventUpdate) throws -> CalendarEvent {
+    func updateEvent(_ update: EventUpdate) async throws -> CalendarEvent {
         throw CalendarStoreError.eventNotFound(update.id)
     }
 }

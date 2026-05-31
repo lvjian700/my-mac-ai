@@ -29,9 +29,10 @@ struct ICalMacApp: App {
                     NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
                 ) { _ in
                     textMetrics = preferredReadingTextMetrics()
+                    model.handleStoreChanged()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .EKEventStoreChanged)) { _ in
-                    Task { await model.refreshCalendar() }
+                    model.handleStoreChanged()
                 }
         }
         .windowStyle(.hiddenTitleBar)

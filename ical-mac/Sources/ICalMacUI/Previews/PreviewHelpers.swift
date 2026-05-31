@@ -22,10 +22,10 @@ final class PreviewCalendarStore: CalendarStore {
 
     func accessStatus() -> CalendarAccessStatus { status }
     func requestAccess() async throws { status = .granted }
-    func listCalendars() throws -> [CalendarInfo] { calendars }
-    func listEvents(range: CalendarQuery) throws -> [CalendarEvent] { events }
+    func listCalendars() async throws -> [CalendarInfo] { calendars }
+    func listEvents(range: CalendarQuery) async throws -> [CalendarEvent] { events }
 
-    func createEvent(_ draft: EventDraft) throws -> CalendarEvent {
+    func createEvent(_ draft: EventDraft) async throws -> CalendarEvent {
         let event = CalendarEvent(
             id: UUID().uuidString,
             title: draft.title,
@@ -38,7 +38,7 @@ final class PreviewCalendarStore: CalendarStore {
         return event
     }
 
-    func updateEvent(_ update: EventUpdate) throws -> CalendarEvent {
+    func updateEvent(_ update: EventUpdate) async throws -> CalendarEvent {
         guard var event = events.first(where: { $0.id == update.id }) else {
             throw CalendarStoreError.eventNotFound(update.id)
         }

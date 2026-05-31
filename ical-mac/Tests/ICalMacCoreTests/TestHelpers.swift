@@ -37,16 +37,16 @@ final class FakeCalendarStore: CalendarStore {
         status = .granted
     }
 
-    func listCalendars() throws -> [CalendarInfo] {
+    func listCalendars() async throws -> [CalendarInfo] {
         calendars
     }
 
-    func listEvents(range: CalendarQuery) throws -> [CalendarEvent] {
+    func listEvents(range: CalendarQuery) async throws -> [CalendarEvent] {
         lastQuery = range
         return events
     }
 
-    func createEvent(_ draft: EventDraft) throws -> CalendarEvent {
+    func createEvent(_ draft: EventDraft) async throws -> CalendarEvent {
         try validate(draft)
         createdDrafts.append(draft)
         let event = CalendarEvent(
@@ -61,7 +61,7 @@ final class FakeCalendarStore: CalendarStore {
         return event
     }
 
-    func updateEvent(_ update: EventUpdate) throws -> CalendarEvent {
+    func updateEvent(_ update: EventUpdate) async throws -> CalendarEvent {
         updates.append(update)
         guard var event = events.first(where: { $0.id == update.id }) else {
             throw CalendarStoreError.eventNotFound(update.id)
