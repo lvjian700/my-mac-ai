@@ -28,6 +28,7 @@ enum VoiceInputState: Equatable {
 @MainActor
 protocol VoiceTranscribing: AnyObject {
     var levelHandler: (@MainActor @Sendable (Double) -> Void)? { get set }
+    var bufferHandler: (@Sendable (AVAudioPCMBuffer, TimeInterval) -> Void)? { get set }
 
     func requestAuthorization() async throws
     func start() throws
@@ -41,6 +42,9 @@ final class VoiceInputController: ObservableObject {
     @Published private(set) var elapsedSeconds: TimeInterval = 0
     @Published private(set) var audioLevel: Double = 0
     @Published private(set) var audioLevels: [Double]
+
+    var debugCapture: VoiceDebugCapture?
+    var settings: VoiceInputSettings?
 
     private let transcriber: VoiceTranscribing
     private let now: () -> Date
@@ -63,7 +67,7 @@ final class VoiceInputController: ObservableObject {
         self.now = now
         self.startDelay = startDelay
         self.retainedLevelCount = retainedLevelCount
-        self.audioLevels = Array(repeating: 0, count: retainedLevelCount)
+        self.audioLevels = []
     }
 
     func handleFunctionKey(isPressed: Bool, appendTranscript: @escaping @MainActor (String) -> Void) {
@@ -101,7 +105,18 @@ final class VoiceInputController: ObservableObject {
             transcriber.levelHandler = { [weak self] level in
                 self?.recordAudioLevel(level)
             }
+            if let cap = debugCapture, cap.isEnabled {
+                transcriber.bufferHandler = { [weak cap] buffer, ts in
+                    cap?.append(buffer: buffer, timestamp: ts)
+                }
+            } else {
+                transcriber.bufferHandler = nil
+            }
             try transcriber.start()
+            if let cap = debugCapture, cap.isEnabled,
+               let format = (transcriber as? AppleSpeechTranscriber)?.inputFormat {
+                cap.startCapture(format: format)
+            }
             recordingStartedAt = now()
             elapsedSeconds = 0
             state = .recording
@@ -119,6 +134,7 @@ final class VoiceInputController: ObservableObject {
 
     func finishRecording(appendTranscript: @escaping @MainActor (String) -> Void) async {
         guard state == .recording else { return }
+        debugCapture?.stopCapture()
         stopTimer()
         state = .transcribing
 
@@ -141,6 +157,7 @@ final class VoiceInputController: ObservableObject {
         isFunctionKeyDown = false
         operationTask?.cancel()
         operationTask = nil
+        debugCapture?.stopCapture()
         stopTimer()
         transcriber.cancel()
         state = .idle
@@ -194,7 +211,7 @@ final class VoiceInputController: ObservableObject {
         audioLevel = 0
         ambientNoiseFloor = 0.03
         smoothedAudioLevel = 0
-        audioLevels = Array(repeating: 0, count: retainedLevelCount)
+        audioLevels = []
     }
 
     private func recordAudioLevel(_ level: Double) {
@@ -204,24 +221,29 @@ final class VoiceInputController: ObservableObject {
         if audioLevels.count > retainedLevelCount {
             audioLevels.removeFirst(audioLevels.count - retainedLevelCount)
         }
+        debugCapture?.appendLevel(displayLevel, at: elapsedSeconds)
     }
 
     private func voiceDisplayLevel(from level: Double) -> Double {
+        let s = settings
         let rawLevel = max(0, min(1, level))
-        let floorBlend = rawLevel < ambientNoiseFloor + 0.18 ? 0.06 : 0.015
+        let speechThreshold = s?.speechThreshold ?? 0.18
+        let floorBlend = rawLevel < ambientNoiseFloor + speechThreshold ? 0.06 : 0.015
         ambientNoiseFloor = max(0.01, min(0.65, ambientNoiseFloor * (1 - floorBlend) + rawLevel * floorBlend))
 
         let speechLevel = max(0, rawLevel - ambientNoiseFloor)
-        let availableRange = max(0.18, 1 - ambientNoiseFloor)
-        var expandedLevel = pow(min(1, speechLevel / availableRange), 0.58) * 1.25
-        if expandedLevel < 0.05 {
-            expandedLevel = 0
-        }
+        let availableRange = max(speechThreshold, 1 - ambientNoiseFloor)
+        let exponent = s?.expansionExponent ?? 0.58
+        let gain = s?.gain ?? 1.25
+        var expandedLevel = pow(min(1, speechLevel / availableRange), exponent) * gain
 
-        smoothedAudioLevel = smoothedAudioLevel * 0.35 + min(1, expandedLevel) * 0.65
-        if expandedLevel == 0 {
-            smoothedAudioLevel *= 0.55
-        }
+        let gate = s?.gateThreshold ?? 0.05
+        if expandedLevel < gate { expandedLevel = 0 }
+
+        let rise = s?.riseBlend ?? 0.65
+        let decay = s?.fallDecay ?? 0.55
+        smoothedAudioLevel = smoothedAudioLevel * (1 - rise) + min(1, expandedLevel) * rise
+        if expandedLevel == 0 { smoothedAudioLevel *= decay }
         return max(0, min(1, smoothedAudioLevel))
     }
 }
@@ -246,6 +268,9 @@ enum VoiceInputError: LocalizedError, Equatable {
 @MainActor
 final class AppleSpeechTranscriber: VoiceTranscribing {
     var levelHandler: (@MainActor @Sendable (Double) -> Void)?
+    var bufferHandler: (@Sendable (AVAudioPCMBuffer, TimeInterval) -> Void)?
+
+    var inputFormat: AVAudioFormat? { audioEngine.inputNode.outputFormat(forBus: 0) }
 
     private let recognizer: SFSpeechRecognizer?
     private let audioEngine = AVAudioEngine()
@@ -324,11 +349,14 @@ final class AppleSpeechTranscriber: VoiceTranscribing {
             hasInstalledTap = false
         }
         let levelReporter = VoiceLevelReporter(handler: levelHandler)
+        let captureHandler = bufferHandler
+        let tapStart = Date()
         inputNode.installTap(
             onBus: 0,
             bufferSize: 1024,
             format: recordingFormat,
-            block: Self.makeInputTapBlock(request: request, levelReporter: levelReporter)
+            block: Self.makeInputTapBlock(request: request, levelReporter: levelReporter,
+                                          bufferHandler: captureHandler, startDate: tapStart)
         )
         hasInstalledTap = true
 
@@ -404,11 +432,14 @@ final class AppleSpeechTranscriber: VoiceTranscribing {
 
     nonisolated private static func makeInputTapBlock(
         request: SFSpeechAudioBufferRecognitionRequest,
-        levelReporter: VoiceLevelReporter
+        levelReporter: VoiceLevelReporter,
+        bufferHandler: (@Sendable (AVAudioPCMBuffer, TimeInterval) -> Void)?,
+        startDate: Date
     ) -> AVAudioNodeTapBlock {
         { buffer, _ in
             request.append(buffer)
             levelReporter.report(Self.normalizedLevel(from: buffer))
+            bufferHandler?(buffer, Date().timeIntervalSince(startDate))
         }
     }
 

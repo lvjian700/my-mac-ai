@@ -126,6 +126,8 @@ private struct MessageRow: View {
 
 private struct ComposerView: View {
     @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var debugCapture: VoiceDebugCapture
+    @EnvironmentObject private var voiceSettings: VoiceInputSettings
     @Environment(\.readingTextMetrics) private var textMetrics
     @StateObject private var voiceInput = VoiceInputController()
     @Binding var text: String
@@ -251,6 +253,9 @@ private struct ComposerView: View {
                     elapsedSeconds: voiceInput.elapsedSeconds,
                     isPreparing: voiceInput.state == .requestingPermission,
                     canSubmit: canSubmit,
+                    barWidth: CGFloat(voiceSettings.barWidth),
+                    barSpacing: CGFloat(voiceSettings.barSpacing),
+                    barMinHeight: voiceSettings.barMinHeight,
                     stopAction: stopVoiceInput,
                     submitAction: submitIfPossible
                 )
@@ -303,6 +308,8 @@ private struct ComposerView: View {
         .animation(.easeOut(duration: 0.18), value: voiceInput.state)
         .onAppear {
             isFocused = true
+            voiceInput.debugCapture = debugCapture
+            voiceInput.settings = voiceSettings
             installFunctionKeyMonitor()
         }
         .onDisappear {
@@ -365,6 +372,9 @@ private struct RecordingControlsView: View {
     let elapsedSeconds: TimeInterval
     let isPreparing: Bool
     let canSubmit: Bool
+    let barWidth: CGFloat
+    let barSpacing: CGFloat
+    let barMinHeight: Double
     var stopAction: () -> Void
     var submitAction: () -> Void
 
@@ -374,7 +384,8 @@ private struct RecordingControlsView: View {
 
     var body: some View {
         HStack(spacing: controlsSpacing) {
-            VoiceTimelineWaveform(levels: audioLevels, isPreparing: isPreparing)
+            VoiceTimelineWaveform(levels: audioLevels, isPreparing: isPreparing,
+                                  barWidth: barWidth, barSpacing: barSpacing, barMinHeight: barMinHeight)
                 .frame(maxWidth: .infinity, minHeight: timelineHeight, maxHeight: timelineHeight)
 
             Text(Self.durationFormatter.string(from: elapsedSeconds) ?? "0:00")
@@ -472,15 +483,15 @@ private struct VoiceInputInlineStatusView: View {
 private struct VoiceTimelineWaveform: View {
     let levels: [Double]
     let isPreparing: Bool
-
-    private let barWidth: CGFloat = 3.0
-    private let barSpacing: CGFloat = 2.0
+    let barWidth: CGFloat
+    let barSpacing: CGFloat
+    let barMinHeight: Double
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { context in
             Canvas { ctx, size in
                 drawBaseline(in: ctx, size: size)
-                drawBars(in: ctx, size: size, date: context.date)
+                drawBars(in: ctx, size: size)
             }
         }
     }
@@ -493,15 +504,12 @@ private struct VoiceTimelineWaveform: View {
                    style: StrokeStyle(lineWidth: 1.2, lineCap: .round, dash: [2.2, 4]))
     }
 
-    private func drawBars(in ctx: GraphicsContext, size: CGSize, date: Date) {
-        let count = max(1, Int(size.width / (barWidth + barSpacing)))
-        let bars = displayLevels(count: count, at: date)
-        let totalWidth = CGFloat(count) * barWidth + CGFloat(count - 1) * barSpacing
-        let startX = (size.width - totalWidth) / 2
-
+    private func drawBars(in ctx: GraphicsContext, size: CGSize) {
+        let maxCount = max(1, Int(size.width / (barWidth + barSpacing)))
+        let bars = Array(levels.suffix(maxCount))
         for (i, level) in bars.enumerated() {
             let h = barHeight(level: level, totalHeight: size.height)
-            let x = startX + CGFloat(i) * (barWidth + barSpacing)
+            let x = CGFloat(i) * (barWidth + barSpacing)
             let y = (size.height - h) / 2
             let rect = CGRect(x: x, y: y, width: barWidth, height: h)
             let path = Path(roundedRect: rect, cornerRadius: barWidth / 2)
@@ -509,16 +517,8 @@ private struct VoiceTimelineWaveform: View {
         }
     }
 
-    private func displayLevels(count: Int, at date: Date) -> [Double] {
-        let recent = Array(levels.suffix(count))
-        if recent.count < count {
-            return Array(repeating: 0.0, count: count - recent.count) + recent
-        }
-        return recent
-    }
-
     private func barHeight(level: Double, totalHeight: CGFloat) -> CGFloat {
         let clamped = max(0, min(1, level))
-        return max(2, totalHeight * CGFloat(0.08 + clamped * 0.92))
+        return max(2, totalHeight * CGFloat(barMinHeight + clamped * (1 - barMinHeight)))
     }
 }
