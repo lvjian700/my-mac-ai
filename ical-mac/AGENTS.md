@@ -10,6 +10,7 @@ swift build -c release   # release build
 swift test               # unit tests with fakes
 ./script/build_and_run.sh # build .app bundle and launch it
 make app                 # create .build/ical-mac.app
+make dmg                 # create dist/ical-mac-<version>.dmg for personal use
 make install             # install app to ~/Applications/ical-mac.app
 ```
 
@@ -19,6 +20,10 @@ Prefer `./script/build_and_run.sh` or `make app` for local UI inspection. Do not
 use the raw SwiftPM executable as the normal GUI run path; the app should launch
 as a macOS `.app` bundle so window activation and Calendar permission behavior
 match user runs.
+
+`make dmg` defaults to ad-hoc signing for personal-use DMGs. For a public
+Developer ID release, run it with `REQUIRE_DEVELOPER_ID_DMG=1` and a
+`CODESIGN_IDENTITY="Developer ID Application: ..."` value.
 
 ## Xcode
 
