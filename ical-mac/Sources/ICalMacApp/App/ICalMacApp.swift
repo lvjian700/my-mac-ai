@@ -7,16 +7,12 @@ import SwiftUI
 struct ICalMacApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var model = AppModel()
-    @StateObject private var debugCapture = VoiceDebugCapture()
-    @StateObject private var voiceSettings = VoiceInputSettings()
     @State private var textMetrics = preferredReadingTextMetrics()
 
     var body: some Scene {
         Window("ical-mac", id: "main")  {
             ContentView()
                 .environmentObject(model)
-                .environmentObject(debugCapture)
-                .environmentObject(voiceSettings)
                 .environment(\.readingTextMetrics, textMetrics)
                 .frame(minWidth: 1120, minHeight: 680)
                 .task {
@@ -49,7 +45,6 @@ struct ICalMacApp: App {
                 }
                 .keyboardShortcut("r", modifiers: [.command])
             }
-            DeveloperCommands()
         }
 
         Settings {
@@ -57,22 +52,6 @@ struct ICalMacApp: App {
                 .environmentObject(model)
                 .environment(\.readingTextMetrics, textMetrics)
                 .frame(width: 520)
-        }
-
-        Window("Voice Debug", id: "voice-debug") {
-            VoiceInputDevMenuView(capture: debugCapture, settings: voiceSettings)
-        }
-    }
-}
-
-private struct DeveloperCommands: Commands {
-    @Environment(\.openWindow) private var openWindow
-
-    var body: some Commands {
-        CommandMenu("Developer") {
-            Button("Voice Input Debug") {
-                openWindow(id: "voice-debug")
-            }
         }
     }
 }
