@@ -97,6 +97,7 @@ struct CalendarEventChip: View {
             font: textMetrics.font(.caption, weight: .medium),
             iconWidth: textMetrics.layoutValue(12),
             spacing: textMetrics.layoutValue(3),
+            lineLimit: 1,
             showsRecurrenceIcon: event.isRecurring,
             isDeclined: statusPresentation?.isDeclined == true
         )
@@ -163,27 +164,48 @@ struct CalendarEventBlock: View {
                     .frame(width: railWidth)
             }
 
+            ViewThatFits(in: .vertical) {
+                eventContent(titleLineLimit: 2, showsTimeRange: true)
+                eventContent(titleLineLimit: 2, showsTimeRange: false)
+                eventContent(titleLineLimit: 1, showsTimeRange: false)
+            }
+            .foregroundStyle(statusPresentation?.usesGrayTitle == true ? .secondary : eventColor)
+            .padding(.leading, titleLeadingPadding)
+            .padding(.trailing, contentTrailingPadding)
+            .padding(.vertical, regularVerticalPadding)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .clipped()
+        }
+        .opacity(statusPresentation?.isDeclined == true ? 0.72 : 1)
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .help(helpText)
+    }
+
+    private func eventContent(titleLineLimit: Int, showsTimeRange: Bool) -> some View {
+        VStack(alignment: .leading, spacing: textMetrics.layoutValue(1)) {
             CalendarEventTitleLabel(
                 title: event.title,
                 symbolName: categoryPresentation.symbolName,
                 font: textMetrics.font(.caption, weight: .semibold),
                 iconWidth: textMetrics.layoutValue(12),
                 spacing: textMetrics.layoutValue(3),
+                lineLimit: titleLineLimit,
                 showsRecurrenceIcon: event.isRecurring,
                 isDeclined: statusPresentation?.isDeclined == true
             )
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .foregroundStyle(statusPresentation?.usesGrayTitle == true ? .secondary : eventColor)
-                .padding(.leading, titleLeadingPadding)
-                .padding(.trailing, contentTrailingPadding)
-                .padding(.vertical, regularVerticalPadding)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .clipped()
+
+            if showsTimeRange {
+                Text(timeRangeText)
+                    .font(textMetrics.font(.caption2, weight: .medium))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .layoutPriority(1)
+            }
         }
-        .opacity(statusPresentation?.isDeclined == true ? 0.72 : 1)
-        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-        .help(helpText)
+    }
+
+    private var timeRangeText: String {
+        Self.eventTimeRangeFormatter.string(from: event.startDate, to: event.endDate)
     }
 
     private var helpText: String {
@@ -196,6 +218,8 @@ struct CalendarEventBlock: View {
         }
         return "\(event.title) - \(details.joined(separator: ", "))"
     }
+
+    private static let eventTimeRangeFormatter = CalendarEventTimeRangeFormatter()
 }
 
 private struct CalendarEventTitleLabel: View {
@@ -204,6 +228,7 @@ private struct CalendarEventTitleLabel: View {
     let font: Font
     let iconWidth: CGFloat
     let spacing: CGFloat
+    let lineLimit: Int
     let showsRecurrenceIcon: Bool
     let isDeclined: Bool
 
@@ -219,9 +244,10 @@ private struct CalendarEventTitleLabel: View {
 
             Text(title)
                 .font(font)
-                .lineLimit(1)
+                .lineLimit(lineLimit)
                 .truncationMode(.tail)
                 .strikethrough(isDeclined, color: .secondary)
+                .layoutPriority(1)
 
             if showsRecurrenceIcon {
                 Spacer(minLength: spacing)
@@ -233,6 +259,42 @@ private struct CalendarEventTitleLabel: View {
                     .accessibilityLabel("Repeats")
             }
         }
+    }
+}
+
+private final class CalendarEventTimeRangeFormatter {
+    private let calendar = Calendar.current
+    private let hourFormatter: DateFormatter
+    private let minuteFormatter: DateFormatter
+    private let periodFormatter: DateFormatter
+
+    init() {
+        hourFormatter = DateFormatter()
+        hourFormatter.dateFormat = "h"
+
+        minuteFormatter = DateFormatter()
+        minuteFormatter.dateFormat = "h:mm"
+
+        periodFormatter = DateFormatter()
+        periodFormatter.dateFormat = "a"
+    }
+
+    func string(from startDate: Date, to endDate: Date) -> String {
+        let start = timeText(for: startDate)
+        let end = timeText(for: endDate)
+        let startPeriod = periodFormatter.string(from: startDate)
+        let endPeriod = periodFormatter.string(from: endDate)
+
+        if startPeriod == endPeriod {
+            return "\(start)-\(end) \(endPeriod)"
+        }
+
+        return "\(start) \(startPeriod)-\(end) \(endPeriod)"
+    }
+
+    private func timeText(for date: Date) -> String {
+        let minute = calendar.component(.minute, from: date)
+        return (minute == 0 ? hourFormatter : minuteFormatter).string(from: date)
     }
 }
 

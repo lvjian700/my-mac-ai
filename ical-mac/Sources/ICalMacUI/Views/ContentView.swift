@@ -35,9 +35,9 @@ public struct ContentView: View {
         } detail: {
             WeekCalendarView()
                 .navigationSplitViewColumnWidth(
-                    min: textMetrics.layoutValue(480),
-                    ideal: textMetrics.layoutValue(720),
-                    max: textMetrics.layoutValue(960)
+                    min: textMetrics.layoutValue(760),
+                    ideal: textMetrics.layoutValue(980),
+                    max: textMetrics.layoutValue(1440)
                     
                 )
         }

@@ -14,7 +14,7 @@ struct ICalMacApp: App {
             ContentView()
                 .environmentObject(model)
                 .environment(\.readingTextMetrics, textMetrics)
-                .frame(minWidth: 1120, minHeight: 680)
+                .frame(minWidth: 1280, minHeight: 680)
                 .task {
                     await model.loadCalendarOnLaunch()
                 }

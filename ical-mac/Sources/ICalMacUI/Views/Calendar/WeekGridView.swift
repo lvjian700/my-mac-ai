@@ -16,16 +16,16 @@ struct WeekGridView: View {
 
     private let calendar = Calendar.current
 
-    private var hourHeight: CGFloat { 58 }
+    private var hourHeight: CGFloat { textMetrics.layoutValue(60) }
     private var timeColumnWidth: CGFloat { textMetrics.layoutValue(72) }
-    private var minimumDayWidth: CGFloat { textMetrics.layoutValue(92) }
+    private var minimumDayWidth: CGFloat { textMetrics.layoutValue(96) }
     private var dayHeaderHeight: CGFloat { 44 }
     private var dayHeaderVerticalPadding: CGFloat { 0 }
     private var trailingPadding: CGFloat { 8 }
-    private var allDayEventHeight: CGFloat { 28 }
+    private var allDayEventHeight: CGFloat { textMetrics.layoutValue(28) }
     private var allDayEventHorizontalPadding: CGFloat { 3 }
     private var allDayEventVerticalPadding: CGFloat { 5 }
-    private var allDayRowHeight: CGFloat { 40 }
+    private var allDayRowHeight: CGFloat { textMetrics.layoutValue(40) }
     private var allDaySeparatorHeight: CGFloat { 2 }
     private var hourLabelOffset: CGFloat { textMetrics.layoutValue(7) }
     private var eventHorizontalInset: CGFloat { 4 }
@@ -36,6 +36,7 @@ struct WeekGridView: View {
     private var currentTimeDotSide: CGFloat { textMetrics.layoutValue(9) }
     private var currentTimeLineHeight: CGFloat { textMetrics.layoutValue(2) }
     private var calendarBottomScrollPadding: CGFloat { textMetrics.layoutValue(12) }
+    private var dayColumnCount: CGFloat { CGFloat(days.count) }
 
     private var days: [Date] {
         (0..<7).compactMap {
@@ -45,25 +46,30 @@ struct WeekGridView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let dayWidth = max((geometry.size.width - timeColumnWidth) / 7, minimumDayWidth)
-            let contentWidth = timeColumnWidth + dayWidth * 7
+            let layout = calendarLayout(for: geometry.size.width)
 
-            ScrollView(.horizontal) {
-                VStack(spacing: 0) {
-                    dayHeader(dayWidth: dayWidth)
-                        .frame(width: contentWidth)
-                    Divider()
-                    allDayRow(dayWidth: dayWidth)
-                        .frame(width: contentWidth)
-                    Rectangle()
-                        .fill(Color.secondary.opacity(0.22))
-                        .frame(width: contentWidth, height: allDaySeparatorHeight)
-                    timeline(dayWidth: dayWidth, contentWidth: contentWidth)
-                }
-                .frame(width: contentWidth, height: geometry.size.height, alignment: .topLeading)
+            VStack(spacing: 0) {
+                dayHeader(dayWidth: layout.dayWidth)
+                    .frame(width: layout.contentWidth)
+                Divider()
+                allDayRow(dayWidth: layout.dayWidth)
+                    .frame(width: layout.contentWidth)
+                Rectangle()
+                    .fill(Color.secondary.opacity(0.22))
+                    .frame(width: layout.contentWidth, height: allDaySeparatorHeight)
+                timeline(dayWidth: layout.dayWidth, contentWidth: layout.contentWidth)
             }
-            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
+            .frame(width: layout.contentWidth, height: geometry.size.height, alignment: .topLeading)
         }
+    }
+
+    private func calendarLayout(for viewportWidth: CGFloat) -> (dayWidth: CGFloat, contentWidth: CGFloat) {
+        let availableDayAreaWidth = max(viewportWidth - timeColumnWidth - trailingPadding, 0)
+        let responsiveDayWidth = availableDayAreaWidth / max(dayColumnCount, 1)
+        let dayWidth = max(responsiveDayWidth, minimumDayWidth)
+        let contentWidth = timeColumnWidth + dayWidth * dayColumnCount + trailingPadding
+
+        return (dayWidth, contentWidth)
     }
 
     private func dayHeader(dayWidth: CGFloat) -> some View {
