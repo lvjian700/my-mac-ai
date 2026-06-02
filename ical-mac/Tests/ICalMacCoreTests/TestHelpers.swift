@@ -28,6 +28,7 @@ final class FakeCalendarStore: CalendarStore {
     var lastQuery: CalendarQuery?
     var createdDrafts: [EventDraft] = []
     var updates: [EventUpdate] = []
+    var deletedEventIDs: [String] = []
 
     func accessStatus() -> CalendarAccessStatus {
         status
@@ -63,13 +64,23 @@ final class FakeCalendarStore: CalendarStore {
 
     func updateEvent(_ update: EventUpdate) async throws -> CalendarEvent {
         updates.append(update)
-        guard var event = events.first(where: { $0.id == update.id }) else {
+        guard let index = events.firstIndex(where: { $0.id == update.id }) else {
             throw CalendarStoreError.eventNotFound(update.id)
         }
+        var event = events[index]
         if let title = update.title { event.title = title }
         if let startDate = update.startDate { event.startDate = startDate }
         if let endDate = update.endDate { event.endDate = endDate }
+        events[index] = event
         return event
+    }
+
+    func deleteEvent(id: String) async throws -> CalendarEvent {
+        guard let index = events.firstIndex(where: { $0.id == id }) else {
+            throw CalendarStoreError.eventNotFound(id)
+        }
+        deletedEventIDs.append(id)
+        return events.remove(at: index)
     }
 
     func respondToInvitation(id: String, response: CalendarInvitationResponse) async throws -> CalendarEvent {

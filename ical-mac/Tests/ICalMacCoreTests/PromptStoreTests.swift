@@ -52,4 +52,39 @@ struct PromptStoreTests {
         #expect(prompt.contains("Out of office - ..."))
         #expect(!prompt.contains("Force - ..."))
     }
+
+    @Test func systemPromptUsesConversationalNonMarkdownResponseStyle() throws {
+        let store = PromptStore()
+
+        let prompt = store.buildSystemPrompt(memory: "", snapshot: nil)
+
+        #expect(prompt.contains("Write like a human assistant"))
+        #expect(prompt.contains("Do not use Markdown formatting"))
+        #expect(prompt.contains("Mention times plainly in natural sentences"))
+        #expect(!prompt.contains("Highlight times with markdown bold text"))
+    }
+
+    @Test func systemPromptTakesClearCalendarActionsWithoutExtraConfirmation() throws {
+        let store = PromptStore()
+
+        let prompt = store.buildSystemPrompt(memory: "", snapshot: nil)
+
+        #expect(prompt.contains("Default to taking action when the user's intent and required details are clear"))
+        #expect(prompt.contains("Do not ask for an extra confirmation just to be polite"))
+        #expect(prompt.contains("Ask one concise clarifying question only when a required detail is missing"))
+        #expect(prompt.contains("If a conflict check shows no meaningful conflict"))
+        #expect(prompt.contains("still create or update the event"))
+        #expect(prompt.contains("say it needs their attention"))
+        #expect(!prompt.contains("ask before scheduling over it"))
+    }
+
+    @Test func systemPromptIncludesDeleteEventGuidance() throws {
+        let store = PromptStore()
+
+        let prompt = store.buildSystemPrompt(memory: "", snapshot: nil)
+
+        #expect(prompt.contains("Delete events with delete_event only when the target event is unambiguous"))
+        #expect(prompt.contains("If multiple events could match"))
+        #expect(prompt.contains("ask one concise question before deleting"))
+    }
 }

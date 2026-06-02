@@ -269,6 +269,10 @@ private final class FakeUICalendarStore: CalendarStore {
         throw CalendarStoreError.eventNotFound(update.id)
     }
 
+    func deleteEvent(id: String) async throws -> CalendarEvent {
+        throw CalendarStoreError.eventNotFound(id)
+    }
+
     func respondToInvitation(id: String, response: CalendarInvitationResponse) async throws -> CalendarEvent {
         guard let event = events.first(where: { $0.id == id }) else {
             throw CalendarStoreError.eventNotFound(id)

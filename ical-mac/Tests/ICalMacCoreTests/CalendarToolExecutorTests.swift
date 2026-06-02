@@ -4,6 +4,12 @@ import Testing
 
 @MainActor
 struct CalendarToolExecutorTests {
+    @Test func toolDefinitionsExposeDeleteEvent() throws {
+        let toolNames = CalendarToolExecutor.toolDefinitions.map(\.name)
+
+        #expect(toolNames.contains("delete_event"))
+    }
+
     @Test func listEventsUsesParsedRangeAndCalendarFilters() async throws {
         let fake = FakeCalendarStore()
         fake.events = [
@@ -66,6 +72,38 @@ struct CalendarToolExecutorTests {
         )
 
         #expect(fake.createdDrafts.first?.calendarTitle == "Family")
+    }
+
+    @Test func deleteEventRemovesEventByID() async throws {
+        let fake = FakeCalendarStore()
+        fake.events = [
+            CalendarEvent(
+                id: "event-1",
+                title: "Old appointment",
+                startDate: makeDate(year: 2026, month: 5, day: 18, hour: 10),
+                endDate: makeDate(year: 2026, month: 5, day: 18, hour: 11),
+                isAllDay: false,
+                calendarTitle: "Work"
+            )
+        ]
+        let executor = CalendarToolExecutor(calendarStore: fake, memoryStore: MemoryStore(rootURL: try makeTempDirectory()))
+
+        let output = await executor.execute(name: "delete_event", input: .object(["id": .string("event-1")]))
+
+        #expect(output.contains("Old appointment"))
+        #expect(fake.deletedEventIDs == ["event-1"])
+        #expect(fake.events.isEmpty)
+    }
+
+    @Test func deleteEventRequiresID() async throws {
+        let fake = FakeCalendarStore()
+        let executor = CalendarToolExecutor(calendarStore: fake, memoryStore: MemoryStore(rootURL: try makeTempDirectory()))
+
+        let output = await executor.execute(name: "delete_event", input: .object([:]))
+
+        #expect(output.contains("Error:"))
+        #expect(output.contains("Missing required field 'id'"))
+        #expect(fake.deletedEventIDs.isEmpty)
     }
 
     @Test func writeMemoryWritesConfiguredFile() async throws {

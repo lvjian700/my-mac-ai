@@ -94,7 +94,6 @@ private struct MessageRow: View {
     @Environment(\.readingTextMetrics) private var textMetrics
 
     private var bubblePadding: CGFloat { textMetrics.layoutValue(10) }
-    private var bubbleSpacing: CGFloat { textMetrics.layoutValue(5) }
     private var sideSpacer: CGFloat { textMetrics.layoutValue(80) }
     private var maxBubbleWidth: CGFloat { textMetrics.layoutValue(760) }
 
@@ -102,13 +101,8 @@ private struct MessageRow: View {
         HStack(alignment: .top) {
             if message.role == .user { Spacer(minLength: sideSpacer) }
 
-            VStack(alignment: .leading, spacing: bubbleSpacing) {
-                if message.role != .user {
-                    Text("Cali")
-                        .font(textMetrics.font(.callout))
-                        .foregroundStyle(.secondary)
-                }
-                Text(message.text)
+            VStack(alignment: .leading) {
+                MessageText(message: message)
                     .font(textMetrics.font(.body))
                     .textSelection(.enabled)
             }
@@ -121,6 +115,25 @@ private struct MessageRow: View {
 
             if message.role != .user { Spacer(minLength: sideSpacer) }
         }
+    }
+}
+
+private struct MessageText: View {
+    let message: ChatMessage
+
+    var body: some View {
+        if message.role == .assistant, let attributedText = markdownText {
+            Text(attributedText)
+        } else {
+            Text(message.text)
+        }
+    }
+
+    private var markdownText: AttributedString? {
+        try? AttributedString(
+            markdown: message.text,
+            options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        )
     }
 }
 

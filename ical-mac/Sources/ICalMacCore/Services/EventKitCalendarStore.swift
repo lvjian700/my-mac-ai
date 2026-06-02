@@ -74,6 +74,16 @@ actor CalendarActor {
         return CalendarEvent(event: ekEvent)
     }
 
+    func deleteEvent(id: String) throws -> CalendarEvent {
+        try requireAccess()
+        guard let ekEvent = store.event(withIdentifier: id) else {
+            throw CalendarStoreError.eventNotFound(id)
+        }
+        let deletedEvent = CalendarEvent(event: ekEvent)
+        try store.remove(ekEvent, span: .thisEvent, commit: true)
+        return deletedEvent
+    }
+
     func saveUpdatedEvent(_ update: EventUpdate) throws -> CalendarEvent {
         try requireAccess()
         guard let event = store.event(withIdentifier: update.id) else {
@@ -171,6 +181,10 @@ public final class EventKitCalendarStore: CalendarStore {
 
     public func updateEvent(_ update: EventUpdate) async throws -> CalendarEvent {
         try await calendarActor.saveUpdatedEvent(update)
+    }
+
+    public func deleteEvent(id: String) async throws -> CalendarEvent {
+        try await calendarActor.deleteEvent(id: id)
     }
 
     public func respondToInvitation(id: String, response: CalendarInvitationResponse) async throws -> CalendarEvent {

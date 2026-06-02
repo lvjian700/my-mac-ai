@@ -39,13 +39,22 @@ final class PreviewCalendarStore: CalendarStore {
     }
 
     func updateEvent(_ update: EventUpdate) async throws -> CalendarEvent {
-        guard var event = events.first(where: { $0.id == update.id }) else {
+        guard let index = events.firstIndex(where: { $0.id == update.id }) else {
             throw CalendarStoreError.eventNotFound(update.id)
         }
+        var event = events[index]
         if let title = update.title { event.title = title }
         if let start = update.startDate { event.startDate = start }
         if let end = update.endDate { event.endDate = end }
+        events[index] = event
         return event
+    }
+
+    func deleteEvent(id: String) async throws -> CalendarEvent {
+        guard let index = events.firstIndex(where: { $0.id == id }) else {
+            throw CalendarStoreError.eventNotFound(id)
+        }
+        return events.remove(at: index)
     }
 
     func respondToInvitation(id: String, response: CalendarInvitationResponse) async throws -> CalendarEvent {
@@ -352,7 +361,7 @@ enum PreviewData {
     static let messages: [ChatMessage] = [
         ChatMessage(role: .assistant, text: "Ask about your calendar or tell me what to schedule."),
         ChatMessage(role: .user, text: "What's on my calendar today?"),
-        ChatMessage(role: .assistant, text: "You have Team Standup now and Lunch with Sarah at 1 PM."),
+        ChatMessage(role: .assistant, text: "Team Standup is now. Lunch with Sarah is at 1 PM."),
     ]
 
     private static func invitation(status: CalendarParticipantStatus, organizer: String) -> CalendarInvitationInfo {

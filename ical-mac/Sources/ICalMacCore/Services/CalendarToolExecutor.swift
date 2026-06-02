@@ -79,6 +79,17 @@ public final class CalendarToolExecutor {
                 ])
             ),
             OpenAIToolDefinition(
+                name: "delete_event",
+                description: "Delete an existing Apple Calendar event by id.",
+                parameters: .object([
+                    "type": .string("object"),
+                    "properties": .object([
+                        "id": .object(["type": .string("string")]),
+                    ]),
+                    "required": .array([.string("id")]),
+                ])
+            ),
+            OpenAIToolDefinition(
                 name: "write_memory",
                 description: "Write the full YAML calendar memory content.",
                 parameters: .object([
@@ -119,6 +130,9 @@ public final class CalendarToolExecutor {
                 return try encode(event)
             case "update_event":
                 let event = try await calendarStore.updateEvent(makeUpdate(from: object))
+                return try encode(event)
+            case "delete_event":
+                let event = try await calendarStore.deleteEvent(id: requiredString("id", in: object))
                 return try encode(event)
             case "write_memory":
                 try memoryStore.writeMemory(requiredString("content", in: object))
