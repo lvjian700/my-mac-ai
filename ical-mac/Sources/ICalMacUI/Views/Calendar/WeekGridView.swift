@@ -23,9 +23,10 @@ struct WeekGridView: View {
     private var dayHeaderVerticalPadding: CGFloat { 0 }
     private var trailingPadding: CGFloat { 6 }
     private var allDayEventHeight: CGFloat { textMetrics.layoutValue(28) }
+    private var allDayEventSpacing: CGFloat { 4 }
     private var allDayEventHorizontalPadding: CGFloat { 3 }
     private var allDayEventVerticalPadding: CGFloat { 5 }
-    private var allDayRowHeight: CGFloat { textMetrics.layoutValue(40) }
+    private var minimumAllDayRowHeight: CGFloat { textMetrics.layoutValue(40) }
     private var allDaySeparatorHeight: CGFloat { 2 }
     private var hourLabelOffset: CGFloat { textMetrics.layoutValue(7) }
     private var eventHorizontalInset: CGFloat { 1 }
@@ -87,34 +88,54 @@ struct WeekGridView: View {
     }
 
     private func allDayRow(dayWidth: CGFloat) -> some View {
-        HStack(alignment: .top, spacing: 0) {
+        let rowHeight = allDayRowHeight()
+
+        return HStack(alignment: .top, spacing: 0) {
             Text("all-day")
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(.secondary)
-                .frame(width: timeColumnWidth, height: allDayRowHeight, alignment: .trailing)
+                .frame(width: timeColumnWidth, height: rowHeight, alignment: .trailing)
                 .padding(.trailing, trailingPadding)
 
             ForEach(days, id: \.self) { day in
-                VStack(alignment: .leading, spacing: 4) {
-                    ForEach(
-                        model.visibleAllDayEvents.filter { $0.intersectsDay(day, calendar: calendar) },
-                        id: \.weekOccurrenceID
-                    ) { event in
+                let events = allDayEvents(for: day)
+
+                VStack(alignment: .leading, spacing: allDayEventSpacing) {
+                    ForEach(events, id: \.weekOccurrenceID) { event in
                         CalendarEventChip(event: event)
                             .eventDetailInteraction(
                                 event: event,
                                 selectedEvent: detailEventBinding(for: event),
                                 showDetails: { showEventDetails(event) }
-                            )
+                        )
                     }
                 }
-                .frame(width: dayWidth, height: allDayEventHeight, alignment: .topLeading)
+                .frame(
+                    width: dayWidth,
+                    height: max(rowHeight - allDayEventVerticalPadding * 2, allDayEventHeight),
+                    alignment: .topLeading
+                )
                 .padding(.horizontal, allDayEventHorizontalPadding)
                 .padding(.vertical, allDayEventVerticalPadding)
             }
         }
-        .frame(height: allDayRowHeight, alignment: .top)
+        .frame(height: rowHeight, alignment: .top)
         .padding(.trailing, trailingPadding)
+    }
+
+    private func allDayRowHeight() -> CGFloat {
+        let eventCount = days
+            .map { allDayEvents(for: $0).count }
+            .max() ?? 0
+        guard eventCount > 0 else { return minimumAllDayRowHeight }
+
+        let eventStackHeight = CGFloat(eventCount) * allDayEventHeight
+            + CGFloat(max(eventCount - 1, 0)) * allDayEventSpacing
+        return max(minimumAllDayRowHeight, eventStackHeight + allDayEventVerticalPadding * 2)
+    }
+
+    private func allDayEvents(for day: Date) -> [CalendarEvent] {
+        model.visibleAllDayEvents.filter { $0.intersectsDay(day, calendar: calendar) }
     }
 
     private func timeline(dayWidth: CGFloat, contentWidth: CGFloat) -> some View {
