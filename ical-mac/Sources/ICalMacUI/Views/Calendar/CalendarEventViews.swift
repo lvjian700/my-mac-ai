@@ -79,9 +79,9 @@ struct CalendarEventChip: View {
     let event: CalendarEvent
     @Environment(\.readingTextMetrics) private var textMetrics
 
-    private var horizontalPadding: CGFloat { textMetrics.layoutValue(6) }
-    private var verticalPadding: CGFloat { textMetrics.layoutValue(3) }
-    private var cornerRadius: CGFloat { textMetrics.layoutValue(5) }
+    private var horizontalPadding: CGFloat { 6 }
+    private var verticalPadding: CGFloat { 3 }
+    private var cornerRadius: CGFloat { 5 }
     private var categoryPresentation: CalendarEventCategoryPresentation {
         CalendarEventCategoryPresentation.make(for: event)
     }
@@ -134,11 +134,11 @@ struct CalendarEventBlock: View {
     let event: CalendarEvent
     @Environment(\.readingTextMetrics) private var textMetrics
 
-    private var railWidth: CGFloat { textMetrics.layoutValue(4) }
-    private var contentLeadingPadding: CGFloat { textMetrics.layoutValue(7) }
-    private var contentTrailingPadding: CGFloat { textMetrics.layoutValue(5) }
-    private var regularVerticalPadding: CGFloat { textMetrics.layoutValue(4) }
-    private var cornerRadius: CGFloat { textMetrics.layoutValue(5) }
+    private var railWidth: CGFloat { 2 }
+    private var contentLeadingPadding: CGFloat { 6 }
+    private var contentTrailingPadding: CGFloat { 5 }
+    private var regularVerticalPadding: CGFloat { 4 }
+    private var cornerRadius: CGFloat { 5 }
     private var categoryPresentation: CalendarEventCategoryPresentation {
         CalendarEventCategoryPresentation.make(for: event)
     }

@@ -21,14 +21,14 @@ struct WeekGridView: View {
     private var minimumDayWidth: CGFloat { textMetrics.layoutValue(96) }
     private var dayHeaderHeight: CGFloat { 44 }
     private var dayHeaderVerticalPadding: CGFloat { 0 }
-    private var trailingPadding: CGFloat { 8 }
+    private var trailingPadding: CGFloat { 6 }
     private var allDayEventHeight: CGFloat { textMetrics.layoutValue(28) }
     private var allDayEventHorizontalPadding: CGFloat { 3 }
     private var allDayEventVerticalPadding: CGFloat { 5 }
     private var allDayRowHeight: CGFloat { textMetrics.layoutValue(40) }
     private var allDaySeparatorHeight: CGFloat { 2 }
     private var hourLabelOffset: CGFloat { textMetrics.layoutValue(7) }
-    private var eventHorizontalInset: CGFloat { 4 }
+    private var eventHorizontalInset: CGFloat { 1 }
     private var eventVerticalInset: CGFloat { 1 }
     private var minimumEventWidth: CGFloat { 44 }
     private var minimumEventHeight: CGFloat { textMetrics.layoutValue(28) }
@@ -64,7 +64,7 @@ struct WeekGridView: View {
     }
 
     private func calendarLayout(for viewportWidth: CGFloat) -> (dayWidth: CGFloat, contentWidth: CGFloat) {
-        let availableDayAreaWidth = max(viewportWidth - timeColumnWidth - trailingPadding, 0)
+        let availableDayAreaWidth = max(viewportWidth - timeColumnWidth, 0)
         let responsiveDayWidth = availableDayAreaWidth / max(dayColumnCount, 1)
         let dayWidth = max(responsiveDayWidth, minimumDayWidth)
         let contentWidth = timeColumnWidth + dayWidth * dayColumnCount + trailingPadding
@@ -199,7 +199,7 @@ struct WeekGridView: View {
         ForEach(model.visibleTimedEvents, id: \.weekOccurrenceID) { event in
             if let frame = frame(for: event, dayWidth: dayWidth) {
                 CalendarEventBlock(event: event)
-                    .frame(width: max(dayWidth - trailingPadding, minimumEventWidth), height: frame.height, alignment: .topLeading)
+                    .frame(width: max(dayWidth, minimumEventWidth), height: frame.height, alignment: .topLeading)
                     .eventDetailInteraction(
                         event: event,
                         selectedEvent: detailEventBinding(for: event),
