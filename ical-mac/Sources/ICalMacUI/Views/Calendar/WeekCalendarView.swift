@@ -11,7 +11,7 @@ import SwiftUI
 struct WeekCalendarView: View {
     @EnvironmentObject private var model: AppModel
 
-    private let headerBottomPadding: CGFloat = 10
+    private let headerBottomPadding: CGFloat = 5
 
     var body: some View {
         VStack(spacing: 0) {
