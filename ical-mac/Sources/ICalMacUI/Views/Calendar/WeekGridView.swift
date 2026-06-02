@@ -31,8 +31,8 @@ struct WeekGridView: View {
     private var hourLabelOffset: CGFloat { textMetrics.layoutValue(7) }
     private var eventHorizontalInset: CGFloat { 1 }
     private var eventVerticalInset: CGFloat { 1 }
-    private var minimumEventWidth: CGFloat { 44 }
     private var minimumEventHeight: CGFloat { textMetrics.layoutValue(28) }
+    private var timedEventLaneGap: CGFloat { 2 }
     private var currentTimeLabelHeight: CGFloat { textMetrics.layoutValue(20) }
     private var currentTimeDotSide: CGFloat { textMetrics.layoutValue(9) }
     private var currentTimeLineHeight: CGFloat { textMetrics.layoutValue(2) }
@@ -217,17 +217,28 @@ struct WeekGridView: View {
     }
 
     private func eventBlocks(dayWidth: CGFloat) -> some View {
-        ForEach(model.visibleTimedEvents, id: \.weekOccurrenceID) { event in
-            if let frame = frame(for: event, dayWidth: dayWidth) {
-                CalendarEventBlock(event: event)
-                    .frame(width: max(dayWidth, minimumEventWidth), height: frame.height, alignment: .topLeading)
-                    .eventDetailInteraction(
-                        event: event,
-                        selectedEvent: detailEventBinding(for: event),
-                        showDetails: { showEventDetails(event) }
-                    )
-                    .offset(x: frame.x, y: frame.y)
-            }
+        let frames = TimedEventWeekLayout.frames(
+            for: model.visibleTimedEvents,
+            weekStartDate: model.displayedWeekStartDate,
+            calendar: calendar,
+            dayWidth: dayWidth,
+            timeColumnWidth: timeColumnWidth,
+            hourHeight: hourHeight,
+            eventHorizontalInset: eventHorizontalInset,
+            eventVerticalInset: eventVerticalInset,
+            minimumEventHeight: minimumEventHeight,
+            laneGap: timedEventLaneGap
+        )
+
+        return ForEach(frames) { frame in
+            CalendarEventBlock(event: frame.event)
+                .frame(width: frame.width, height: frame.height, alignment: .topLeading)
+                .eventDetailInteraction(
+                    event: frame.event,
+                    selectedEvent: detailEventBinding(for: frame.event),
+                    showDetails: { showEventDetails(frame.event) }
+                )
+                .offset(x: frame.x, y: frame.y)
         }
     }
 
@@ -245,35 +256,6 @@ struct WeekGridView: View {
                 selectedDetailEvent = nil
             }
         }
-    }
-
-    private func frame(for event: CalendarEvent, dayWidth: CGFloat) -> (x: CGFloat, y: CGFloat, height: CGFloat)? {
-        let eventStart = max(event.startDate, model.displayedWeekRange.startDate)
-        let dayStart = calendar.startOfDay(for: eventStart)
-        guard let dayIndex = calendar.dateComponents([.day], from: model.displayedWeekStartDate, to: dayStart).day,
-              dayIndex >= 0,
-              dayIndex < 7 else {
-            return nil
-        }
-
-        let visibleStart = max(event.startDate, dayStart)
-        let nextDay = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? event.endDate
-        let visibleEnd = min(event.endDate, nextDay)
-        let startOffset = visibleStart.timeIntervalSince(dayStart)
-        let duration = max(visibleEnd.timeIntervalSince(visibleStart), 0)
-        let gridHeight = hourHeight * 24
-        let startY = CGFloat(startOffset / 3600) * hourHeight
-        let durationHeight = CGFloat(duration / 3600) * hourHeight
-        let rawHeight = max(durationHeight - eventVerticalInset * 2, minimumEventHeight)
-        let clampedHeight = min(rawHeight, gridHeight)
-        let rawY = startY + eventVerticalInset
-        let clampedY = min(max(rawY, 0), max(gridHeight - clampedHeight, 0))
-
-        return (
-            x: timeColumnWidth + CGFloat(dayIndex) * dayWidth + eventHorizontalInset,
-            y: clampedY,
-            height: clampedHeight
-        )
     }
 
     private func scrollToCurrentTime(_ proxy: ScrollViewProxy, now: Date) {

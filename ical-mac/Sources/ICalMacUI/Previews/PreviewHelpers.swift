@@ -79,7 +79,7 @@ enum PreviewData {
         CalendarInfo(id: "3", title: "Holidays", accountName: "iCloud", allowsContentModifications: false),
     ]
 
-    static let events: [CalendarEvent] = categoryEvents + recurringEvents
+    static let events: [CalendarEvent] = categoryEvents + clashEvents + recurringEvents
 
     static let categoryEvents: [CalendarEvent] = [
         event(
@@ -186,6 +186,49 @@ enum PreviewData {
             id: "cat-out-of-office",
             title: "Out of office - Travel day",
             dayOffset: 6
+        ),
+    ]
+
+    static let clashEvents: [CalendarEvent] = [
+        event(
+            id: "clash-two-design-review",
+            title: "Catchup - Design review",
+            dayOffset: 5,
+            hour: 15,
+            duration: 60
+        ),
+        event(
+            id: "clash-two-customer-call",
+            title: "Support - Customer call",
+            dayOffset: 5,
+            hour: 15,
+            duration: 60
+        ),
+        event(
+            id: "clash-three-release-plan",
+            title: "Focus - Release plan",
+            dayOffset: 5,
+            hour: 16,
+            minute: 15,
+            duration: 60
+        ),
+        event(
+            id: "clash-three-partner-sync",
+            title: "Sync: Partner review",
+            dayOffset: 5,
+            hour: 16,
+            minute: 15,
+            duration: 60
+        ),
+        event(
+            id: "clash-three-personal-appointment",
+            title: "Personal - Appointment",
+            dayOffset: 5,
+            hour: 16,
+            minute: 15,
+            duration: 60,
+            calendarTitle: "Personal",
+            calendarIdentifier: "1"
         ),
     ]
 

@@ -141,26 +141,26 @@ struct AppModelTests {
         #expect(visibleRecurringEventIDs.contains("recurring-meet-free-wednesday"))
     }
 
-    @Test func previewTimedEventsDoNotOverlapWithinADay() async throws {
+    @Test func previewTimedEventsIncludeTwoAndThreeEventClashSamples() async throws {
         let model = AppModel.preview()
-        let calendar = Calendar.current
 
         await model.refreshCalendar()
 
-        let eventsByDay = Dictionary(grouping: model.visibleTimedEvents) { event in
-            calendar.startOfDay(for: event.startDate)
-        }
-        for dayEvents in eventsByDay.values {
-            let sortedEvents = dayEvents.sorted { $0.startDate < $1.startDate }
-            for index in sortedEvents.indices.dropFirst() {
-                let previousEvent = sortedEvents[sortedEvents.index(before: index)]
-                let event = sortedEvents[index]
-                #expect(
-                    previousEvent.endDate <= event.startDate,
-                    "\(previousEvent.title) overlaps \(event.title)"
-                )
-            }
-        }
+        let eventsByID = Dictionary(uniqueKeysWithValues: model.visibleTimedEvents.map { ($0.id, $0) })
+        let twoClashEvents = [
+            eventsByID["clash-two-design-review"],
+            eventsByID["clash-two-customer-call"],
+        ].compactMap(\.self)
+        let threeClashEvents = [
+            eventsByID["clash-three-release-plan"],
+            eventsByID["clash-three-partner-sync"],
+            eventsByID["clash-three-personal-appointment"],
+        ].compactMap(\.self)
+
+        #expect(twoClashEvents.count == 2)
+        #expect(threeClashEvents.count == 3)
+        #expect(eventsFullyOverlap(twoClashEvents))
+        #expect(eventsFullyOverlap(threeClashEvents))
     }
 
     @Test func weekOccurrenceIDsDifferentiateRecurringOccurrencesWithSharedEventID() {
@@ -324,4 +324,11 @@ private func makeDate(year: Int, month: Int, day: Int, hour: Int = 0, minute: In
     components.minute = minute
     components.second = second
     return components.date!
+}
+
+private func eventsFullyOverlap(_ events: [CalendarEvent]) -> Bool {
+    guard let first = events.first else { return false }
+    return events.allSatisfy {
+        $0.startDate == first.startDate && $0.endDate == first.endDate
+    }
 }
