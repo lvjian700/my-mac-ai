@@ -80,6 +80,34 @@ struct AssistantServiceTests {
         #expect(secondInput[2] == .message(role: "user", content: "second question"))
     }
 
+    @Test func seededHistoryIsReusedOnNextTurn() async throws {
+        let root = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let client = FakeOpenAIClient(responses: [
+            OpenAIResponse(output: [.message(role: "assistant", content: [.init(type: "output_text", text: "Resumed answer.")])]),
+        ])
+        let service = AssistantService(
+            client: client,
+            apiKeyStore: FakeAPIKeyStore(key: "test-key"),
+            memoryStore: MemoryStore(rootURL: root),
+            promptStore: PromptStore(),
+            toolExecutor: CalendarToolExecutor(calendarStore: FakeCalendarStore(), memoryStore: MemoryStore(rootURL: root)),
+            inputHistory: [
+                .message(role: "user", content: "first question"),
+                .message(role: "assistant", content: "First answer.")
+            ]
+        )
+
+        _ = try await service.send("second question", snapshot: nil)
+
+        #expect(client.requests[0].input == [
+            .message(role: "user", content: "first question"),
+            .message(role: "assistant", content: "First answer."),
+            .message(role: "user", content: "second question")
+        ])
+        #expect(service.transcript.last == .message(role: "assistant", content: "Resumed answer."))
+    }
+
     @Test func repeatedToolUseStopsAtConfiguredLimit() async throws {
         let root = try makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }

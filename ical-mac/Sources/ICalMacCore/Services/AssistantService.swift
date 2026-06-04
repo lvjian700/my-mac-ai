@@ -18,8 +18,10 @@ public final class AssistantService {
         promptStore: PromptStore,
         toolExecutor: CalendarToolExecutor,
         configuration: AssistantConfiguration = AssistantConfiguration(),
-        maxToolRounds: Int = 8
+        maxToolRounds: Int = 8,
+        inputHistory: [OpenAIInputItem] = []
     ) {
+        self.inputHistory = inputHistory
         self.client = client
         self.apiKeyStore = apiKeyStore
         self.memoryStore = memoryStore
@@ -29,8 +31,16 @@ public final class AssistantService {
         self.maxToolRounds = maxToolRounds
     }
 
+    public var transcript: [OpenAIInputItem] {
+        inputHistory
+    }
+
     public func clearHistory() {
         inputHistory.removeAll()
+    }
+
+    public func replaceHistory(with inputHistory: [OpenAIInputItem]) {
+        self.inputHistory = inputHistory
     }
 
     public func send(_ text: String, snapshot: SessionSnapshot?) async throws -> String {

@@ -469,6 +469,7 @@ extension AppModel {
         let model = AppModel(
             calendarStore: PreviewCalendarStore(status: status, calendars: calendars, events: events),
             memoryStore: MemoryStore(rootURL: URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("ical-mac-preview")),
+            conversationStore: JSONConversationStore(rootURL: URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("ical-mac-preview")),
             promptStore: PromptStore(),
             apiKeyStore: PreviewAPIKeyStore(),
             client: PreviewOpenAIClient()

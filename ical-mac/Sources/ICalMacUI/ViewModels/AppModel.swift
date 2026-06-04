@@ -4,9 +4,9 @@ import os
 
 @MainActor
 public final class AppModel: ObservableObject {
-    @Published public var messages: [ChatMessage] = [
-        ChatMessage(role: .assistant, text: "Ask about your calendar or tell me what to schedule.")
-    ]
+    @Published public var messages: [ChatMessage] = [AppModel.welcomeMessage()]
+    @Published public var conversationSummaries: [ConversationSummary] = []
+    @Published public var selectedConversationID: UUID?
     @Published public var events: [CalendarEvent] = []
     @Published public var calendars: [CalendarInfo] = []
     @Published public var accessStatus: CalendarAccessStatus = .notDetermined
@@ -22,10 +22,12 @@ public final class AppModel: ObservableObject {
 
     private let calendarStore: CalendarStore
     private let memoryStore: MemoryStore
+    private let conversationStore: any ConversationStore
     private let promptStore: PromptStore
     private let apiKeyStore: APIKeyStore
     private let client: OpenAIClient
     private var assistant: AssistantService
+    private var currentConversation: ChatConversationRecord?
     private var snapshot: SessionSnapshot?
     private var pollingTask: Task<Void, Never>?
     private var storeChangedDebounceTask: Task<Void, Never>?
@@ -36,6 +38,7 @@ public final class AppModel: ObservableObject {
     public init(
         calendarStore: CalendarStore = EventKitCalendarStore(),
         memoryStore: MemoryStore = MemoryStore(),
+        conversationStore: any ConversationStore = JSONConversationStore(),
         promptStore: PromptStore = PromptStore(),
         apiKeyStore: APIKeyStore = OpenAIAPIKeyStore(),
         client: OpenAIClient = URLSessionOpenAIClient(),
@@ -44,6 +47,7 @@ public final class AppModel: ObservableObject {
         let cachedSnapshot = memoryStore.readSnapshot()
         self.calendarStore = calendarStore
         self.memoryStore = memoryStore
+        self.conversationStore = conversationStore
         self.promptStore = promptStore
         self.apiKeyStore = apiKeyStore
         self.client = client
@@ -104,6 +108,7 @@ public final class AppModel: ObservableObject {
     }
 
     public func loadCalendarOnLaunch() async {
+        await loadConversationsOnLaunch()
         accessStatus = calendarStore.accessStatus()
         await refreshCalendar()
     }
@@ -204,16 +209,20 @@ public final class AppModel: ObservableObject {
     public func send(_ text: String) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !isSending else { return }
+        await ensureConversationLoaded()
         messages.append(ChatMessage(role: .user, text: trimmed))
+        await persistCurrentConversation()
         isSending = true
         defer { isSending = false }
 
         do {
             let reply = try await assistant.send(trimmed, snapshot: filteredSnapshotForAssistant())
             messages.append(ChatMessage(role: .assistant, text: reply))
+            await persistCurrentConversation()
             await refreshCalendar()
         } catch {
             messages.append(ChatMessage(role: .assistant, text: error.localizedDescription))
+            await persistCurrentConversation()
         }
     }
 
@@ -243,8 +252,48 @@ public final class AppModel: ObservableObject {
     }
 
     public func clearChat() {
-        assistant.clearHistory()
-        messages = [ChatMessage(role: .assistant, text: "Fresh thread. What should we do with your calendar?")]
+        Task { await createNewConversation() }
+    }
+
+    public func createNewConversation() async {
+        guard !isSending else { return }
+        let welcome = ChatMessage(role: .assistant, text: "Fresh thread. What should we do with your calendar?")
+        do {
+            let conversation = try await conversationStore.createConversation(messages: [welcome], transcript: [])
+            await applyConversation(conversation)
+            try await reloadConversationSummaries()
+        } catch {
+            statusText = error.localizedDescription
+        }
+    }
+
+    public func selectConversation(id: UUID) async {
+        guard !isSending, selectedConversationID != id else { return }
+        do {
+            let conversation = try await conversationStore.loadConversation(id: id)
+            await applyConversation(conversation)
+            try await reloadConversationSummaries()
+        } catch {
+            statusText = error.localizedDescription
+        }
+    }
+
+    public func deleteConversation(id: UUID) async {
+        guard !isSending else { return }
+        do {
+            try await conversationStore.deleteConversation(id: id)
+            try await reloadConversationSummaries()
+            if selectedConversationID == id {
+                if let next = conversationSummaries.first {
+                    let conversation = try await conversationStore.loadConversation(id: next.id)
+                    await applyConversation(conversation)
+                } else {
+                    await createNewConversation()
+                }
+            }
+        } catch {
+            statusText = error.localizedDescription
+        }
     }
 
     public static func logCalendarInvitation(_ event: CalendarEvent) {
@@ -294,6 +343,53 @@ public final class AppModel: ObservableObject {
             ),
             configuration: AssistantConfiguration(model: modelName)
         )
+        assistant.replaceHistory(with: currentConversation?.transcript ?? assistant.transcript)
+    }
+
+    private func loadConversationsOnLaunch() async {
+        do {
+            try await reloadConversationSummaries()
+            if let first = conversationSummaries.first {
+                let conversation = try await conversationStore.loadConversation(id: first.id)
+                await applyConversation(conversation)
+            } else {
+                let conversation = try await conversationStore.createConversation(messages: [Self.welcomeMessage()], transcript: [])
+                await applyConversation(conversation)
+                try await reloadConversationSummaries()
+            }
+        } catch {
+            statusText = error.localizedDescription
+        }
+    }
+
+    private func ensureConversationLoaded() async {
+        guard currentConversation == nil else { return }
+        await loadConversationsOnLaunch()
+    }
+
+    private func reloadConversationSummaries() async throws {
+        conversationSummaries = try await conversationStore.listSummaries()
+    }
+
+    private func applyConversation(_ conversation: ChatConversationRecord) async {
+        currentConversation = conversation
+        selectedConversationID = conversation.id
+        messages = conversation.messages.isEmpty ? [Self.welcomeMessage()] : conversation.messages
+        rebuildAssistant()
+    }
+
+    private func persistCurrentConversation() async {
+        guard var conversation = currentConversation else { return }
+        conversation.messages = messages
+        conversation.transcript = assistant.transcript
+        conversation.refreshMetadata()
+        do {
+            try await conversationStore.saveConversation(conversation)
+            currentConversation = conversation
+            try await reloadConversationSummaries()
+        } catch {
+            statusText = error.localizedDescription
+        }
     }
 
     private func reconcileSelectedCalendars() {
@@ -321,6 +417,7 @@ public final class AppModel: ObservableObject {
             let evaluation = try await assistant.evaluateInvitations(invitations, snapshot: snapshot)
             if !evaluation.isEmpty {
                 messages.append(ChatMessage(role: .assistant, text: evaluation))
+                await persistCurrentConversation()
             }
         } catch {
             // silent — proactive notifications should not surface errors to chat
@@ -351,6 +448,10 @@ public final class AppModel: ObservableObject {
         subsystem: "com.jlyu.ical-mac",
         category: "CalendarInvitations"
     )
+
+    private static func welcomeMessage() -> ChatMessage {
+        ChatMessage(role: .assistant, text: "Ask about your calendar or tell me what to schedule.")
+    }
 }
 
 private extension CalendarEvent {

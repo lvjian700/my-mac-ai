@@ -106,6 +106,95 @@ struct AppModelTests {
         #expect(model.messages.last?.text == "Done")
     }
 
+    @Test func launchRestoresMostRecentConversation() async throws {
+        let store = FakeUICalendarStore()
+        let root = try makeTempDirectory()
+        let conversationStore = JSONConversationStore(rootURL: root)
+        let older = try await conversationStore.createConversation(
+            messages: [ChatMessage(role: .user, text: "Older question")]
+        )
+        try await Task.sleep(for: .milliseconds(10))
+        let newer = try await conversationStore.createConversation(
+            messages: [ChatMessage(role: .user, text: "Newer question")]
+        )
+        let model = try makeModel(store: store, conversationStore: conversationStore)
+
+        await model.loadCalendarOnLaunch()
+
+        #expect(model.selectedConversationID == newer.id)
+        #expect(model.messages.map(\.text) == ["Newer question"])
+        #expect(model.conversationSummaries.map(\.id) == [newer.id, older.id])
+    }
+
+    @Test func sendingMessagePersistsConversationMessagesAndTranscript() async throws {
+        let store = FakeUICalendarStore()
+        let root = try makeTempDirectory()
+        let conversationStore = JSONConversationStore(rootURL: root)
+        let model = try makeModel(
+            store: store,
+            conversationStore: conversationStore,
+            client: FakeUIOpenAIClient(responses: [
+                OpenAIResponse(output: [.message(role: "assistant", content: [.init(type: "output_text", text: "Done")])])
+            ])
+        )
+
+        await model.send("Move standup")
+
+        let summary = try #require(try await conversationStore.listSummaries().first)
+        let conversation = try await conversationStore.loadConversation(id: summary.id)
+        #expect(conversation.messages.map(\.text) == [
+            "Ask about your calendar or tell me what to schedule.",
+            "Move standup",
+            "Done"
+        ])
+        #expect(conversation.transcript == [
+            .message(role: "user", content: "Move standup"),
+            .message(role: "assistant", content: "Done")
+        ])
+    }
+
+    @Test func newConversationAndDeleteCurrentFallbackToExistingConversation() async throws {
+        let store = FakeUICalendarStore()
+        let conversationStore = JSONConversationStore(rootURL: try makeTempDirectory())
+        let model = try makeModel(store: store, conversationStore: conversationStore)
+        await model.loadCalendarOnLaunch()
+        let originalID = try #require(model.selectedConversationID)
+
+        await model.createNewConversation()
+        let newID = try #require(model.selectedConversationID)
+        #expect(newID != originalID)
+        #expect(model.conversationSummaries.count == 2)
+
+        await model.deleteConversation(id: newID)
+
+        #expect(model.selectedConversationID == originalID)
+        #expect(model.conversationSummaries.map(\.id) == [originalID])
+    }
+
+    @Test func switchingConversationsReplacesAssistantTranscript() async throws {
+        let store = FakeUICalendarStore()
+        let client = FakeUIOpenAIClient(responses: [
+            OpenAIResponse(output: [.message(role: "assistant", content: [.init(type: "output_text", text: "First answer")])]),
+            OpenAIResponse(output: [.message(role: "assistant", content: [.init(type: "output_text", text: "Second answer")])]),
+            OpenAIResponse(output: [.message(role: "assistant", content: [.init(type: "output_text", text: "Followup answer")])]),
+        ])
+        let conversationStore = JSONConversationStore(rootURL: try makeTempDirectory())
+        let model = try makeModel(store: store, conversationStore: conversationStore, client: client)
+
+        await model.send("First question")
+        let firstID = try #require(model.selectedConversationID)
+        await model.createNewConversation()
+        await model.send("Second question")
+        await model.selectConversation(id: firstID)
+        await model.send("Followup")
+
+        #expect(client.requests.last?.input == [
+            .message(role: "user", content: "First question"),
+            .message(role: "assistant", content: "First answer"),
+            .message(role: "user", content: "Followup")
+        ])
+    }
+
     @Test func refreshLogsNewInvitationsOnce() async throws {
         let store = FakeUICalendarStore()
         store.calendars = [
@@ -189,15 +278,23 @@ struct AppModelTests {
 
     private func makeModel(
         store: FakeUICalendarStore,
+        conversationStore: (any ConversationStore)? = nil,
         apiKeyStore: APIKeyStore = FakeUIAPIKeyStore(key: "test-key"),
         client: FakeUIOpenAIClient = FakeUIOpenAIClient(responses: [
             OpenAIResponse(output: [.message(role: "assistant", content: [.init(type: "output_text", text: "OK")])])
         ]),
         invitationLogger: @escaping @MainActor (CalendarEvent) -> Void = { _ in }
     ) throws -> AppModel {
-        AppModel(
+        let resolvedConversationStore: any ConversationStore
+        if let conversationStore {
+            resolvedConversationStore = conversationStore
+        } else {
+            resolvedConversationStore = JSONConversationStore(rootURL: try makeTempDirectory())
+        }
+        return AppModel(
             calendarStore: store,
             memoryStore: MemoryStore(rootURL: try makeTempDirectory()),
+            conversationStore: resolvedConversationStore,
             promptStore: PromptStore(),
             apiKeyStore: apiKeyStore,
             client: client,
@@ -300,13 +397,15 @@ private final class FakeUIAPIKeyStore: APIKeyStore, @unchecked Sendable {
 
 private final class FakeUIOpenAIClient: OpenAIClient, @unchecked Sendable {
     private var responses: [OpenAIResponse]
+    private(set) var requests: [OpenAIRequest] = []
 
     init(responses: [OpenAIResponse]) {
         self.responses = responses
     }
 
     func createResponse(_ request: OpenAIRequest, apiKey: String) async throws -> OpenAIResponse {
-        responses.removeFirst()
+        requests.append(request)
+        return responses.removeFirst()
     }
 }
 

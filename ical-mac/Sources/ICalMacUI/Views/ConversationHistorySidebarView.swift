@@ -1,3 +1,4 @@
+import ICalMacCore
 import SwiftUI
 
 #if DEBUG
@@ -9,18 +10,60 @@ import SwiftUI
 #endif
 
 struct ConversationHistorySidebarView: View {
+    @EnvironmentObject private var model: AppModel
     @Environment(\.readingTextMetrics) private var textMetrics
 
     var body: some View {
-        List {
+        List(selection: selection) {
             Section("Conversations") {
-                ConversationHistoryRow(title: "Current conversation")
+                ForEach(model.conversationSummaries) { summary in
+                    ConversationHistoryRow(summary: summary)
+                        .tag(summary.id)
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                Task { await model.deleteConversation(id: summary.id) }
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                            .disabled(model.isSending)
+                        }
+                }
             }
         }
         .listStyle(.sidebar)
         .navigationTitle("Cali")
+        .toolbar {
+            ToolbarItemGroup {
+                Button {
+                    Task { await model.createNewConversation() }
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .disabled(model.isSending)
+                .help("New conversation")
+
+                Button(role: .destructive) {
+                    if let id = model.selectedConversationID {
+                        Task { await model.deleteConversation(id: id) }
+                    }
+                } label: {
+                    Image(systemName: "trash")
+                }
+                .disabled(model.isSending || model.selectedConversationID == nil)
+                .help("Delete conversation")
+            }
+        }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             SidebarFooter()
+        }
+    }
+
+    private var selection: Binding<UUID?> {
+        Binding {
+            model.selectedConversationID
+        } set: { id in
+            guard let id else { return }
+            Task { await model.selectConversation(id: id) }
         }
     }
 }
@@ -61,11 +104,11 @@ private struct SidebarFooter: View {
 }
 
 private struct ConversationHistoryRow: View {
-    let title: String
+    let summary: ConversationSummary
     @Environment(\.readingTextMetrics) private var textMetrics
 
     private var rowSpacing: CGFloat { textMetrics.layoutValue(8) }
-    private var titleSpacing: CGFloat { textMetrics.layoutValue(2) }
+    private var titleSpacing: CGFloat { textMetrics.layoutValue(3) }
 
     var body: some View {
         HStack(spacing: rowSpacing) {
@@ -73,8 +116,13 @@ private struct ConversationHistoryRow: View {
                 .foregroundStyle(.secondary)
 
             VStack(alignment: .leading, spacing: titleSpacing) {
-                Text(title)
+                Text(summary.title)
                     .font(textMetrics.font(.body))
+                    .lineLimit(1)
+
+                Text(summary.lastMessagePreview)
+                    .font(textMetrics.font(.caption))
+                    .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
         }
