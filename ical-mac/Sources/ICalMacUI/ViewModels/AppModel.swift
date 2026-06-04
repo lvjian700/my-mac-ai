@@ -209,11 +209,11 @@ public final class AppModel: ObservableObject {
     public func send(_ text: String) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !isSending else { return }
+        isSending = true
+        defer { isSending = false }
         await ensureConversationLoaded()
         messages.append(ChatMessage(role: .user, text: trimmed))
         await persistCurrentConversation()
-        isSending = true
-        defer { isSending = false }
 
         do {
             let reply = try await assistant.send(trimmed, snapshot: filteredSnapshotForAssistant())
@@ -293,6 +293,10 @@ public final class AppModel: ObservableObject {
             }
         } catch {
             statusText = error.localizedDescription
+            if selectedConversationID == id {
+                currentConversation = nil
+                selectedConversationID = nil
+            }
         }
     }
 
@@ -331,6 +335,7 @@ public final class AppModel: ObservableObject {
     }
 
     private func rebuildAssistant() {
+        let previousTranscript = assistant.transcript
         assistant = AssistantService(
             client: client,
             apiKeyStore: apiKeyStore,
@@ -343,7 +348,7 @@ public final class AppModel: ObservableObject {
             ),
             configuration: AssistantConfiguration(model: modelName)
         )
-        assistant.replaceHistory(with: currentConversation?.transcript ?? assistant.transcript)
+        assistant.replaceHistory(with: currentConversation?.transcript ?? previousTranscript)
     }
 
     private func loadConversationsOnLaunch() async {

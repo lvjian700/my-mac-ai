@@ -11,10 +11,11 @@ import SwiftUI
 
 struct ConversationHistorySidebarView: View {
     @EnvironmentObject private var model: AppModel
+    @State private var selection: UUID?
     @Environment(\.readingTextMetrics) private var textMetrics
 
     var body: some View {
-        List(selection: selection) {
+        List(selection: $selection) {
             Section("Conversations") {
                 ForEach(model.conversationSummaries) { summary in
                     ConversationHistoryRow(summary: summary)
@@ -56,15 +57,19 @@ struct ConversationHistorySidebarView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             SidebarFooter()
         }
-    }
-
-    private var selection: Binding<UUID?> {
-        Binding {
-            model.selectedConversationID
-        } set: { id in
-            guard let id else { return }
-            Task { await model.selectConversation(id: id) }
+        .onChange(of: selection) { _, newID in
+            guard let newID, newID != model.selectedConversationID else { return }
+            Task {
+                await model.selectConversation(id: newID)
+                if model.selectedConversationID != newID {
+                    selection = model.selectedConversationID
+                }
+            }
         }
+        .onChange(of: model.selectedConversationID) { _, newID in
+            selection = newID
+        }
+        .onAppear { selection = model.selectedConversationID }
     }
 }
 

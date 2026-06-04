@@ -81,8 +81,6 @@ public actor JSONConversationStore: ConversationStore {
     }
 
     public func saveConversation(_ conversation: ChatConversationRecord) async throws {
-        var conversation = conversation
-        conversation.refreshMetadata()
         try ensureDirectoryExists()
         let data = try encoder.encode(conversation)
         try data.write(to: recordURL(id: conversation.id), options: .atomic)
