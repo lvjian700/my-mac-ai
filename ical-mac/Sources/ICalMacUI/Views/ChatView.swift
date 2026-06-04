@@ -137,6 +137,28 @@ private struct MessageText: View {
     }
 }
 
+enum ComposerReturnKeyAction: Equatable {
+    case ignore
+    case insertNewline
+    case send
+
+    static func action(keyCode: UInt16, modifierFlags: NSEvent.ModifierFlags) -> ComposerReturnKeyAction {
+        guard keyCode == Self.returnKeyCode || keyCode == Self.keypadEnterKeyCode else {
+            return .ignore
+        }
+        if modifierFlags.contains(.shift) {
+            return .insertNewline
+        }
+        if modifierFlags.contains(.command) || modifierFlags.contains(.control) || modifierFlags.contains(.option) {
+            return .ignore
+        }
+        return .send
+    }
+
+    private static let returnKeyCode: UInt16 = 36
+    private static let keypadEnterKeyCode: UInt16 = 76
+}
+
 private struct ComposerView: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.readingTextMetrics) private var textMetrics
@@ -145,6 +167,7 @@ private struct ComposerView: View {
     var onSubmit: () -> Void
     @FocusState private var isFocused: Bool
     @State private var functionKeyMonitor: Any?
+    @State private var returnKeyMonitor: Any?
     @State private var editorWidth: CGFloat = 0
 
     private let composerSpacing: CGFloat = 4
@@ -293,7 +316,6 @@ private struct ComposerView: View {
                             }
                     }
                     .buttonStyle(.plain)
-                    .keyboardShortcut(.return, modifiers: [.command])
                     .disabled(!canSubmit)
                     .help("Send")
                 }
@@ -317,9 +339,11 @@ private struct ComposerView: View {
         .onAppear {
             isFocused = true
             installFunctionKeyMonitor()
+            installReturnKeyMonitor()
         }
         .onDisappear {
             removeFunctionKeyMonitor()
+            removeReturnKeyMonitor()
             voiceInput.cancel()
         }
     }
@@ -366,10 +390,30 @@ private struct ComposerView: View {
         }
     }
 
+    private func installReturnKeyMonitor() {
+        guard returnKeyMonitor == nil else { return }
+        returnKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            guard isFocused else { return event }
+            switch ComposerReturnKeyAction.action(keyCode: event.keyCode, modifierFlags: event.modifierFlags) {
+            case .send:
+                submitIfPossible()
+                return nil
+            case .insertNewline, .ignore:
+                return event
+            }
+        }
+    }
+
     private func removeFunctionKeyMonitor() {
         guard let functionKeyMonitor else { return }
         NSEvent.removeMonitor(functionKeyMonitor)
         self.functionKeyMonitor = nil
+    }
+
+    private func removeReturnKeyMonitor() {
+        guard let returnKeyMonitor else { return }
+        NSEvent.removeMonitor(returnKeyMonitor)
+        self.returnKeyMonitor = nil
     }
 }
 
