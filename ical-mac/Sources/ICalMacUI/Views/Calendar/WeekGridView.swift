@@ -30,8 +30,6 @@ struct WeekGridView: View {
     private var allDaySeparatorHeight: CGFloat { 2 }
     private var hourLabelOffset: CGFloat { textMetrics.layoutValue(7) }
     private var eventHorizontalInset: CGFloat { 1 }
-    private var eventVerticalInset: CGFloat { 1 }
-    private var minimumEventHeight: CGFloat { textMetrics.layoutValue(28) }
     private var timedEventLaneGap: CGFloat { 2 }
     private var currentTimeLabelHeight: CGFloat { textMetrics.layoutValue(20) }
     private var currentTimeDotSide: CGFloat { textMetrics.layoutValue(9) }
@@ -225,8 +223,6 @@ struct WeekGridView: View {
             timeColumnWidth: timeColumnWidth,
             hourHeight: hourHeight,
             eventHorizontalInset: eventHorizontalInset,
-            eventVerticalInset: eventVerticalInset,
-            minimumEventHeight: minimumEventHeight,
             laneGap: timedEventLaneGap
         )
 

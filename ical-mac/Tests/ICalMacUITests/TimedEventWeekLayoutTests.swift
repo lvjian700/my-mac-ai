@@ -77,8 +77,30 @@ struct TimedEventWeekLayoutTests {
 
         #expect(frames.count == 2)
         #expect(frames.map(\.dayIndex) == [0, 1])
-        #expect(frames.map(\.y) == [23 * 60 + 1, 1])
-        #expect(frames.map(\.height) == [58, 58])
+        #expect(frames.map(\.y) == [23 * 60, 0])
+        #expect(frames.map(\.height) == [60, 60])
+    }
+
+    @Test func timedEventPositionAndHeightUseOneMinuteScale() {
+        let frames = layoutFrames(
+            for: [
+                event(id: "precise", startHour: 9, startMinute: 13, endHour: 9, endMinute: 42),
+            ],
+            hourHeight: 58
+        )
+
+        #expect(frames.count == 1)
+        #expect(isNearlyEqual(frames[0].y, 9 * 58 + 13 * 58 / 60))
+        #expect(isNearlyEqual(frames[0].height, 29 * 58 / 60))
+    }
+
+    @Test func oneMinuteTimedEventUsesFiveMinuteMinimumHeight() {
+        let frames = layoutFrames(for: [
+            event(id: "short", startHour: 9, startMinute: 13, endHour: 9, endMinute: 14),
+        ])
+
+        #expect(frames.count == 1)
+        #expect(isNearlyEqual(frames[0].height, 5))
     }
 
     @Test func sameStartEventsUseStableIDOrdering() {
@@ -91,17 +113,15 @@ struct TimedEventWeekLayoutTests {
         #expect(frames.map(\.event.id) == ["a", "b", "c"])
     }
 
-    private func layoutFrames(for events: [CalendarEvent]) -> [TimedEventLayoutFrame] {
+    private func layoutFrames(for events: [CalendarEvent], hourHeight: CGFloat = 60) -> [TimedEventLayoutFrame] {
         TimedEventWeekLayout.frames(
             for: events,
             weekStartDate: makeDate(day: 18),
             calendar: calendar,
             dayWidth: 300,
             timeColumnWidth: 0,
-            hourHeight: 60,
+            hourHeight: hourHeight,
             eventHorizontalInset: 1,
-            eventVerticalInset: 1,
-            minimumEventHeight: 28,
             laneGap: 2
         )
     }

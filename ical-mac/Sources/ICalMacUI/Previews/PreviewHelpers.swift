@@ -88,7 +88,7 @@ enum PreviewData {
         CalendarInfo(id: "3", title: "Holidays", accountName: "iCloud", allowsContentModifications: false),
     ]
 
-    static let events: [CalendarEvent] = categoryEvents + clashEvents + recurringEvents
+    static let events: [CalendarEvent] = categoryEvents + shortEvents + clashEvents + recurringEvents
 
     static let categoryEvents: [CalendarEvent] = [
         event(
@@ -238,6 +238,32 @@ enum PreviewData {
             duration: 60,
             calendarTitle: "Personal",
             calendarIdentifier: "1"
+        ),
+    ]
+
+    static let shortEvents: [CalendarEvent] = [
+        event(
+            id: "short-five-minute-check",
+            title: "Focus - 5 min check",
+            dayOffset: 2,
+            hour: 14,
+            duration: 5
+        ),
+        event(
+            id: "short-ten-minute-check",
+            title: "Sync: 10 min check",
+            dayOffset: 2,
+            hour: 14,
+            minute: 10,
+            duration: 10
+        ),
+        event(
+            id: "short-fifteen-minute-check",
+            title: "Break - 15 min reset",
+            dayOffset: 2,
+            hour: 14,
+            minute: 25,
+            duration: 15
         ),
     ]
 

@@ -252,6 +252,25 @@ struct AppModelTests {
         #expect(eventsFullyOverlap(threeClashEvents))
     }
 
+    @Test func previewTimedEventsIncludeShortDurationSamples() async throws {
+        let model = AppModel.preview()
+
+        await model.refreshCalendar()
+
+        let eventsByID = Dictionary(uniqueKeysWithValues: model.visibleTimedEvents.map { ($0.id, $0) })
+        let durationsByID = [
+            "short-five-minute-check": 5,
+            "short-ten-minute-check": 10,
+            "short-fifteen-minute-check": 15,
+        ]
+
+        for (id, expectedMinutes) in durationsByID {
+            let event = try #require(eventsByID[id])
+            let durationMinutes = Int(event.endDate.timeIntervalSince(event.startDate) / 60)
+            #expect(durationMinutes == expectedMinutes)
+        }
+    }
+
     @Test func weekOccurrenceIDsDifferentiateRecurringOccurrencesWithSharedEventID() {
         let mondayOccurrence = CalendarEvent(
             id: "eventkit-recurring-id",

@@ -22,8 +22,6 @@ enum TimedEventWeekLayout {
         timeColumnWidth: CGFloat,
         hourHeight: CGFloat,
         eventHorizontalInset: CGFloat,
-        eventVerticalInset: CGFloat,
-        minimumEventHeight: CGFloat,
         laneGap: CGFloat
     ) -> [TimedEventLayoutFrame] {
         let weekStart = calendar.startOfDay(for: weekStartDate)
@@ -31,9 +29,7 @@ enum TimedEventWeekLayout {
             for: events,
             weekStart: weekStart,
             calendar: calendar,
-            hourHeight: hourHeight,
-            eventVerticalInset: eventVerticalInset,
-            minimumEventHeight: minimumEventHeight
+            hourHeight: hourHeight
         )
         let inputsByDay = Dictionary(grouping: inputs, by: \.dayIndex)
 
@@ -56,27 +52,26 @@ enum TimedEventWeekLayout {
         for events: [CalendarEvent],
         weekStart: Date,
         calendar: Calendar,
-        hourHeight: CGFloat,
-        eventVerticalInset: CGFloat,
-        minimumEventHeight: CGFloat
+        hourHeight: CGFloat
     ) -> [TimedEventLayoutInput] {
-        events.flatMap { event in
-            (0..<7).compactMap { dayIndex in
+        let minuteHeight = hourHeight / 60
+        let minimumEventHeight = minuteHeight * 5
+
+        return events.flatMap { event in
+            (0..<7).compactMap { dayIndex -> TimedEventLayoutInput? in
                 let dayStart = calendar.date(byAdding: .day, value: dayIndex, to: weekStart) ?? weekStart
                 let nextDay = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart
                 let visibleStart = max(event.startDate, dayStart)
                 let visibleEnd = min(event.endDate, nextDay)
                 guard visibleStart < visibleEnd else { return nil }
 
-                let startOffset = visibleStart.timeIntervalSince(dayStart)
-                let duration = visibleEnd.timeIntervalSince(visibleStart)
+                let startOffset = minuteOffset(from: dayStart, to: visibleStart, calendar: calendar)
+                let duration = minuteOffset(from: visibleStart, to: visibleEnd, calendar: calendar)
                 let gridHeight = hourHeight * 24
-                let startY = CGFloat(startOffset / 3600) * hourHeight
-                let durationHeight = CGFloat(duration / 3600) * hourHeight
-                let rawHeight = max(durationHeight - eventVerticalInset * 2, minimumEventHeight)
-                let clampedHeight = min(rawHeight, gridHeight)
-                let rawY = startY + eventVerticalInset
-                let clampedY = min(max(rawY, 0), max(gridHeight - clampedHeight, 0))
+                let startY = CGFloat(startOffset) * minuteHeight
+                let durationHeight = CGFloat(duration) * minuteHeight
+                let clampedHeight = min(max(durationHeight, minimumEventHeight), gridHeight)
+                let clampedY = min(max(startY, 0), max(gridHeight - clampedHeight, 0))
 
                 return TimedEventLayoutInput(
                     event: event,
@@ -88,6 +83,11 @@ enum TimedEventWeekLayout {
                 )
             }
         }
+    }
+
+    private static func minuteOffset(from startDate: Date, to endDate: Date, calendar: Calendar) -> Int {
+        let components = calendar.dateComponents([.minute], from: startDate, to: endDate)
+        return max(components.minute ?? 0, 0)
     }
 
     private static func frames(
