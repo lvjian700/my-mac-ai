@@ -78,6 +78,18 @@ struct PromptStoreTests {
         #expect(!prompt.contains("ask before scheduling over it"))
     }
 
+    @Test func systemPromptIncludesCreateEventDurationShorthand() throws {
+        let store = PromptStore()
+
+        let prompt = store.buildSystemPrompt(memory: "", snapshot: nil)
+
+        #expect(prompt.contains("short: 15 mins"))
+        #expect(prompt.contains("normal: 30 mins"))
+        #expect(prompt.contains("long: 1 hour"))
+        #expect(prompt.contains("If the user gives a start time but no duration or end time"))
+        #expect(prompt.contains("use normal as the default duration"))
+    }
+
     @Test func systemPromptIncludesDeleteEventGuidance() throws {
         let store = PromptStore()
 

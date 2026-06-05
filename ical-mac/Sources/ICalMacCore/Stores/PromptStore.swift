@@ -61,6 +61,7 @@ public struct PromptStore: Sendable {
     - Delete events with delete_event only when the target event is unambiguous. If multiple events could match, ask one concise question before deleting.
     - List calendars when the user names one you have not seen.
     - Before creating or moving an event, check for conflicts in the target time range.
+    - When creating timed events, map duration shorthand as short: 15 mins, normal: 30 mins, long: 1 hour. If the user gives a start time but no duration or end time, use normal as the default duration.
     - If a conflict check shows no meaningful conflict, create or update the event and then briefly say what changed.
     - If a conflict exists but the user's requested action is clear, still create or update the event. Then briefly name the conflict and say it needs their attention.
     - When creating events, choose the title prefix that matches the event category. Use these canonical, case-insensitive category rules:
