@@ -11,15 +11,21 @@ import SwiftUI
 
 struct ConversationHistorySidebarView: View {
     @EnvironmentObject private var model: AppModel
-    @State private var selection: UUID?
     @Environment(\.readingTextMetrics) private var textMetrics
 
     var body: some View {
-        List(selection: $selection) {
+        List {
             Section("Conversations") {
                 ForEach(model.conversationSummaries) { summary in
-                    ConversationHistoryRow(summary: summary)
-                        .tag(summary.id)
+                    ConversationHistoryRow(
+                        summary: summary,
+                        isSelected: model.selectedConversationID == summary.id
+                    )
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            guard !model.isSending, model.selectedConversationID != summary.id else { return }
+                            Task { await model.selectConversation(id: summary.id) }
+                        }
                         .contextMenu {
                             Button(role: .destructive) {
                                 Task { await model.deleteConversation(id: summary.id) }
@@ -28,6 +34,17 @@ struct ConversationHistorySidebarView: View {
                             }
                             .disabled(model.isSending)
                         }
+                        .listRowInsets(EdgeInsets(
+                            top: textMetrics.layoutValue(2),
+                            leading: textMetrics.layoutValue(10),
+                            bottom: textMetrics.layoutValue(2),
+                            trailing: textMetrics.layoutValue(10)
+                        ))
+                        .listRowBackground(
+                            ConversationHistoryRowBackground(
+                                isSelected: model.selectedConversationID == summary.id
+                            )
+                        )
                 }
             }
         }
@@ -57,19 +74,6 @@ struct ConversationHistorySidebarView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             SidebarFooter()
         }
-        .onChange(of: selection) { _, newID in
-            guard let newID, newID != model.selectedConversationID else { return }
-            Task {
-                await model.selectConversation(id: newID)
-                if model.selectedConversationID != newID {
-                    selection = model.selectedConversationID
-                }
-            }
-        }
-        .onChange(of: model.selectedConversationID) { _, newID in
-            selection = newID
-        }
-        .onAppear { selection = model.selectedConversationID }
     }
 }
 
@@ -110,26 +114,49 @@ private struct SidebarFooter: View {
 
 private struct ConversationHistoryRow: View {
     let summary: ConversationSummary
+    let isSelected: Bool
     @Environment(\.readingTextMetrics) private var textMetrics
 
     private var rowSpacing: CGFloat { textMetrics.layoutValue(8) }
-    private var titleSpacing: CGFloat { textMetrics.layoutValue(3) }
+    private var horizontalPadding: CGFloat { textMetrics.layoutValue(8) }
+    private var verticalPadding: CGFloat { textMetrics.layoutValue(7) }
+    private var timeWidth: CGFloat { textMetrics.layoutValue(38) }
+    private let relativeTimeFormatter = CompactRelativeTimeFormatter()
 
     var body: some View {
-        HStack(spacing: rowSpacing) {
-            Image(systemName: "message")
-                .foregroundStyle(.secondary)
-
-            VStack(alignment: .leading, spacing: titleSpacing) {
+        TimelineView(.periodic(from: Date(), by: 60)) { context in
+            HStack(alignment: .firstTextBaseline, spacing: rowSpacing) {
                 Text(summary.title)
                     .font(textMetrics.font(.body))
                     .lineLimit(1)
+                    .truncationMode(.tail)
 
-                Text(summary.lastMessagePreview)
+                Spacer(minLength: 0)
+
+                Text(relativeTimeFormatter.string(from: summary.updatedAt, relativeTo: context.date))
                     .font(textMetrics.font(.caption))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                    .monospacedDigit()
+                    .frame(minWidth: timeWidth, alignment: .trailing)
             }
+            .padding(.horizontal, horizontalPadding)
+            .padding(.vertical, verticalPadding)
         }
+        .help(summary.lastMessagePreview)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+}
+
+private struct ConversationHistoryRowBackground: View {
+    let isSelected: Bool
+    @Environment(\.readingTextMetrics) private var textMetrics
+
+    private var cornerRadius: CGFloat { textMetrics.layoutValue(7) }
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .fill(isSelected ? Color.secondary.opacity(0.12) : Color.clear)
+            .padding(.horizontal, 2)
     }
 }

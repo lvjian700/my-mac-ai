@@ -86,6 +86,45 @@ struct PreviewOpenAIClient: OpenAIClient {
     }
 }
 
+actor PreviewConversationStore: ConversationStore {
+    private var records: [UUID: ChatConversationRecord]
+
+    init(records: [ChatConversationRecord] = PreviewData.conversations) {
+        self.records = Dictionary(uniqueKeysWithValues: records.map { ($0.id, $0) })
+    }
+
+    func listSummaries() async throws -> [ConversationSummary] {
+        records.values
+            .map(\.summary)
+            .sorted { $0.updatedAt > $1.updatedAt }
+    }
+
+    func loadConversation(id: UUID) async throws -> ChatConversationRecord {
+        guard let record = records[id] else {
+            throw ConversationStoreError.conversationNotFound(id)
+        }
+        return record
+    }
+
+    func createConversation(
+        messages: [ChatMessage],
+        transcript: [OpenAIInputItem]
+    ) async throws -> ChatConversationRecord {
+        var record = ChatConversationRecord(messages: messages, transcript: transcript)
+        record.refreshMetadata()
+        records[record.id] = record
+        return record
+    }
+
+    func saveConversation(_ conversation: ChatConversationRecord) async throws {
+        records[conversation.id] = conversation
+    }
+
+    func deleteConversation(id: UUID) async throws {
+        records[id] = nil
+    }
+}
+
 // MARK: - Sample data
 
 enum PreviewData {
@@ -399,6 +438,46 @@ enum PreviewData {
         ChatMessage(role: .assistant, text: "Team Standup is now. Lunch with Sarah is at 1 PM."),
     ]
 
+    static let conversations: [ChatConversationRecord] = [
+        conversation(
+            id: "11111111-1111-1111-1111-111111111111",
+            title: "What's the time for WWDC session planning?",
+            updatedAt: now.addingTimeInterval(-4 * 3_600),
+            messages: [
+                ChatMessage(role: .assistant, text: "Ask about your calendar or tell me what to schedule.", createdAt: now.addingTimeInterval(-4 * 3_600 - 180)),
+                ChatMessage(role: .user, text: "What's the time for WWDC session planning?", createdAt: now.addingTimeInterval(-4 * 3_600 - 120)),
+                ChatMessage(role: .assistant, text: "Yes, a few things matter next month. WWDC starts Monday morning, and your watch party is blocked for 11 AM.", createdAt: now.addingTimeInterval(-4 * 3_600)),
+            ]
+        ),
+        conversation(
+            id: "22222222-2222-2222-2222-222222222222",
+            title: "anything happening next week?",
+            updatedAt: now.addingTimeInterval(-2 * 86_400),
+            messages: [
+                ChatMessage(role: .user, text: "anything happening next week?", createdAt: now.addingTimeInterval(-2 * 86_400 - 60)),
+                ChatMessage(role: .assistant, text: "Done. Focus time is on Tuesday from 9:30 to noon, with product review on Thursday.", createdAt: now.addingTimeInterval(-2 * 86_400)),
+            ]
+        ),
+        conversation(
+            id: "33333333-3333-3333-3333-333333333333",
+            title: "watch tv right now",
+            updatedAt: now.addingTimeInterval(-7 * 86_400),
+            messages: [
+                ChatMessage(role: .user, text: "watch tv right now", createdAt: now.addingTimeInterval(-7 * 86_400 - 90)),
+                ChatMessage(role: .assistant, text: "Done. Watch TV now runs for 1 hour.", createdAt: now.addingTimeInterval(-7 * 86_400)),
+            ]
+        ),
+        conversation(
+            id: "44444444-4444-4444-4444-444444444444",
+            title: "Review next week's schedule",
+            updatedAt: now.addingTimeInterval(-32 * 86_400),
+            messages: [
+                ChatMessage(role: .user, text: "Review next week's schedule", createdAt: now.addingTimeInterval(-32 * 86_400 - 120)),
+                ChatMessage(role: .assistant, text: "You have a meeting-heavy Monday and Wednesday, with Friday mostly open.", createdAt: now.addingTimeInterval(-32 * 86_400)),
+            ]
+        ),
+    ]
+
     static let emptyChatMessages: [ChatMessage] = [
         ChatMessage(role: .assistant, text: "Ask about your calendar or tell me what to schedule.")
     ]
@@ -453,6 +532,21 @@ enum PreviewData {
 
     private static let calendar = Calendar.current
     private static let weekStart = startOfWeek(containing: now)
+
+    private static func conversation(
+        id: String,
+        title: String,
+        updatedAt: Date,
+        messages: [ChatMessage]
+    ) -> ChatConversationRecord {
+        ChatConversationRecord(
+            id: UUID(uuidString: id)!,
+            title: title,
+            createdAt: messages.first?.createdAt ?? updatedAt,
+            updatedAt: updatedAt,
+            messages: messages
+        )
+    }
 
     private static func event(
         id: String,
@@ -542,14 +636,15 @@ extension AppModel {
         status: CalendarAccessStatus = .granted,
         events: [CalendarEvent] = PreviewData.events,
         calendars: [CalendarInfo] = PreviewData.calendars,
-        messages: [ChatMessage] = PreviewData.messages,
+        messages: [ChatMessage] = PreviewData.conversations.first?.messages ?? PreviewData.messages,
         isSending: Bool = false,
         assistantLoadingState: AssistantLoadingState = .thinking
     ) -> AppModel {
+        let conversationStore = PreviewConversationStore()
         let model = AppModel(
             calendarStore: PreviewCalendarStore(status: status, calendars: calendars, events: events),
             memoryStore: MemoryStore(rootURL: URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("ical-mac-preview")),
-            conversationStore: JSONConversationStore(rootURL: URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("ical-mac-preview")),
+            conversationStore: conversationStore,
             promptStore: PromptStore(),
             apiKeyStore: PreviewAPIKeyStore(),
             client: PreviewOpenAIClient()
@@ -563,6 +658,10 @@ extension AppModel {
         model.isSending = isSending
         model.assistantLoadingState = assistantLoadingState
         model.apiKeyDraft = "preview-key"
+        model.conversationSummaries = PreviewData.conversations
+            .map(\.summary)
+            .sorted { $0.updatedAt > $1.updatedAt }
+        model.selectedConversationID = model.conversationSummaries.first?.id
         return model
     }
 }
