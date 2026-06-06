@@ -91,6 +91,74 @@ public final class AssistantService {
         }
     }
 
+    public func send(
+        _ text: String,
+        snapshot: SessionSnapshot?,
+        onToken: @escaping (String) -> Void,
+        onToolCall: @escaping (String) -> Void = { _ in }
+    ) async throws -> String {
+        guard let apiKey = apiKeyStore.readAPIKey(), !apiKey.isEmpty else {
+            throw OpenAIError.missingAPIKey
+        }
+
+        inputHistory.append(.message(role: "user", content: text))
+        let instructions = promptStore.buildSystemPrompt(
+            memory: memoryStore.readMemory(),
+            snapshot: snapshot,
+            configuration: configuration
+        )
+
+        var toolRounds = 0
+        while true {
+            let request = OpenAIRequest(
+                model: configuration.model,
+                instructions: instructions,
+                tools: CalendarToolExecutor.toolDefinitions,
+                input: inputHistory
+            )
+
+            var completedResponse: OpenAIResponse?
+            for try await event in try await client.streamResponse(request, apiKey: apiKey) {
+                switch event {
+                case .textDelta(let delta) where !delta.isEmpty:
+                    onToken(delta)
+                case .completed(let response):
+                    completedResponse = response
+                default:
+                    break
+                }
+            }
+            guard let response = completedResponse else {
+                throw OpenAIError.emptyResponse
+            }
+
+            let toolCalls = response.output.functionCalls
+            if !toolCalls.isEmpty {
+                guard toolRounds < maxToolRounds else {
+                    throw OpenAIError.toolLoopLimitExceeded(maxToolRounds)
+                }
+                toolRounds += 1
+                for call in toolCalls {
+                    inputHistory.append(.functionCall(callId: call.callId, name: call.name, arguments: call.arguments))
+                }
+                for call in toolCalls {
+                    onToolCall(call.name)
+                    let input = parseArguments(call.arguments)
+                    let output = await toolExecutor.execute(name: call.name, input: input)
+                    inputHistory.append(.functionCallOutput(callId: call.callId, output: output))
+                }
+                continue
+            }
+
+            let output = response.output.text
+            guard !output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw OpenAIError.emptyResponse
+            }
+            inputHistory.append(.message(role: "assistant", content: output))
+            return output
+        }
+    }
+
     public func evaluateInvitations(
         _ invitations: [CalendarEvent],
         snapshot: SessionSnapshot?

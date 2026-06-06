@@ -75,6 +75,15 @@ struct PreviewOpenAIClient: OpenAIClient {
     func createResponse(_ request: OpenAIRequest, apiKey: String) async throws -> OpenAIResponse {
         OpenAIResponse(output: [.message(role: "assistant", content: [.init(type: "output_text", text: "Preview response")])])
     }
+
+    func streamResponse(_ request: OpenAIRequest, apiKey: String) async throws -> AsyncThrowingStream<OpenAIStreamEvent, Error> {
+        let response = OpenAIResponse(output: [.message(role: "assistant", content: [.init(type: "output_text", text: "Preview response")])])
+        return AsyncThrowingStream { continuation in
+            continuation.yield(.textDelta("Preview response"))
+            continuation.yield(.completed(response))
+            continuation.finish()
+        }
+    }
 }
 
 // MARK: - Sample data
@@ -534,7 +543,8 @@ extension AppModel {
         events: [CalendarEvent] = PreviewData.events,
         calendars: [CalendarInfo] = PreviewData.calendars,
         messages: [ChatMessage] = PreviewData.messages,
-        isSending: Bool = false
+        isSending: Bool = false,
+        assistantLoadingState: AssistantLoadingState = .thinking
     ) -> AppModel {
         let model = AppModel(
             calendarStore: PreviewCalendarStore(status: status, calendars: calendars, events: events),
@@ -551,6 +561,7 @@ extension AppModel {
         model.statusText = "Synced 9:00 AM"
         model.messages = messages
         model.isSending = isSending
+        model.assistantLoadingState = assistantLoadingState
         model.apiKeyDraft = "preview-key"
         return model
     }

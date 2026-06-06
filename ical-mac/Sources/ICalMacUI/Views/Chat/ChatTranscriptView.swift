@@ -3,17 +3,22 @@ import SwiftUI
 
 #if DEBUG
 #Preview("Transcript - Empty") {
-    ChatTranscriptView(messages: PreviewData.emptyChatMessages, isSending: false)
+    ChatTranscriptView(messages: PreviewData.emptyChatMessages, isSending: false, assistantLoadingState: .thinking)
         .frame(width: 620, height: 520)
 }
 
 #Preview("Transcript - Active") {
-    ChatTranscriptView(messages: PreviewData.activeChatMessages, isSending: false)
+    ChatTranscriptView(messages: PreviewData.activeChatMessages, isSending: false, assistantLoadingState: .thinking)
         .frame(width: 620, height: 520)
 }
 
 #Preview("Transcript - Sending") {
-    ChatTranscriptView(messages: PreviewData.sendingChatMessages, isSending: true)
+    ChatTranscriptView(messages: PreviewData.sendingChatMessages, isSending: true, assistantLoadingState: .thinking)
+        .frame(width: 620, height: 520)
+}
+
+#Preview("Transcript - Working") {
+    ChatTranscriptView(messages: PreviewData.sendingChatMessages, isSending: true, assistantLoadingState: .working("Checking your calendar…"))
         .frame(width: 620, height: 520)
 }
 #endif
@@ -21,6 +26,7 @@ import SwiftUI
 struct ChatTranscriptView: View {
     let messages: [ChatMessage]
     let isSending: Bool
+    let assistantLoadingState: AssistantLoadingState
 
     @Environment(\.readingTextMetrics) private var textMetrics
 
@@ -39,10 +45,9 @@ struct ChatTranscriptView: View {
                                 .id(message.id)
                         }
 
-                        if isSending {
-                            ProgressView()
-                                .controlSize(.small)
-                                .padding(.horizontal)
+                        if isSending && messages.last?.role != .assistant {
+                            ChatLoadingRow(state: assistantLoadingState)
+                                .transition(.opacity)
                         }
                     }
                     .padding(.horizontal, horizontalPadding)
@@ -58,6 +63,9 @@ struct ChatTranscriptView: View {
             }
             .onChange(of: isSending) { _, isSending in
                 guard isSending else { return }
+                scrollToBottom(proxy)
+            }
+            .onChange(of: messages.last?.text) { _, _ in
                 scrollToBottom(proxy)
             }
         }

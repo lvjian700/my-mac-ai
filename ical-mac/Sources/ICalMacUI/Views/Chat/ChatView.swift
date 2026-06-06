@@ -13,9 +13,15 @@ import SwiftUI
         .frame(width: 700, height: 720)
 }
 
-#Preview("Sending") {
+#Preview("Sending - Thinking") {
     ChatView()
-        .environmentObject(AppModel.preview(messages: PreviewData.sendingChatMessages, isSending: true))
+        .environmentObject(AppModel.preview(messages: PreviewData.sendingChatMessages, isSending: true, assistantLoadingState: .thinking))
+        .frame(width: 700, height: 720)
+}
+
+#Preview("Sending - Working") {
+    ChatView()
+        .environmentObject(AppModel.preview(messages: PreviewData.sendingChatMessages, isSending: true, assistantLoadingState: .working("Checking your calendar…")))
         .frame(width: 700, height: 720)
 }
 #endif
@@ -30,7 +36,7 @@ struct ChatView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            ChatTranscriptView(messages: model.messages, isSending: model.isSending)
+            ChatTranscriptView(messages: model.messages, isSending: model.isSending, assistantLoadingState: model.assistantLoadingState)
 
             ChatComposerView(text: $draft) {
                 let text = draft

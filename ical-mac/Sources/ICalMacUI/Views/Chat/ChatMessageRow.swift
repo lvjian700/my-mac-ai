@@ -37,10 +37,8 @@ struct ChatMessageRow: View {
                     .textSelection(.enabled)
             }
             .padding(bubblePadding)
-            .background {
-                RoundedRectangle(cornerRadius: textMetrics.layoutValue(8))
-                    .fill(message.role == .user ? Color.accentColor.opacity(0.14) : Color.secondary.opacity(0.10))
-            }
+            .background(message.role == .user ? Color.accentColor.opacity(0.14) : Color.secondary.opacity(0.10))
+            .clipShape(ChatBubbleShape(isFromUser: message.role == .user))
             .frame(maxWidth: maxBubbleWidth, alignment: message.role == .user ? .trailing : .leading)
 
             if message.role != .user { Spacer(minLength: sideSpacer) }

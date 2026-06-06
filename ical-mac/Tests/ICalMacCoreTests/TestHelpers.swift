@@ -103,6 +103,17 @@ final class FakeOpenAIClient: OpenAIClient, @unchecked Sendable {
         requests.append(request)
         return responses.removeFirst()
     }
+
+    func streamResponse(_ request: OpenAIRequest, apiKey: String) async throws -> AsyncThrowingStream<OpenAIStreamEvent, Error> {
+        requests.append(request)
+        let response = responses.removeFirst()
+        let text = response.output.text
+        return AsyncThrowingStream { continuation in
+            if !text.isEmpty { continuation.yield(.textDelta(text)) }
+            continuation.yield(.completed(response))
+            continuation.finish()
+        }
+    }
 }
 
 struct FakeAPIKeyStore: APIKeyStore {

@@ -12,6 +12,7 @@ public final class AppModel: ObservableObject {
     @Published public var accessStatus: CalendarAccessStatus = .notDetermined
     @Published public var statusText = "Calendar not loaded"
     @Published public var isSending = false
+    @Published public var assistantLoadingState: AssistantLoadingState = .thinking
     @Published public var isRefreshing = false
     @Published public var apiKeyDraft = ""
     @Published public var modelName = UserDefaults.standard.string(forKey: "icalMac.model") ?? "gpt-4.5-mini"
@@ -210,19 +211,61 @@ public final class AppModel: ObservableObject {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !isSending else { return }
         isSending = true
-        defer { isSending = false }
+        assistantLoadingState = .thinking
+        defer {
+            isSending = false
+            assistantLoadingState = .thinking
+        }
         await ensureConversationLoaded()
         messages.append(ChatMessage(role: .user, text: trimmed))
         await persistCurrentConversation()
 
+        var streamingIndex: Int? = nil
+
         do {
-            let reply = try await assistant.send(trimmed, snapshot: filteredSnapshotForAssistant())
-            messages.append(ChatMessage(role: .assistant, text: reply))
+            let reply = try await assistant.send(
+                trimmed,
+                snapshot: filteredSnapshotForAssistant(),
+                onToken: { [weak self] token in
+                    guard let self else { return }
+                    if let idx = streamingIndex {
+                        messages[idx].text += token
+                    } else {
+                        messages.append(ChatMessage(role: .assistant, text: token))
+                        streamingIndex = messages.count - 1
+                    }
+                },
+                onToolCall: { [weak self] name in
+                    self?.assistantLoadingState = .working(Self.toolStatusMessage(for: name))
+                }
+            )
+            if let idx = streamingIndex {
+                messages[idx].text = reply
+            } else {
+                messages.append(ChatMessage(role: .assistant, text: reply))
+            }
             await persistCurrentConversation()
             await refreshCalendar()
         } catch {
-            messages.append(ChatMessage(role: .assistant, text: error.localizedDescription))
+            if let idx = streamingIndex {
+                messages[idx].text = error.localizedDescription
+            } else {
+                messages.append(ChatMessage(role: .assistant, text: error.localizedDescription))
+            }
             await persistCurrentConversation()
+        }
+    }
+
+    private static func toolStatusMessage(for name: String) -> String {
+        switch name {
+        case "list_calendars":    return "Reading calendars…"
+        case "list_events":       return "Checking your calendar…"
+        case "create_event":      return "Creating event…"
+        case "update_event":      return "Updating event…"
+        case "delete_event":      return "Removing event…"
+        case "write_memory":      return "Saving to memory…"
+        case "respond_to_invite": return "Responding to invitation…"
+        default:                  return "Working…"
         }
     }
 

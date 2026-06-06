@@ -22,6 +22,7 @@ public enum OpenAIError: LocalizedError, Equatable, Sendable {
 
 public protocol OpenAIClient: Sendable {
     func createResponse(_ request: OpenAIRequest, apiKey: String) async throws -> OpenAIResponse
+    func streamResponse(_ request: OpenAIRequest, apiKey: String) async throws -> AsyncThrowingStream<OpenAIStreamEvent, Error>
 }
 
 public struct URLSessionOpenAIClient: OpenAIClient {
@@ -56,6 +57,62 @@ public struct URLSessionOpenAIClient: OpenAIClient {
         }
         return try decoder.decode(OpenAIResponse.self, from: data)
     }
+
+    public func streamResponse(_ request: OpenAIRequest, apiKey: String) async throws -> AsyncThrowingStream<OpenAIStreamEvent, Error> {
+        var streamingRequest = request
+        streamingRequest.stream = true
+
+        var urlRequest = URLRequest(url: endpoint)
+        urlRequest.httpMethod = "POST"
+        urlRequest.setValue("application/json", forHTTPHeaderField: "content-type")
+        urlRequest.setValue("Bearer \(apiKey)", forHTTPHeaderField: "authorization")
+        urlRequest.httpBody = try encoder.encode(streamingRequest)
+
+        let (asyncBytes, response) = try await session.bytes(for: urlRequest)
+        guard let http = response as? HTTPURLResponse else {
+            throw OpenAIError.badHTTPStatus(-1, "Missing HTTP response")
+        }
+        guard (200..<300).contains(http.statusCode) else {
+            var body = ""
+            for try await line in asyncBytes.lines { body += line }
+            throw OpenAIError.badHTTPStatus(http.statusCode, body)
+        }
+
+        let decoder = self.decoder
+        return AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    for try await line in asyncBytes.lines {
+                        guard line.hasPrefix("data: ") else { continue }
+                        let dataStr = String(line.dropFirst("data: ".count))
+                        guard !dataStr.isEmpty, dataStr != "[DONE]" else { continue }
+                        guard let data = dataStr.data(using: .utf8) else { continue }
+                        if let event = Self.parseSSEEvent(data: data, decoder: decoder) {
+                            continuation.yield(event)
+                        }
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    private static func parseSSEEvent(data: Data, decoder: JSONDecoder) -> OpenAIStreamEvent? {
+        guard let sniff = try? decoder.decode(SSESniff.self, from: data) else { return nil }
+        switch sniff.type {
+        case "response.output_text.delta":
+            guard let payload = try? decoder.decode(SSETextDelta.self, from: data) else { return nil }
+            return .textDelta(payload.delta)
+        case "response.completed":
+            guard let payload = try? decoder.decode(SSECompleted.self, from: data) else { return nil }
+            return .completed(payload.response)
+        default:
+            return nil
+        }
+    }
 }
 
 // ── Request ───────────────────────────────────────────────────────────────
@@ -66,19 +123,22 @@ public struct OpenAIRequest: Codable, Sendable {
     public var maxOutputTokens: Int
     public var tools: [OpenAIToolDefinition]
     public var input: [OpenAIInputItem]
+    public var stream: Bool
 
     public init(
         model: String,
         instructions: String,
         maxOutputTokens: Int = 4096,
         tools: [OpenAIToolDefinition],
-        input: [OpenAIInputItem]
+        input: [OpenAIInputItem],
+        stream: Bool = false
     ) {
         self.model = model
         self.instructions = instructions
         self.maxOutputTokens = maxOutputTokens
         self.tools = tools
         self.input = input
+        self.stream = stream
     }
 
     enum CodingKeys: String, CodingKey {
@@ -87,6 +147,17 @@ public struct OpenAIRequest: Codable, Sendable {
         case maxOutputTokens = "max_output_tokens"
         case tools
         case input
+        case stream
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(model, forKey: .model)
+        try container.encode(instructions, forKey: .instructions)
+        try container.encode(maxOutputTokens, forKey: .maxOutputTokens)
+        try container.encode(tools, forKey: .tools)
+        try container.encode(input, forKey: .input)
+        if stream { try container.encode(true, forKey: .stream) }
     }
 }
 
@@ -230,9 +301,20 @@ public struct OpenAIOutputContent: Codable, Sendable {
     }
 }
 
+// ── Streaming ─────────────────────────────────────────────────────────────
+
+public enum OpenAIStreamEvent: Sendable {
+    case textDelta(String)
+    case completed(OpenAIResponse)
+}
+
+private struct SSESniff: Decodable { let type: String }
+private struct SSETextDelta: Decodable { let delta: String }
+private struct SSECompleted: Decodable { let response: OpenAIResponse }
+
 // ── Convenience extensions ────────────────────────────────────────────────
 
-extension Array where Element == OpenAIOutputItem {
+public extension Array where Element == OpenAIOutputItem {
     var functionCalls: [(callId: String, name: String, arguments: String)] {
         compactMap { item in
             if case .functionCall(let callId, let name, let arguments) = item {
