@@ -56,7 +56,7 @@ struct ChatComposerView: View {
     private var maximumInputHeight: CGFloat { max(112, inputFontSize * 8.1) }
     private var editorVerticalInset: CGFloat { max(22, inputFontSize * 1.7) }
     private let editorMeasureHorizontalInset: CGFloat = 8
-    private let editorPlaceholderPadding = EdgeInsets(top: 7, leading: 0, bottom: 0, trailing: 0)
+    private let editorPlaceholderPadding = EdgeInsets(top: 0, leading: 5, bottom: 0, trailing: 0)
 
     private var editorHeight: CGFloat {
         guard editorWidth > 0 else { return minimumInputHeight }
@@ -123,36 +123,35 @@ struct ChatComposerView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: composerSpacing) {
-            ZStack(alignment: .topLeading) {
-                TextEditor(text: $text)
-                    .font(textMetrics.font(.body))
-                    .scrollContentBackground(.hidden)
-                    .focused($isFocused)
-                    .onAppear { isFocused = true }
-                    .frame(
-                        maxWidth: .infinity,
-                        minHeight: editorHeight,
-                        maxHeight: editorHeight,
-                        alignment: .topLeading
-                    )
-
-                if text.isEmpty {
-                    Text("Ask anything")
-                        .font(textMetrics.font(.body))
-                        .foregroundStyle(.secondary)
-                        .allowsHitTesting(false)
-                        .padding(editorPlaceholderPadding)
+            TextEditor(text: $text)
+                .font(textMetrics.font(.body))
+                .scrollContentBackground(.hidden)
+                .focused($isFocused)
+                .onAppear { isFocused = true }
+                .frame(
+                    maxWidth: .infinity,
+                    minHeight: editorHeight,
+                    maxHeight: editorHeight,
+                    alignment: .topLeading
+                )
+                .overlay(alignment: .topLeading) {
+                    if text.isEmpty {
+                        Text("Ask anything")
+                            .font(textMetrics.font(.body))
+                            .foregroundStyle(.secondary)
+                            .allowsHitTesting(false)
+                            .padding(editorPlaceholderPadding)
+                    }
                 }
-            }
-            .background {
-                GeometryReader { proxy in
-                    Color.clear
-                        .onAppear { editorWidth = proxy.size.width }
-                        .onChange(of: proxy.size.width) { _, width in
-                            editorWidth = width
-                        }
+                .background {
+                    GeometryReader { proxy in
+                        Color.clear
+                            .onAppear { editorWidth = proxy.size.width }
+                            .onChange(of: proxy.size.width) { _, width in
+                                editorWidth = width
+                            }
+                    }
                 }
-            }
 
             if shouldShowCaptureControls {
                 RecordingControlsView(
