@@ -390,6 +390,49 @@ enum PreviewData {
         ChatMessage(role: .assistant, text: "Team Standup is now. Lunch with Sarah is at 1 PM."),
     ]
 
+    static let emptyChatMessages: [ChatMessage] = [
+        ChatMessage(role: .assistant, text: "Ask about your calendar or tell me what to schedule.")
+    ]
+
+    static let userChatMessage = ChatMessage(
+        role: .user,
+        text: "Move design review to tomorrow at 3 PM."
+    )
+
+    static let assistantChatMessage = ChatMessage(
+        role: .assistant,
+        text: "I found one design review tomorrow afternoon and can move it to 3 PM."
+    )
+
+    static let markdownAssistantChatMessage = ChatMessage(
+        role: .assistant,
+        text: "**Plan:** move Design Review to 3 PM, then refresh the week calendar."
+    )
+
+    static let activeChatMessages: [ChatMessage] = [
+        emptyChatMessages[0],
+        ChatMessage(role: .user, text: "What's on my calendar today?"),
+        ChatMessage(role: .assistant, text: "Team Standup is now. Lunch with Sarah is at 1 PM."),
+        userChatMessage,
+        assistantChatMessage,
+    ]
+
+    static let sendingChatMessages: [ChatMessage] = activeChatMessages + [
+        ChatMessage(role: .user, text: "Add a short focus block after lunch.")
+    ]
+
+    static let shortComposerDraft = "Schedule a 30 minute planning block tomorrow morning."
+
+    static let longComposerDraft = """
+    Move the vendor sync out of the afternoon and find the next quiet slot this week.
+    Keep lunch and the design review untouched.
+    """
+
+    static let voiceInputLevels: [Double] = [
+        0.12, 0.22, 0.36, 0.58, 0.32, 0.74, 0.42, 0.27,
+        0.63, 0.88, 0.45, 0.19, 0.35, 0.70, 0.52, 0.24,
+    ]
+
     private static func invitation(status: CalendarParticipantStatus, organizer: String) -> CalendarInvitationInfo {
         CalendarInvitationInfo(
             currentUserStatus: status,
@@ -490,7 +533,8 @@ extension AppModel {
         status: CalendarAccessStatus = .granted,
         events: [CalendarEvent] = PreviewData.events,
         calendars: [CalendarInfo] = PreviewData.calendars,
-        messages: [ChatMessage] = PreviewData.messages
+        messages: [ChatMessage] = PreviewData.messages,
+        isSending: Bool = false
     ) -> AppModel {
         let model = AppModel(
             calendarStore: PreviewCalendarStore(status: status, calendars: calendars, events: events),
@@ -506,6 +550,7 @@ extension AppModel {
         model.displayedWeekStartDate = PreviewData.visibleWeekStart
         model.statusText = "Synced 9:00 AM"
         model.messages = messages
+        model.isSending = isSending
         model.apiKeyDraft = "preview-key"
         return model
     }
