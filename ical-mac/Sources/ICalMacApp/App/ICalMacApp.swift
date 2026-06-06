@@ -75,7 +75,7 @@ private func preferredReadingTextCategory() -> String {
         return "M"
     }
 
-    let bundleIdentifier = Bundle.main.bundleIdentifier ?? "ai.my-mac.ical-mac"
+    let bundleIdentifier = Bundle.main.bundleIdentifier ?? "jian.ai.ical-mac"
     let appValue = categories[bundleIdentifier] as? String
     if let appValue, appValue != "UseGlobal" {
         return appValue

@@ -19,7 +19,7 @@ public protocol APIKeyStore: Sendable {
 }
 
 public struct AnthropicAPIKeyStore: APIKeyStore {
-    private let service = "ai.my-mac.ical-mac"
+    private let service = "jian.ai.ical-mac"
     private let account = "anthropic-api-key"
 
     public init() {}
@@ -73,7 +73,7 @@ public struct AnthropicAPIKeyStore: APIKeyStore {
 }
 
 public struct OpenAIAPIKeyStore: APIKeyStore {
-    private let service = "ai.my-mac.ical-mac"
+    private let service = "jian.ai.ical-mac"
     private let account = "openai-api-key"
 
     public init() {}

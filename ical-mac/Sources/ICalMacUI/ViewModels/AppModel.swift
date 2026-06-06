@@ -237,6 +237,9 @@ public final class AppModel: ObservableObject {
                 },
                 onToolCall: { [weak self] name in
                     self?.assistantLoadingState = .working(Self.toolStatusMessage(for: name))
+                },
+                onRetry: { [weak self] attempt, max in
+                    self?.assistantLoadingState = .working("Retrying \(attempt)/\(max)…")
                 }
             )
             if let idx = streamingIndex {

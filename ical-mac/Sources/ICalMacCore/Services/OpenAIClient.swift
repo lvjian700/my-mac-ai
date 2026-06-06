@@ -5,6 +5,9 @@ public enum OpenAIError: LocalizedError, Equatable, Sendable {
     case badHTTPStatus(Int, String)
     case emptyResponse
     case toolLoopLimitExceeded(Int)
+    /// Retryable HTTP error (429/502/503) that persisted after all retry attempts.
+    /// `body` contains the raw server response for debugging.
+    case transientFailureExhausted(code: Int, body: String)
 
     public var errorDescription: String? {
         switch self {
@@ -16,6 +19,8 @@ public enum OpenAIError: LocalizedError, Equatable, Sendable {
             return "OpenAI returned no assistant text."
         case .toolLoopLimitExceeded(let limit):
             return "Assistant stopped after \(limit) tool rounds without a final answer."
+        case .transientFailureExhausted(let code, _):
+            return "OpenAI is temporarily unavailable (HTTP \(code)). Please try again in a moment."
         }
     }
 }

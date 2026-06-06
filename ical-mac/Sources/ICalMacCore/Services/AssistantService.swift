@@ -1,4 +1,5 @@
 import Foundation
+import os.log
 
 @MainActor
 public final class AssistantService {
@@ -63,7 +64,7 @@ public final class AssistantService {
                 tools: CalendarToolExecutor.toolDefinitions,
                 input: inputHistory
             )
-            let response = try await client.createResponse(request, apiKey: apiKey)
+            let response = try await withRetry { try await client.createResponse(request, apiKey: apiKey) }
 
             let toolCalls = response.output.functionCalls
             if !toolCalls.isEmpty {
@@ -95,7 +96,8 @@ public final class AssistantService {
         _ text: String,
         snapshot: SessionSnapshot?,
         onToken: @escaping (String) -> Void,
-        onToolCall: @escaping (String) -> Void = { _ in }
+        onToolCall: @escaping (String) -> Void = { _ in },
+        onRetry: @escaping (Int, Int) -> Void = { _, _ in }
     ) async throws -> String {
         guard let apiKey = apiKeyStore.readAPIKey(), !apiKey.isEmpty else {
             throw OpenAIError.missingAPIKey
@@ -118,7 +120,8 @@ public final class AssistantService {
             )
 
             var completedResponse: OpenAIResponse?
-            for try await event in try await client.streamResponse(request, apiKey: apiKey) {
+            let stream = try await withRetry(onRetry: onRetry) { try await client.streamResponse(request, apiKey: apiKey) }
+            for try await event in stream {
                 switch event {
                 case .textDelta(let delta) where !delta.isEmpty:
                     onToken(delta)
@@ -194,6 +197,37 @@ public final class AssistantService {
         )
         let response = try await client.createResponse(request, apiKey: apiKey)
         return response.output.text
+    }
+
+    private static let logger = Logger(subsystem: "jian.ai.ical-mac", category: "AssistantService")
+
+    // Retries on transient OpenAI HTTP errors (429, 502, 503) with 1s/2s/3s backoff.
+    // onRetry is called with (attemptNumber, maxRetries) before each sleep.
+    // On exhaustion logs the full server body at .error level and throws transientFailureExhausted.
+    private func withRetry<T>(
+        onRetry: ((Int, Int) -> Void)? = nil,
+        _ operation: () async throws -> T
+    ) async throws -> T {
+        let maxRetries = 3
+        let retryDelays: [Duration] = [.seconds(1), .seconds(2), .seconds(3)]
+        var attempt = 0
+        while true {
+            do {
+                return try await operation()
+            } catch let error as OpenAIError {
+                guard case .badHTTPStatus(let code, let body) = error,
+                      [429, 502, 503].contains(code) else {
+                    throw error
+                }
+                guard attempt < maxRetries else {
+                    Self.logger.error("OpenAI transient failure exhausted after \(maxRetries) retries — HTTP \(code): \(body)")
+                    throw OpenAIError.transientFailureExhausted(code: code, body: body)
+                }
+                attempt += 1
+                onRetry?(attempt, maxRetries)
+                try await Task.sleep(for: retryDelays[attempt - 1])
+            }
+        }
     }
 
     private func parseArguments(_ arguments: String) -> JSONValue {

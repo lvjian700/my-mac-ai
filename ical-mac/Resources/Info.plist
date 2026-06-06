@@ -5,7 +5,7 @@
     <key>CFBundleExecutable</key>
     <string>ical-mac</string>
     <key>CFBundleIdentifier</key>
-    <string>ai.my-mac.ical-mac</string>
+    <string>jian.ai.ical-mac</string>
     <key>CFBundleName</key>
     <string>ical-mac</string>
     <key>CFBundleDisplayName</key>

@@ -79,6 +79,14 @@ User message
 - Empty weeks should still render the week grid; only denied Calendar access should replace the grid with an unavailable state.
 - Calendar UI tests should use fake stores. Do not add default tests that require live Calendar permission.
 
+## Logging
+
+Uses `os.Logger` with subsystem `jian.ai.ical-mac`. Stream live logs:
+
+```bash
+log stream --predicate 'subsystem == "jian.ai.ical-mac"' --level debug
+```
+
 ## Notes
 
 This app does not reuse TypeScript, Bun, Ink, or the `ical-chat` runtime.

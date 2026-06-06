@@ -24,6 +24,12 @@ import SwiftUI
         .environmentObject(AppModel.preview(messages: PreviewData.sendingChatMessages, isSending: true, assistantLoadingState: .working("Checking your calendar…")))
         .frame(width: 700, height: 720)
 }
+
+#Preview("Sending - Retrying") {
+    ChatView()
+        .environmentObject(AppModel.preview(messages: PreviewData.sendingChatMessages, isSending: true, assistantLoadingState: .working("Retrying 2/3…")))
+        .frame(width: 700, height: 720)
+}
 #endif
 
 struct ChatView: View {
