@@ -233,7 +233,7 @@ private struct CalendarEventTitleLabel: View {
     let isDeclined: Bool
 
     var body: some View {
-        HStack(spacing: spacing) {
+        HStack(alignment: .firstTextBaseline, spacing: spacing) {
             if let symbolName {
                 Image(systemName: symbolName)
                     .font(font)
