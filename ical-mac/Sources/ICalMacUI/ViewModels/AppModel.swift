@@ -2,6 +2,10 @@ import Foundation
 import ICalMacCore
 import os
 
+public enum APIKeyStatus: Equatable, Sendable {
+    case unknown, testing, connected, failed(String)
+}
+
 @MainActor
 public final class AppModel: ObservableObject {
     public struct AssistantModelOption: Identifiable, Equatable, Sendable {
@@ -26,6 +30,7 @@ public final class AppModel: ObservableObject {
     @Published public var isSending = false
     @Published public var assistantLoadingState: AssistantLoadingState = .thinking
     @Published public var isRefreshing = false
+    @Published public var apiKeyStatus: APIKeyStatus = .unknown
     @Published public var apiKeyDraft = ""
     @Published public var modelName: String
     @Published public var defaultCalendarTitle = UserDefaults.standard.string(forKey: "icalMac.defaultCalendarTitle") ?? ""
@@ -105,6 +110,28 @@ public final class AppModel: ObservableObject {
     public func loadAPIKeyDraft() {
         guard !isUsingEnvAPIKey else { return }
         apiKeyDraft = apiKeyStore.readAPIKey() ?? ""
+    }
+
+    public func testAPIKeyConnectivity() async {
+        let key: String
+        if isUsingEnvAPIKey {
+            key = ProcessInfo.processInfo.environment["OPENAI_API_KEY"] ?? ""
+        } else {
+            key = apiKeyStore.readAPIKey() ?? ""
+        }
+        guard !key.isEmpty else {
+            apiKeyStatus = .failed("No API key configured")
+            return
+        }
+        apiKeyStatus = .testing
+        do {
+            var req = URLRequest(url: URL(string: "https://api.openai.com/v1/models")!)
+            req.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+            let (_, resp) = try await URLSession.shared.data(for: req)
+            apiKeyStatus = (resp as? HTTPURLResponse)?.statusCode == 200 ? .connected : .failed("Unexpected response")
+        } catch {
+            apiKeyStatus = .failed(error.localizedDescription)
+        }
     }
 
     public var displayedWeekRange: CalendarQuery {
@@ -312,19 +339,17 @@ public final class AppModel: ObservableObject {
         modelName = Self.supportedModelName(from: modelName)
         persistModelName()
         rebuildAssistant()
-        statusText = "Settings saved"
     }
 
     public func saveDefaultCalendarSetting() {
         persistDefaultCalendarTitle()
         rebuildAssistant()
-        statusText = "Settings saved"
     }
 
     public func saveAPIKeySetting() {
         do {
             try persistAPIKeyDraft()
-            statusText = "Settings saved"
+            apiKeyStatus = .unknown
         } catch {
             statusText = error.localizedDescription
         }

@@ -51,7 +51,7 @@ struct ICalMacApp: App {
             SettingsView()
                 .environmentObject(model)
                 .environment(\.readingTextMetrics, textMetrics)
-                .frame(width: 520)
+                .frame(width: 550)
         }
     }
 }
