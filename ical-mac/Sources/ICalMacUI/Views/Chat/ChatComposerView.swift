@@ -33,7 +33,7 @@ import SwiftUI
 
 struct ChatComposerView: View {
     @EnvironmentObject private var model: AppModel
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.readingTextMetrics) private var textMetrics
     @StateObject private var voiceInput = VoiceInputController()
     @Binding var text: String
     var onSubmit: () -> Void
@@ -51,7 +51,7 @@ struct ChatComposerView: View {
     private let sendButtonSide: CGFloat = 30
     private let voiceButtonSide: CGFloat = 30
     private let controlsSpacing: CGFloat = 6
-    private var inputFontSize: CGFloat { dynamicTypeSize.bodyPointSize }
+    private var inputFontSize: CGFloat { textMetrics.value(ReadingTextStyle.body.baseSize) }
     private var minimumInputHeight: CGFloat { max(38, inputFontSize * 2.65) }
     private var maximumInputHeight: CGFloat { max(112, inputFontSize * 8.1) }
     private var editorVerticalInset: CGFloat { max(22, inputFontSize * 1.7) }
@@ -124,7 +124,7 @@ struct ChatComposerView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: composerSpacing) {
             TextEditor(text: $text)
-                .font(.body)
+                .font(textMetrics.font(.body))
                 .scrollContentBackground(.hidden)
                 .focused($isFocused)
                 .onAppear { isFocused = true }
@@ -137,7 +137,7 @@ struct ChatComposerView: View {
                 .overlay(alignment: .topLeading) {
                     if text.isEmpty {
                         Text("Ask anything")
-                            .font(.body)
+                            .font(textMetrics.font(.body))
                             .foregroundStyle(.secondary)
                             .allowsHitTesting(false)
                             .padding(editorPlaceholderPadding)

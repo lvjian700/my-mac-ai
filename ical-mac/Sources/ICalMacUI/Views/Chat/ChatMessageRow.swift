@@ -21,21 +21,27 @@ import SwiftUI
 struct ChatMessageRow: View {
     let message: ChatMessage
 
+    @Environment(\.readingTextMetrics) private var textMetrics
+
+    private var bubblePadding: CGFloat { textMetrics.layoutValue(10) }
+    private var sideSpacer: CGFloat { textMetrics.layoutValue(80) }
+    private var maxBubbleWidth: CGFloat { textMetrics.layoutValue(760) }
+
     var body: some View {
         HStack(alignment: .top) {
-            if message.role == .user { Spacer(minLength: 80) }
+            if message.role == .user { Spacer(minLength: sideSpacer) }
 
             VStack(alignment: .leading) {
                 ChatMessageText(message: message)
-                    .font(.body)
+                    .font(textMetrics.font(.body))
                     .textSelection(.enabled)
             }
-            .padding(10)
+            .padding(bubblePadding)
             .background(message.role == .user ? Color.accentColor.opacity(0.14) : Color.secondary.opacity(0.10))
             .clipShape(ChatBubbleShape(isFromUser: message.role == .user))
-            .frame(maxWidth: 760, alignment: message.role == .user ? .trailing : .leading)
+            .frame(maxWidth: maxBubbleWidth, alignment: message.role == .user ? .trailing : .leading)
 
-            if message.role != .user { Spacer(minLength: 80) }
+            if message.role != .user { Spacer(minLength: sideSpacer) }
         }
     }
 }

@@ -11,29 +11,30 @@ import SwiftUI
 
 struct WeekGridView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.readingTextMetrics) private var textMetrics
     @State private var selectedDetailEvent: CalendarEvent?
 
     private let calendar = Calendar.current
 
-    private var hourHeight: CGFloat { 60 }
-    private var timeColumnWidth: CGFloat { 72 }
-    private var minimumDayWidth: CGFloat { 96 }
+    private var hourHeight: CGFloat { textMetrics.layoutValue(60) }
+    private var timeColumnWidth: CGFloat { textMetrics.layoutValue(72) }
+    private var minimumDayWidth: CGFloat { textMetrics.layoutValue(96) }
     private var dayHeaderHeight: CGFloat { 44 }
     private var dayHeaderVerticalPadding: CGFloat { 0 }
     private var trailingPadding: CGFloat { 6 }
-    private var allDayEventHeight: CGFloat { 28 }
+    private var allDayEventHeight: CGFloat { textMetrics.layoutValue(28) }
     private var allDayEventSpacing: CGFloat { 4 }
     private var allDayEventHorizontalPadding: CGFloat { 3 }
     private var allDayEventVerticalPadding: CGFloat { 5 }
-    private var minimumAllDayRowHeight: CGFloat { 40 }
+    private var minimumAllDayRowHeight: CGFloat { textMetrics.layoutValue(40) }
     private var allDaySeparatorHeight: CGFloat { 2 }
-    private var hourLabelOffset: CGFloat { 7 }
+    private var hourLabelOffset: CGFloat { textMetrics.layoutValue(7) }
     private var eventHorizontalInset: CGFloat { 1 }
     private var timedEventLaneGap: CGFloat { 2 }
-    private var currentTimeLabelHeight: CGFloat { 20 }
-    private var currentTimeDotSide: CGFloat { 9 }
-    private var currentTimeLineHeight: CGFloat { 2 }
-    private var calendarBottomScrollPadding: CGFloat { 12 }
+    private var currentTimeLabelHeight: CGFloat { textMetrics.layoutValue(20) }
+    private var currentTimeDotSide: CGFloat { textMetrics.layoutValue(9) }
+    private var currentTimeLineHeight: CGFloat { textMetrics.layoutValue(2) }
+    private var calendarBottomScrollPadding: CGFloat { textMetrics.layoutValue(12) }
     private var dayColumnCount: CGFloat { CGFloat(days.count) }
 
     private var days: [Date] {
@@ -59,7 +60,6 @@ struct WeekGridView: View {
             }
             .frame(width: layout.contentWidth, height: geometry.size.height, alignment: .topLeading)
         }
-        .dynamicTypeSize(.xSmall ... .xxLarge)
     }
 
     private func calendarLayout(for viewportWidth: CGFloat) -> (dayWidth: CGFloat, contentWidth: CGFloat) {

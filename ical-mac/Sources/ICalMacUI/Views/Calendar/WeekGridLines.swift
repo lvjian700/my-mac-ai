@@ -26,6 +26,7 @@ struct WeekGridLines: View {
     let eventHorizontalInset: CGFloat
     let hourLabelOffset: CGFloat
     let dateForHour: (Int) -> Date
+    @Environment(\.readingTextMetrics) private var textMetrics
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -37,7 +38,7 @@ struct WeekGridLines: View {
 
                 if hour < 24 {
                     Text(Self.hourFormatter.string(from: dateForHour(hour)))
-                        .font(.caption)
+                        .font(textMetrics.font(.caption))
                         .foregroundStyle(.secondary)
                         .frame(width: timeColumnWidth - trailingPadding, alignment: .trailing)
                         .offset(y: hour == 0 ? eventHorizontalInset : CGFloat(hour) * hourHeight - hourLabelOffset)

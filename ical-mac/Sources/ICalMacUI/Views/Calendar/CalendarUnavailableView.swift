@@ -15,17 +15,20 @@ struct CalendarUnavailableView: View {
     let title: String
     let systemImage: String
     let detail: String
+    @Environment(\.readingTextMetrics) private var textMetrics
+
+    private var topSpacer: CGFloat { textMetrics.layoutValue(80) }
 
     var body: some View {
         VStack {
-            Spacer(minLength: 80)
+            Spacer(minLength: topSpacer)
 
             ContentUnavailableView {
                 Label(title, systemImage: systemImage)
-                    .font(.title3.weight(.semibold))
+                    .font(textMetrics.font(.title3, weight: .semibold))
             } description: {
                 Text(detail)
-                    .font(.body)
+                    .font(textMetrics.font(.body))
             }
 
             Spacer()

@@ -28,10 +28,12 @@ struct ChatTranscriptView: View {
     let isSending: Bool
     let assistantLoadingState: AssistantLoadingState
 
-    private var horizontalPadding: CGFloat { 24 }
-    private var topPadding: CGFloat { 18 }
-    private var bottomPadding: CGFloat { 220 }
-    private var spacing: CGFloat { 12 }
+    @Environment(\.readingTextMetrics) private var textMetrics
+
+    private var horizontalPadding: CGFloat { textMetrics.layoutValue(24) }
+    private var topPadding: CGFloat { textMetrics.layoutValue(18) }
+    private var bottomPadding: CGFloat { textMetrics.layoutValue(220) }
+    private var spacing: CGFloat { textMetrics.layoutValue(12) }
 
     var body: some View {
         ScrollViewReader { proxy in
