@@ -11,6 +11,7 @@ import SwiftUI
 public struct SettingsView: View {
     @EnvironmentObject private var model: AppModel
     @State private var hasLoadedAPIKey = false
+    @State private var apiKeySaveTask: Task<Void, Never>?
 
     public init() {}
 
@@ -25,13 +26,20 @@ public struct SettingsView: View {
                     }
                 } else {
                     SecureField("API key", text: $model.apiKeyDraft)
+                        .onSubmit {
+                            saveAPIKeyNow()
+                        }
                 }
-                TextField("Model", text: $model.modelName)
-                    .help("e.g. gpt-4.5-mini, gpt-4o, o3")
-                Button("Save Settings") {
-                    model.saveSettings()
+                Picker("Model", selection: $model.modelName) {
+                    ForEach(AppModel.supportedModelOptions) { option in
+                        Text(option.label).tag(option.modelID)
+                    }
                 }
-                .keyboardShortcut("s", modifiers: [.command])
+                .pickerStyle(.menu)
+                .help("Select the OpenAI model used for calendar assistant replies.")
+                .onChange(of: model.modelName) { _, _ in
+                    model.saveModelSetting()
+                }
             }
 
             Section("Calendar") {
@@ -40,6 +48,9 @@ public struct SettingsView: View {
                     ForEach(model.calendars.filter(\.allowsContentModifications)) { calendar in
                         Text("\(calendar.title) (\(calendar.accountName))").tag(calendar.title)
                     }
+                }
+                .onChange(of: model.defaultCalendarTitle) { _, _ in
+                    model.saveDefaultCalendarSetting()
                 }
                 Text(model.statusText)
                     .foregroundStyle(.secondary)
@@ -54,5 +65,28 @@ public struct SettingsView: View {
             hasLoadedAPIKey = true
             model.loadAPIKeyDraft()
         }
+        .onChange(of: model.apiKeyDraft) { _, _ in
+            scheduleAPIKeySave()
+        }
+        .onDisappear {
+            saveAPIKeyNow()
+        }
+    }
+
+    private func scheduleAPIKeySave() {
+        guard hasLoadedAPIKey, !model.isUsingEnvAPIKey else { return }
+        apiKeySaveTask?.cancel()
+        apiKeySaveTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(500))
+            guard !Task.isCancelled else { return }
+            model.saveAPIKeySetting()
+        }
+    }
+
+    private func saveAPIKeyNow() {
+        guard hasLoadedAPIKey, !model.isUsingEnvAPIKey else { return }
+        apiKeySaveTask?.cancel()
+        apiKeySaveTask = nil
+        model.saveAPIKeySetting()
     }
 }

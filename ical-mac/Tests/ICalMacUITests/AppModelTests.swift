@@ -85,6 +85,14 @@ struct AppModelTests {
         #expect(model.apiKeyDraft == "test-key")
     }
 
+    @Test func supportedModelNameAllowsOnlySettingsPickerModels() {
+        #expect(AppModel.supportedModelOptions.map(\.modelID) == ["gpt-5-mini", "gpt-5.5"])
+        #expect(AppModel.supportedModelName(from: "gpt-5-mini") == "gpt-5-mini")
+        #expect(AppModel.supportedModelName(from: "gpt-5.5") == "gpt-5.5")
+        #expect(AppModel.supportedModelName(from: "gpt-4.5-mini") == AppModel.defaultModelName)
+        #expect(AppModel.supportedModelName(from: nil) == AppModel.defaultModelName)
+    }
+
     @Test func sendingMessageRefreshesCalendarAfterAssistantReply() async throws {
         let store = FakeUICalendarStore()
         store.calendars = [
