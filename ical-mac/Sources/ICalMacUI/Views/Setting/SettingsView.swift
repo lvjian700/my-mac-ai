@@ -1,11 +1,34 @@
 import SwiftUI
 
 #if DEBUG
-#Preview {
+#Preview("No API key") {
     SettingsView()
-        .environmentObject(AppModel.preview())
-        .frame(height: 380)
-        .frame(width: 550)
+        .environmentObject(AppModel.preview(apiKeyStatus: .unknown, apiKeyDraft: ""))
+        .frame(width: 550, height: 380)
+}
+
+#Preview("Test button") {
+    SettingsView()
+        .environmentObject(AppModel.preview(apiKeyStatus: .unknown))
+        .frame(width: 550, height: 380)
+}
+
+#Preview("Testing…") {
+    SettingsView()
+        .environmentObject(AppModel.preview(apiKeyStatus: .testing))
+        .frame(width: 550, height: 380)
+}
+
+#Preview("Connected") {
+    SettingsView()
+        .environmentObject(AppModel.preview(apiKeyStatus: .connected))
+        .frame(width: 550, height: 380)
+}
+
+#Preview("Failed") {
+    SettingsView()
+        .environmentObject(AppModel.preview(apiKeyStatus: .failed("Invalid API key — check your key and try again.")))
+        .frame(width: 550, height: 380)
 }
 #endif
 
@@ -18,25 +41,26 @@ public struct SettingsView: View {
 
     public var body: some View {
         Form {
-            Section("AI") {
-                HStack(alignment: .center, spacing: 12) {
-                    Image(systemName: "sparkles")
-                        .foregroundStyle(.tint)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("OpenAI")
-                            .font(.headline)
+            Section("OpenAI Config") {
+                LabeledContent {
+                    HStack(spacing: 8) {
                         if model.isUsingEnvAPIKey {
-                            Text("API key loaded from environment")
-                                .font(.caption)
+                            Text("Loaded from environment")
                                 .foregroundStyle(.secondary)
                         } else {
-                            SecureField("Paste API key…", text: $model.apiKeyDraft)
+                            SecureField("", text: $model.apiKeyDraft)
+                                
+                                .textFieldStyle(.roundedBorder)
                                 .onSubmit { saveAPIKeyNow() }
                         }
+                        connectivityControl
                     }
-                    Spacer()
-                    connectivityControl
-                }
+                    
+                    .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] }
+                } label: {
+                    Label("API Key", systemImage: "sparkles")
+                        .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] }
+                }.padding(.top, 5)
 
                 LabeledContent {
                     Picker("", selection: $model.modelName) {

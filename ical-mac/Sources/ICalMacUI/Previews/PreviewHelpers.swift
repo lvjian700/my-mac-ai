@@ -66,7 +66,8 @@ final class PreviewCalendarStore: CalendarStore {
 }
 
 struct PreviewAPIKeyStore: APIKeyStore {
-    func readAPIKey() -> String? { "preview-key" }
+    var key: String?
+    func readAPIKey() -> String? { key }
     func writeAPIKey(_ key: String) throws {}
     func deleteAPIKey() throws {}
 }
@@ -638,7 +639,9 @@ extension AppModel {
         calendars: [CalendarInfo] = PreviewData.calendars,
         messages: [ChatMessage] = PreviewData.conversations.first?.messages ?? PreviewData.messages,
         isSending: Bool = false,
-        assistantLoadingState: AssistantLoadingState = .thinking
+        assistantLoadingState: AssistantLoadingState = .thinking,
+        apiKeyStatus: APIKeyStatus = .unknown,
+        apiKeyDraft: String = "preview-key"
     ) -> AppModel {
         let conversationStore = PreviewConversationStore()
         let model = AppModel(
@@ -646,7 +649,7 @@ extension AppModel {
             memoryStore: MemoryStore(rootURL: URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("ical-mac-preview")),
             conversationStore: conversationStore,
             promptStore: PromptStore(),
-            apiKeyStore: PreviewAPIKeyStore(),
+            apiKeyStore: PreviewAPIKeyStore(key: apiKeyDraft.isEmpty ? nil : apiKeyDraft),
             client: PreviewOpenAIClient()
         )
         model.events = events
@@ -657,7 +660,8 @@ extension AppModel {
         model.messages = messages
         model.isSending = isSending
         model.assistantLoadingState = assistantLoadingState
-        model.apiKeyDraft = "preview-key"
+        model.apiKeyDraft = apiKeyDraft
+        model.apiKeyStatus = apiKeyStatus
         model.conversationSummaries = PreviewData.conversations
             .map(\.summary)
             .sorted { $0.updatedAt > $1.updatedAt }
