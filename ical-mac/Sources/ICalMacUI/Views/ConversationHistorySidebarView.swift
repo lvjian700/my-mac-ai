@@ -77,25 +77,14 @@ struct ConversationHistorySidebarView: View {
 }
 
 private struct SidebarFooter: View {
-    @EnvironmentObject private var model: AppModel
     @Environment(\.readingTextMetrics) private var textMetrics
 
-    private var footerSpacing: CGFloat { 8 }
     private var horizontalPadding: CGFloat { 14 }
     private var verticalPadding: CGFloat { 12 }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: footerSpacing) {
+        VStack(alignment: .leading, spacing: 0) {
             Divider()
-
-            Label(model.statusText, systemImage: model.isRefreshing ? "arrow.triangle.2.circlepath" : "checkmark.circle")
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
-
-            if model.isShowingCachedSnapshot {
-                Label("Showing cached events", systemImage: "externaldrive")
-                    .foregroundStyle(.secondary)
-            }
 
             SettingsLink {
                 Label("Settings", systemImage: "gearshape")
