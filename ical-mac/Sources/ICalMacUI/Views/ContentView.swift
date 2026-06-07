@@ -11,7 +11,6 @@ import SwiftUI
 
 public struct ContentView: View {
     @EnvironmentObject private var model: AppModel
-    @Environment(\.readingTextMetrics) private var textMetrics
     @State private var columnVisibility = NavigationSplitViewVisibility.all
 
     public init() {}
@@ -19,27 +18,13 @@ public struct ContentView: View {
     public var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             ConversationHistorySidebarView()
-                .navigationSplitViewColumnWidth(
-                    min: textMetrics.layoutValue(200),
-                    ideal: textMetrics.layoutValue(240),
-                    max: textMetrics.layoutValue(320)
-                )
+                .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 320)
         } content: {
             ChatView()
-                .navigationSplitViewColumnWidth(
-                    min: textMetrics.layoutValue(240),
-                    ideal: textMetrics.layoutValue(280),
-                    max: textMetrics.layoutValue(480)
-                )
-            
+                .navigationSplitViewColumnWidth(min: 240, ideal: 280, max: 480)
         } detail: {
             WeekCalendarView()
-                .navigationSplitViewColumnWidth(
-                    min: textMetrics.layoutValue(760),
-                    ideal: textMetrics.layoutValue(980),
-                    max: textMetrics.layoutValue(1440)
-                    
-                )
+                .navigationSplitViewColumnWidth(min: 760, ideal: 980, max: 1440)
         }
         .onAppear {
             model.startAutoRefresh()

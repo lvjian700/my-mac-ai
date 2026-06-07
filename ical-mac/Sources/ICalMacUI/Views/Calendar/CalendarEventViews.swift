@@ -77,7 +77,6 @@ import SwiftUI
 
 struct CalendarEventChip: View {
     let event: CalendarEvent
-    @Environment(\.readingTextMetrics) private var textMetrics
 
     private var horizontalPadding: CGFloat { 6 }
     private var verticalPadding: CGFloat { 3 }
@@ -94,9 +93,9 @@ struct CalendarEventChip: View {
         CalendarEventTitleLabel(
             title: event.title,
             symbolName: categoryPresentation.symbolName,
-            font: textMetrics.font(.caption, weight: .medium),
-            iconWidth: textMetrics.layoutValue(12),
-            spacing: textMetrics.layoutValue(3),
+            font: .caption.weight(.medium),
+            iconWidth: 12,
+            spacing: 3,
             lineLimit: 1,
             showsRecurrenceIcon: event.isRecurring,
             isDeclined: statusPresentation?.isDeclined == true
@@ -132,7 +131,6 @@ struct CalendarEventChip: View {
 
 struct CalendarEventBlock: View {
     let event: CalendarEvent
-    @Environment(\.readingTextMetrics) private var textMetrics
 
     private var railWidth: CGFloat { 2 }
     private var contentLeadingPadding: CGFloat { 6 }
@@ -182,13 +180,13 @@ struct CalendarEventBlock: View {
     }
 
     private func eventContent(titleLineLimit: Int, showsTimeRange: Bool) -> some View {
-        VStack(alignment: .leading, spacing: textMetrics.layoutValue(1)) {
+        VStack(alignment: .leading, spacing: 1) {
             CalendarEventTitleLabel(
                 title: event.title,
                 symbolName: categoryPresentation.symbolName,
-                font: textMetrics.font(.caption, weight: .semibold),
-                iconWidth: textMetrics.layoutValue(12),
-                spacing: textMetrics.layoutValue(3),
+                font: .caption.weight(.semibold),
+                iconWidth: 12,
+                spacing: 3,
                 lineLimit: titleLineLimit,
                 showsRecurrenceIcon: event.isRecurring,
                 isDeclined: statusPresentation?.isDeclined == true
@@ -196,7 +194,7 @@ struct CalendarEventBlock: View {
 
             if showsTimeRange {
                 Text(timeRangeText)
-                    .font(textMetrics.font(.caption2, weight: .medium))
+                    .font(.caption2.weight(.medium))
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .layoutPriority(1)

@@ -34,7 +34,6 @@ struct CurrentTimeIndicator: View {
     let dotSide: CGFloat
     let lineHeight: CGFloat
     let yPosition: CGFloat
-    @Environment(\.readingTextMetrics) private var textMetrics
 
     private var todayX: CGFloat {
         timeColumnWidth + CGFloat(dayIndex) * dayWidth
@@ -66,10 +65,10 @@ struct CurrentTimeIndicator: View {
                 .offset(x: todayX - dotSide / 2, y: yPosition - dotSide / 2)
 
             Text(Self.currentTimeFormatter.string(from: now))
-                .font(textMetrics.font(.caption, weight: .semibold))
+                .font(.caption.weight(.semibold))
                 .foregroundStyle(.white)
                 .lineLimit(1)
-                .padding(.horizontal, textMetrics.layoutValue(4))
+                .padding(.horizontal, 4)
                 .frame(height: labelHeight)
                 .background(Color.red, in: Capsule())
                 .frame(width: timeColumnWidth - trailingPadding, alignment: .trailing)

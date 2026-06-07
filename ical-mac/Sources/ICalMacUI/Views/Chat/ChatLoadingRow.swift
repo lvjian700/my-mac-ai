@@ -8,15 +8,13 @@ public enum AssistantLoadingState: Equatable {
 struct ChatLoadingRow: View {
     let state: AssistantLoadingState
 
-    @Environment(\.readingTextMetrics) private var textMetrics
-
     var body: some View {
         HStack(alignment: .bottom, spacing: 0) {
             bubbleContent
-                .font(textMetrics.font(.body))
+                .font(.body)
                 .background(Color.secondary.opacity(0.10))
                 .clipShape(ChatBubbleShape(isFromUser: false))
-                .frame(minWidth: 60, maxWidth: textMetrics.layoutValue(760), alignment: .leading)
+                .frame(minWidth: 60, maxWidth: 760, alignment: .leading)
                 .animation(.easeInOut(duration: 0.22), value: state)
             Spacer()
         }
@@ -27,14 +25,14 @@ struct ChatLoadingRow: View {
         switch state {
         case .thinking:
             TypingDotsView()
-                .padding(.horizontal, textMetrics.layoutValue(14))
-                .padding(.vertical, textMetrics.layoutValue(12))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
         case .working(let status):
             Text(status)
                 .foregroundStyle(.secondary)
                 .italic()
-                .padding(.horizontal, textMetrics.layoutValue(14))
-                .padding(.vertical, textMetrics.layoutValue(10))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
                 .transition(.opacity.combined(with: .move(edge: .bottom)))
         }
     }
