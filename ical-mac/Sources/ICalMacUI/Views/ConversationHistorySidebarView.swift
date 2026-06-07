@@ -83,20 +83,15 @@ private struct SidebarFooter: View {
     private var verticalPadding: CGFloat { 12 }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Divider()
-
-            SettingsLink {
-                Label("Settings", systemImage: "gearshape")
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .buttonStyle(.borderless)
-            .help("Open Settings")
+        SettingsLink {
+            Label("Settings", systemImage: "gearshape")
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .buttonStyle(.borderless)
+        .help("Open Settings")
         .font(textMetrics.font(.callout))
         .padding(.horizontal, horizontalPadding)
         .padding(.vertical, verticalPadding)
-        .background(.bar)
     }
 }
 
