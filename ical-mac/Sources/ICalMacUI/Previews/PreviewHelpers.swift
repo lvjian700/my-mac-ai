@@ -477,6 +477,12 @@ enum PreviewData {
                 ChatMessage(role: .assistant, text: "You have a meeting-heavy Monday and Wednesday, with Friday mostly open.", createdAt: now.addingTimeInterval(-32 * 86_400)),
             ]
         ),
+        conversation(
+            id: "55555555-5555-5555-5555-555555555555",
+            title: "What does my week look like?",
+            updatedAt: now.addingTimeInterval(-30 * 60),
+            messages: longChatMessages
+        ),
     ]
 
     static let emptyChatMessages: [ChatMessage] = [
@@ -508,6 +514,26 @@ enum PreviewData {
 
     static let sendingChatMessages: [ChatMessage] = activeChatMessages + [
         ChatMessage(role: .user, text: "Add a short focus block after lunch.")
+    ]
+
+    static let longChatMessages: [ChatMessage] = [
+        ChatMessage(role: .assistant, text: "Ask about your calendar or tell me what to schedule."),
+        ChatMessage(role: .user, text: "What does my week look like?"),
+        ChatMessage(role: .assistant, text: "You have a busy week. Monday has school time in the morning and a Focus Planning block at 9:45 AM. Tuesday is packed with a Design Sync at 9:45, a Sync at 11, and a Tech Huddle at 1 PM. Wednesday is meeting-free — just recurring focus time. Thursday has a Product Review at 10, Support Rotation Handoff at 11:30, and a COP Incident Review at 1. Friday has Oncall Primary at 11 and two clashing events at 3 PM."),
+        ChatMessage(role: .user, text: "What's clashing on Friday?"),
+        ChatMessage(role: .assistant, text: "At 3 PM on Friday you have two overlapping events: Catchup — Design Review and Support — Customer Call, both one hour long. Then at 4:15 PM three more events overlap: Focus — Release Plan, Sync: Partner Review, and Personal — Appointment."),
+        ChatMessage(role: .user, text: "Can you move the Design Review to 4 PM?"),
+        ChatMessage(role: .assistant, text: "Done. I moved Catchup — Design Review to 4:00–5:00 PM on Friday. It no longer clashes with Support — Customer Call at 3 PM, though it now partially overlaps with the 4:15 PM cluster. Want me to adjust those too?"),
+        ChatMessage(role: .user, text: "Yes, push the release plan and partner review to Monday afternoon."),
+        ChatMessage(role: .assistant, text: "Done. Focus — Release Plan and Sync: Partner Review are both moved to Monday afternoon, starting at 2:00 PM and 3:00 PM respectively. Monday now has more events in the afternoon but the Friday conflict is resolved."),
+        ChatMessage(role: .user, text: "Add a 30-minute coffee break on Wednesday at 10 AM."),
+        ChatMessage(role: .assistant, text: "Done. I added \"Coffee Break\" on Wednesday from 10:00–10:30 AM on your Work calendar."),
+        ChatMessage(role: .user, text: "What time is my lunch with Sarah?"),
+        ChatMessage(role: .assistant, text: "Lunch with Sarah is on Friday at 12:15 PM, running for one hour until 1:15 PM on your Personal calendar."),
+        ChatMessage(role: .user, text: "Move it to Thursday at 12:30 PM."),
+        ChatMessage(role: .assistant, text: "Done. Lunch with Sarah is rescheduled to Thursday at 12:30–1:30 PM. Thursday now has Product Review at 10, Lunch with Sarah at 12:30, Support Rotation at 11:30, and COP Review at 1 PM — note the overlap with the Support and COP events. Want me to shift any of those?"),
+        ChatMessage(role: .user, text: "No, that's fine. Can you block Friday afternoon as focus time?"),
+        ChatMessage(role: .assistant, text: "Done. I added a 3-hour \"Focus Time\" block on Friday from 1:00–4:00 PM on your Work calendar. That gives you a clear run before the Design Review at 4 PM."),
     ]
 
     static let shortComposerDraft = "Schedule a 30 minute planning block tomorrow morning."

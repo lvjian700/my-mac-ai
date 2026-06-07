@@ -30,6 +30,12 @@ import SwiftUI
         .environmentObject(AppModel.preview(messages: PreviewData.sendingChatMessages, isSending: true, assistantLoadingState: .working("Retrying 2/3…")))
         .frame(width: 700, height: 720)
 }
+
+#Preview("Long conversation") {
+    ChatView()
+        .environmentObject(AppModel.preview(messages: PreviewData.longChatMessages))
+        .frame(width: 700, height: 720)
+}
 #endif
 
 struct ChatView: View {

@@ -30,7 +30,7 @@ struct ChatTranscriptView: View {
 
     @Environment(\.readingTextMetrics) private var textMetrics
 
-    private var horizontalPadding: CGFloat { textMetrics.layoutValue(24) }
+    private var horizontalPadding: CGFloat { 20}
     private var topPadding: CGFloat { textMetrics.layoutValue(18) }
     private var bottomPadding: CGFloat { textMetrics.layoutValue(220) }
     private var spacing: CGFloat { textMetrics.layoutValue(12) }
@@ -68,7 +68,7 @@ struct ChatTranscriptView: View {
             .onChange(of: messages.last?.text) { _, _ in
                 scrollToBottom(proxy)
             }
-        }
+        }.padding(.bottom, 12)
     }
 
     private func scrollToBottom(_ proxy: ScrollViewProxy) {
