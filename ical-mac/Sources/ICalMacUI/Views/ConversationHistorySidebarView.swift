@@ -78,6 +78,7 @@ struct ConversationHistorySidebarView: View {
 
 private struct SidebarFooter: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.readingTextMetrics) private var textMetrics
 
     private var footerSpacing: CGFloat { 8 }
     private var horizontalPadding: CGFloat { 14 }
@@ -103,7 +104,7 @@ private struct SidebarFooter: View {
             .buttonStyle(.borderless)
             .help("Open Settings")
         }
-        .font(.callout)
+        .font(textMetrics.font(.callout))
         .padding(.horizontal, horizontalPadding)
         .padding(.vertical, verticalPadding)
         .background(.bar)
@@ -113,6 +114,8 @@ private struct SidebarFooter: View {
 private struct ConversationHistoryRow: View {
     let summary: ConversationSummary
     let isSelected: Bool
+
+    @Environment(\.readingTextMetrics) private var textMetrics
 
     private var rowSpacing: CGFloat { 4 }
     private var horizontalPadding: CGFloat { 0 }
@@ -124,14 +127,14 @@ private struct ConversationHistoryRow: View {
         TimelineView(.periodic(from: Date(), by: 60)) { context in
             HStack(alignment: .firstTextBaseline, spacing: rowSpacing) {
                 Text(summary.title)
-                    .font(.body)
+                    .font(textMetrics.font(.body))
                     .lineLimit(1)
                     .truncationMode(.tail)
 
                 Spacer(minLength: 0)
 
                 Text(relativeTimeFormatter.string(from: summary.updatedAt, relativeTo: context.date))
-                    .font(.caption)
+                    .font(textMetrics.font(.caption))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .monospacedDigit()
