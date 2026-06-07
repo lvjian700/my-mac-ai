@@ -5,13 +5,12 @@ import SwiftUI
 #Preview {
     ConversationHistorySidebarView()
         .environmentObject(AppModel.preview())
-        .frame(width: 260, height: 560)
+        .frame(width: 400, height: 560)
 }
 #endif
 
 struct ConversationHistorySidebarView: View {
     @EnvironmentObject private var model: AppModel
-    @Environment(\.readingTextMetrics) private var textMetrics
 
     var body: some View {
         List {
@@ -35,10 +34,10 @@ struct ConversationHistorySidebarView: View {
                             .disabled(model.isSending)
                         }
                         .listRowInsets(EdgeInsets(
-                            top: textMetrics.layoutValue(2),
-                            leading: textMetrics.layoutValue(10),
-                            bottom: textMetrics.layoutValue(2),
-                            trailing: textMetrics.layoutValue(10)
+                            top: 0,
+                            leading: 0,
+                            bottom: 0,
+                            trailing: 0
                         ))
                         .listRowBackground(
                             ConversationHistoryRowBackground(
@@ -79,11 +78,10 @@ struct ConversationHistorySidebarView: View {
 
 private struct SidebarFooter: View {
     @EnvironmentObject private var model: AppModel
-    @Environment(\.readingTextMetrics) private var textMetrics
 
-    private var footerSpacing: CGFloat { textMetrics.layoutValue(8) }
-    private var horizontalPadding: CGFloat { textMetrics.layoutValue(14) }
-    private var verticalPadding: CGFloat { textMetrics.layoutValue(12) }
+    private var footerSpacing: CGFloat { 8 }
+    private var horizontalPadding: CGFloat { 14 }
+    private var verticalPadding: CGFloat { 12 }
 
     var body: some View {
         VStack(alignment: .leading, spacing: footerSpacing) {
@@ -105,7 +103,7 @@ private struct SidebarFooter: View {
             .buttonStyle(.borderless)
             .help("Open Settings")
         }
-        .font(textMetrics.font(.callout))
+        .font(.callout)
         .padding(.horizontal, horizontalPadding)
         .padding(.vertical, verticalPadding)
         .background(.bar)
@@ -115,26 +113,25 @@ private struct SidebarFooter: View {
 private struct ConversationHistoryRow: View {
     let summary: ConversationSummary
     let isSelected: Bool
-    @Environment(\.readingTextMetrics) private var textMetrics
 
-    private var rowSpacing: CGFloat { textMetrics.layoutValue(8) }
-    private var horizontalPadding: CGFloat { textMetrics.layoutValue(8) }
-    private var verticalPadding: CGFloat { textMetrics.layoutValue(7) }
-    private var timeWidth: CGFloat { textMetrics.layoutValue(38) }
+    private var rowSpacing: CGFloat { 4 }
+    private var horizontalPadding: CGFloat { 0 }
+    private var verticalPadding: CGFloat { 6 }
+    private var timeWidth: CGFloat { 40 }
     private let relativeTimeFormatter = CompactRelativeTimeFormatter()
 
     var body: some View {
         TimelineView(.periodic(from: Date(), by: 60)) { context in
             HStack(alignment: .firstTextBaseline, spacing: rowSpacing) {
                 Text(summary.title)
-                    .font(textMetrics.font(.body))
+                    .font(.body)
                     .lineLimit(1)
                     .truncationMode(.tail)
 
                 Spacer(minLength: 0)
 
                 Text(relativeTimeFormatter.string(from: summary.updatedAt, relativeTo: context.date))
-                    .font(textMetrics.font(.caption))
+                    .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .monospacedDigit()
@@ -150,13 +147,12 @@ private struct ConversationHistoryRow: View {
 
 private struct ConversationHistoryRowBackground: View {
     let isSelected: Bool
-    @Environment(\.readingTextMetrics) private var textMetrics
 
-    private var cornerRadius: CGFloat { textMetrics.layoutValue(7) }
+    private var cornerRadius: CGFloat { 7 }
 
     var body: some View {
         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
             .fill(isSelected ? Color.secondary.opacity(0.12) : Color.clear)
-            .padding(.horizontal, 2)
+            .padding(.horizontal, 6)
     }
 }
