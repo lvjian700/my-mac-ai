@@ -1,6 +1,6 @@
 import AppKit
 import Testing
-@testable import ICalMacUI
+@testable import ICalMac
 
 struct ComposerReturnKeyActionTests {
     @Test func plainReturnSendsMessage() {

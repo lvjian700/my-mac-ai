@@ -1,23 +1,26 @@
 PREFIX ?= $(HOME)/.local
 APP_DIR ?= $(HOME)/Applications
-BUILD_DIR := .build/release
+PROJECT := ical-mac.xcodeproj
+SCHEME := ical-mac
+DERIVED_DATA := .build/DerivedData
+DESTINATION ?= platform=macOS
 APP_BUNDLE := .build/ical-mac.app
 
 .PHONY: build test run app dmg install uninstall clean xcode xcode-build xcode-test
 
 build:
-	swift build -c release
+	xcodebuild -project "$(PROJECT)" -scheme "$(SCHEME)" -configuration Release -derivedDataPath "$(DERIVED_DATA)" -destination '$(DESTINATION)' build
 
 test:
-	swift test --parallel -q
+	xcodebuild -project "$(PROJECT)" -scheme "$(SCHEME)" -configuration Debug -derivedDataPath "$(DERIVED_DATA)" -destination '$(DESTINATION)' test
 
 run:
-	swift run ical-mac
+	./script/build_and_run.sh
 
-app: build
+app:
 	./scripts/build_app_bundle.sh
 
-dmg: build
+dmg:
 	./scripts/build_dmg.sh
 
 install: app
@@ -29,15 +32,11 @@ uninstall:
 	rm -rf "$(APP_DIR)/ical-mac.app" "$(PREFIX)/bin/ical-mac"
 
 clean:
-	rm -rf .build
+	rm -rf .build DerivedData
 
 xcode:
 	./scripts/open_xcode.sh
 
-xcode-build:
-	./scripts/ensure_xcode_workspace.sh
-	xcodebuild -quiet -workspace .swiftpm/xcode/package.xcworkspace -scheme ical-mac -destination 'platform=macOS' build
+xcode-build: build
 
-xcode-test:
-	./scripts/ensure_xcode_workspace.sh
-	xcodebuild -quiet -workspace .swiftpm/xcode/package.xcworkspace -scheme ical-mac-Package -destination 'platform=macOS' test
+xcode-test: test

@@ -1,4 +1,3 @@
-import ICalMacCore
 import SwiftUI
 
 #if DEBUG

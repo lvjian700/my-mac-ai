@@ -1,6 +1,5 @@
-import ICalMacCore
+@testable import ICalMac
 import Testing
-@testable import ICalMacUI
 
 struct CalendarInvitationStatusPresentationTests {
     @Test func mapsRsvpStatusesToCalendarLabels() {

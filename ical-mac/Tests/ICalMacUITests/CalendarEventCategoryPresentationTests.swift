@@ -1,5 +1,5 @@
 import Testing
-@testable import ICalMacUI
+@testable import ICalMac
 
 struct CalendarEventCategoryPresentationTests {
     @Test func mapsCategoryPrefixesToCalendarThemes() {

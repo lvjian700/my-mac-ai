@@ -1,5 +1,4 @@
 import Foundation
-import ICalMacCore
 
 extension CalendarEvent {
     var weekOccurrenceID: String {

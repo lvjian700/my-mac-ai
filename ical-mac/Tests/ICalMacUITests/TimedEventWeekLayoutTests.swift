@@ -1,7 +1,6 @@
 import Foundation
 import Testing
-@testable import ICalMacUI
-import ICalMacCore
+@testable import ICalMac
 
 struct TimedEventWeekLayoutTests {
     private let calendar: Calendar = {

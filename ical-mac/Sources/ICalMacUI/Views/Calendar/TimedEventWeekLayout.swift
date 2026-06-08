@@ -1,6 +1,5 @@
 import CoreGraphics
 import Foundation
-import ICalMacCore
 
 struct TimedEventLayoutFrame: Identifiable, Equatable {
     let id: String

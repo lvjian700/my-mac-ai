@@ -2,10 +2,10 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-WORKSPACE="$("$ROOT/scripts/ensure_xcode_workspace.sh")"
+PROJECT="$ROOT/ical-mac.xcodeproj"
 
 if command -v xed >/dev/null 2>&1; then
-  xed "$WORKSPACE"
+  xed "$PROJECT"
 else
-  open "$WORKSPACE"
+  open "$PROJECT"
 fi

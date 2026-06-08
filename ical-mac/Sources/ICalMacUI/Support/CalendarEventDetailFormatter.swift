@@ -1,5 +1,4 @@
 import Foundation
-import ICalMacCore
 
 struct CalendarEventDetailFormatter {
     var calendar: Calendar

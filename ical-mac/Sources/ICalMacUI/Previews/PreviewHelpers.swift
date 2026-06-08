@@ -1,6 +1,5 @@
 #if DEBUG
 import Foundation
-import ICalMacCore
 
 // MARK: - Fake stores
 

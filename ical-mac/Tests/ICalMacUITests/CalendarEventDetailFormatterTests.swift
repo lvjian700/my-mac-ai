@@ -1,7 +1,6 @@
 import Foundation
-import ICalMacCore
+@testable import ICalMac
 import Testing
-@testable import ICalMacUI
 
 struct CalendarEventDetailFormatterTests {
     @Test func formatsSameDayTimedEvent() {

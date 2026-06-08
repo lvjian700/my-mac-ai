@@ -1,6 +1,5 @@
 import AppKit
 import EventKit
-import ICalMacUI
 import SwiftUI
 
 @main

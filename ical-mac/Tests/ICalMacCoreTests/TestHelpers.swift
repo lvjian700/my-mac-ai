@@ -1,5 +1,5 @@
 import Foundation
-@testable import ICalMacCore
+@testable import ICalMac
 
 func makeTempDirectory() throws -> URL {
     let url = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)

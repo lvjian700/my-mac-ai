@@ -6,7 +6,7 @@ Keychain-backed API key storage.
 
 ## Boundaries
 
-- Keep this target UI-free. Do not import SwiftUI or AppKit here.
+- Keep this source area UI-free. Do not import SwiftUI or AppKit here.
 - `CalendarStore` is the boundary for calendar operations. Use fakes in tests;
   only `EventKitCalendarStore` should touch EventKit.
 - `EventKitCalendarStore` is a `@MainActor` bridge over the internal

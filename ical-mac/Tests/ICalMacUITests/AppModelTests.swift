@@ -1,7 +1,6 @@
 import Foundation
-import ICalMacCore
+@testable import ICalMac
 import Testing
-@testable import ICalMacUI
 
 @MainActor
 struct AppModelTests {
@@ -116,7 +115,7 @@ struct AppModelTests {
 
     @Test func launchRestoresMostRecentConversation() async throws {
         let store = FakeUICalendarStore()
-        let root = try makeTempDirectory()
+        let root = try makeUITempDirectory()
         let conversationStore = JSONConversationStore(rootURL: root)
         let older = try await conversationStore.createConversation(
             messages: [ChatMessage(role: .user, text: "Older question")]
@@ -136,7 +135,7 @@ struct AppModelTests {
 
     @Test func sendingMessagePersistsConversationMessagesAndTranscript() async throws {
         let store = FakeUICalendarStore()
-        let root = try makeTempDirectory()
+        let root = try makeUITempDirectory()
         let conversationStore = JSONConversationStore(rootURL: root)
         let model = try makeModel(
             store: store,
@@ -163,7 +162,7 @@ struct AppModelTests {
 
     @Test func newConversationAndDeleteCurrentFallbackToExistingConversation() async throws {
         let store = FakeUICalendarStore()
-        let conversationStore = JSONConversationStore(rootURL: try makeTempDirectory())
+        let conversationStore = JSONConversationStore(rootURL: try makeUITempDirectory())
         let model = try makeModel(store: store, conversationStore: conversationStore)
         await model.loadCalendarOnLaunch()
         let originalID = try #require(model.selectedConversationID)
@@ -186,7 +185,7 @@ struct AppModelTests {
             OpenAIResponse(output: [.message(role: "assistant", content: [.init(type: "output_text", text: "Second answer")])]),
             OpenAIResponse(output: [.message(role: "assistant", content: [.init(type: "output_text", text: "Followup answer")])]),
         ])
-        let conversationStore = JSONConversationStore(rootURL: try makeTempDirectory())
+        let conversationStore = JSONConversationStore(rootURL: try makeUITempDirectory())
         let model = try makeModel(store: store, conversationStore: conversationStore, client: client)
 
         await model.send("First question")
@@ -316,11 +315,11 @@ struct AppModelTests {
         if let conversationStore {
             resolvedConversationStore = conversationStore
         } else {
-            resolvedConversationStore = JSONConversationStore(rootURL: try makeTempDirectory())
+            resolvedConversationStore = JSONConversationStore(rootURL: try makeUITempDirectory())
         }
         return AppModel(
             calendarStore: store,
-            memoryStore: MemoryStore(rootURL: try makeTempDirectory()),
+            memoryStore: MemoryStore(rootURL: try makeUITempDirectory()),
             conversationStore: resolvedConversationStore,
             promptStore: PromptStore(),
             apiKeyStore: apiKeyStore,
@@ -447,7 +446,7 @@ private final class FakeUIOpenAIClient: OpenAIClient, @unchecked Sendable {
     }
 }
 
-private func makeTempDirectory() throws -> URL {
+private func makeUITempDirectory() throws -> URL {
     let url = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
         .appendingPathComponent("ical-mac-ui-tests-\(UUID().uuidString)", isDirectory: true)
     try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)

@@ -1,6 +1,7 @@
 # Agent Guide - Tests
 
-Tests use Swift Testing and run with `swift test` from `ical-mac/`.
+Tests use Swift Testing and run through the `ical-mac` Xcode scheme from
+`ical-mac/`.
 
 ## Rules
 

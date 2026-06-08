@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import ICalMacUI
+@testable import ICalMac
 
 struct CompactRelativeTimeFormatterTests {
     private let formatter = CompactRelativeTimeFormatter()

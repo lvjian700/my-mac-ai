@@ -1,11 +1,11 @@
 # Agent Guide - ICalMacApp
 
-This target owns the app entrypoint and macOS app lifecycle wiring.
+This source area owns the app entrypoint and macOS app lifecycle wiring.
 
 ## Scope
 
-- Keep business logic out of this target. Put calendar, assistant, persistence,
-  and UI state changes in `ICalMacCore` or `ICalMacUI`.
+- Keep business logic out of this source area. Put calendar, assistant,
+  persistence, and UI state changes in `ICalMacCore` or `ICalMacUI`.
 - `ICalMacApp` should mostly compose `ContentView`, inject `AppModel`, install
   environment values, configure scenes, and handle app/window lifecycle events.
 - Maintain the `.hiddenTitleBar` and unified toolbar style unless the window

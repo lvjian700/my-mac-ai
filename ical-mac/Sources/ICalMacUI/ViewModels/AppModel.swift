@@ -1,5 +1,4 @@
 import Foundation
-import ICalMacCore
 import os
 
 public enum APIKeyStatus: Equatable, Sendable {

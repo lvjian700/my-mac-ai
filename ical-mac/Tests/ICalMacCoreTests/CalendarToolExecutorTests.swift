@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import ICalMacCore
+@testable import ICalMac
 
 @MainActor
 struct CalendarToolExecutorTests {
