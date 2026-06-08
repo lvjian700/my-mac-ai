@@ -10,7 +10,7 @@ This is a macOS-focused monorepo. Each top-level folder is a standalone app or t
 |--------|-------------|
 | `ical/` | CLI app to access Apple Calendar from the terminal (Swift 6, EventKit, swift-argument-parser) |
 | `ical-chat/` | Terminal chat app for Apple Calendar using the Anthropic SDK (TypeScript, multi-turn REPL) |
-| `ical-mac/` | Native macOS calendar assistant using SwiftUI, EventKit, and the Anthropic Messages API |
+| `ical-mac/` | Native macOS calendar assistant using SwiftUI, EventKit, and the OpenAI Responses API |
 
 See each app's own `AGENTS.md` for build commands and architecture. `AGENTS.md` is the canonical agent file; `CLAUDE.md` should be a symlink to it for Claude Code.
 

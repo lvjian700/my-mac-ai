@@ -1,25 +1,36 @@
 # Agent Guide - ical-mac
 
-Native macOS calendar assistant. Built from scratch in SwiftUI with direct EventKit calendar access and a Swift Anthropic Messages API client.
+Native macOS calendar assistant built as a SwiftPM package with SwiftUI,
+EventKit, Keychain storage, and the OpenAI Responses API.
 
-## Build & Run
+Nested `AGENTS.md` files provide target-specific guidance:
+
+| Path | Scope |
+|------|-------|
+| `Sources/ICalMacCore/AGENTS.md` | Calendar models, EventKit bridge, OpenAI client/tool loop, prompt, memory, Keychain, conversation JSON storage |
+| `Sources/ICalMacUI/AGENTS.md` | `AppModel`, SwiftUI views, settings, chat, conversation sidebar, read-only week calendar |
+| `Sources/ICalMacApp/AGENTS.md` | App entrypoint, scenes, window/app lifecycle, app-wide environment values |
+| `Tests/AGENTS.md` | Unit test patterns and fake-store rules |
+
+## Build, Test, Run
+
+Run commands from `ical-mac/`.
 
 ```bash
 swift build              # debug build
-swift build -c release   # release build
-swift test               # unit tests with fakes
-./script/build_and_run.sh # build .app bundle and launch it
+swift test               # package tests
+swift build -c release   # release build used by app packaging
 make app                 # create .build/ical-mac.app
+./scripts/build_app_bundle.sh
 make dmg                 # create dist/ical-mac-<version>.dmg for personal use
 make install             # install app to ~/Applications/ical-mac.app
 ```
 
 Requires macOS 14+.
 
-Prefer `./script/build_and_run.sh` or `make app` for local UI inspection. Do not
-use the raw SwiftPM executable as the normal GUI run path; the app should launch
-as a macOS `.app` bundle so window activation and Calendar permission behavior
-match user runs.
+Run `swift build` and `swift test` after completing a task. For UI/runtime
+inspection, prefer `make app` or `./scripts/build_app_bundle.sh`; the normal
+GUI path is the `.app` bundle, not the raw SwiftPM executable.
 
 `make dmg` defaults to ad-hoc signing for personal-use DMGs. For a public
 Developer ID release, run it with `REQUIRE_DEVELOPER_ID_DMG=1` and a
@@ -33,60 +44,47 @@ make xcode-build  # validate the Xcode-generated ical-mac scheme
 make xcode-test   # run package tests through Xcode
 ```
 
-In Xcode, select the `ical-mac` scheme and `My Mac`, then Run. The package keeps
-skill lookup independent of Xcode's generated `.swiftpm/xcode` working directory,
-so breakpoints in `Sources/ICalMacApp` and `Sources/ICalMacCore` work normally.
+`Package.swift` declares two libraries (`ICalMacCore`, `ICalMacUI`) and one
+executable (`ical-mac`). SwiftPM does not declare a true Xcode macOS
+Application product type here; `scripts/build_app_bundle.sh` wraps the release
+binary into `.build/ical-mac.app`.
 
 ## Architecture
 
-**Tech stack:** Swift 6, SwiftUI, EventKit, Security/Keychain, URLSession.
+**Targets:**
 
-**Boundaries:**
-- `ICalMacCore` owns calendar models, EventKit access, OpenAI API/tool loop, memory files, prompt loading, and Keychain storage.
-- `ICalMacUI` owns `AppModel`, SwiftUI views, settings, chat transcript, conversation sidebar, and the read-only week calendar surface.
-- `ICalMacApp` owns the SwiftUI app entrypoint, app delegate, main window scene, and settings scene.
+- `ICalMacCore`: calendar domain models, `CalendarStore`, EventKit access,
+  OpenAI request/streaming types, `AssistantService`, `CalendarToolExecutor`,
+  `PromptStore`, `MemoryStore`, `ConversationStore`, and Keychain access.
+- `ICalMacUI`: `AppModel`, SwiftUI screens/components, settings, voice input,
+  previews, and presentation helpers.
+- `ICalMacApp`: `@main` app, app delegate, main window, settings scene, app
+  commands, launch refresh, and global reading text metrics.
 
-Use fakes for tests. Do not depend on real Calendar data or live API calls in unit tests.
+This app does not reuse TypeScript, Bun, Ink, Anthropic SDK code, or the
+`ical-chat` runtime. Do not import old CLI skill or prompt text from `ical/` or
+`ical-chat/`; the native app prompt lives in `PromptStore`.
 
-### Agent Flow
+## Shared Rules
 
-Single-agent design. `AssistantService` runs a tool loop with Cali as the sole agent and all five calendar tools exposed directly.
-
-```
-User message
-  └─► AssistantService  (Cali — single agent)
-        ├─ tool: list_calendars
-        ├─ tool: list_events
-        ├─ tool: create_event
-        ├─ tool: update_event
-        └─ tool: write_memory
-        └─ returns response
-```
-
-**`AssistantService`** (`Services/AssistantService.swift`) — Maintains multi-turn `inputHistory`. Builds the system prompt each turn, runs the tool loop via `CalendarToolExecutor`, and returns the final assistant text.
-
-**`PromptStore`** (`Stores/PromptStore.swift`) — Builds Cali's system prompt: personality, calendar tool guidance, loaded memory, session context (date/timezone/name), and calendar snapshot.
-
-**When to introduce multi-agent:** Only when a task genuinely requires parallel exploration, exceeds the context window, or involves a distinct new specialist (e.g. an async MemoryAgent, EmailAgent). For sequential calendar CRUD, a single agent with direct tool access is faster, cheaper, and simpler — the orchestrator-subagent pattern adds 2–3× API call overhead with no benefit for this problem size.
-
-## UI & Calendar Behavior
-
-- Use native macOS SwiftUI patterns first: `NavigationSplitView`, `.sidebar` `List`, `SettingsLink`, toolbars, and system controls.
-- Keep the left pane as a standard navigation/sidebar list for conversations. Do not put the calendar account list or calendar filter toggles there.
-- Keep default calendar selection in Settings unless the product flow is intentionally redesigned.
-- The middle calendar surface is read-only. Event creation and updates should stay agent-driven through Cali and `CalendarToolExecutor`.
-- Launch should request Calendar permission through EventKit when needed, then load calendars and the displayed week's events.
-- Empty weeks should still render the week grid; only denied Calendar access should replace the grid with an unavailable state.
-- Calendar UI tests should use fake stores. Do not add default tests that require live Calendar permission.
+- Keep tests isolated from real Calendar data, live OpenAI calls, and user
+  Keychain state. Use fakes and temporary directories.
+- Calendar mutations are agent-driven through `CalendarToolExecutor`; the week
+  calendar UI remains read-only unless the product flow is intentionally
+  redesigned.
+- User data lives under `~/.my-mac-ai/ical`: `memory.yaml`,
+  `session-memory.json`, and `conversations/`. Do not bake user-specific data
+  into tests or previews.
+- Keep API keys in `OPENAI_API_KEY` or Keychain via `OpenAIAPIKeyStore`. Never
+  commit API keys.
+- If git commands fail because `/Users/jlyu/.gitconfig` is unreadable, retry
+  with `GIT_CONFIG_GLOBAL=/dev/null`.
 
 ## Logging
 
-Uses `os.Logger` with subsystem `jian.ai.ical-mac`. Stream live logs:
+Most app logs use `os.Logger`. Useful streams:
 
 ```bash
 log stream --predicate 'subsystem == "jian.ai.ical-mac"' --level debug
+log stream --predicate 'subsystem == "com.jlyu.ical-mac"' --level debug
 ```
-
-## Notes
-
-This app does not reuse TypeScript, Bun, Ink, or the `ical-chat` runtime.

@@ -18,6 +18,7 @@ let package = Package(
         .target(
             name: "ICalMacCore",
             path: "Sources/ICalMacCore",
+            exclude: ["AGENTS.md"],
             linkerSettings: [
                 .linkedFramework("EventKit"),
                 .linkedFramework("Security"),
@@ -27,6 +28,7 @@ let package = Package(
             name: "ICalMacUI",
             dependencies: ["ICalMacCore"],
             path: "Sources/ICalMacUI",
+            exclude: ["AGENTS.md"],
             linkerSettings: [
                 .linkedFramework("AppKit"),
                 .linkedFramework("AVFoundation"),
@@ -37,6 +39,7 @@ let package = Package(
             name: "ICalMacApp",
             dependencies: ["ICalMacUI"],
             path: "Sources/ICalMacApp",
+            exclude: ["AGENTS.md"],
             resources: [
                 .process("../../Resources")
             ],
