@@ -104,6 +104,7 @@
 		23FB2CAEB38545C3793097DD /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -175,7 +176,7 @@
 		2A62C3BB1CBF9DBB70326F08 /* AGENTS.md */ = {isa = PBXFileReference; lastKnownFileType = text; path = "AGENTS.md"; sourceTree = "<group>"; };
 		2B443ABEF54B1FE31286BF6A /* CalendarEventCategoryPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 009ACECBA7B27778CDAEA766 /* CalendarEventCategoryPresentation.swift */; };
 		2BE16BEF7769C3AC27B52652 /* MemoryStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66B73CF50E0214DCDF1177CE /* MemoryStoreTests.swift */; };
-		2E6AEA2A393A6D685764B005 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 6B4F3D537CCD0D51CD1644B2 /* AppIcon.icns */; };
+		2E6AEA2A393A6D685764B005 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6B4F3D537CCD0D51CD1644B2 /* Assets.xcassets */; };
 		2F1689BCECDE8B3560D7818B /* MemoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 609DFFA05A8AAA3B3027B744 /* MemoryStore.swift */; };
 		32995943DE67267A65D32CA9 /* Build configuration list for PBXNativeTarget "ical-mac" */ = {isa = XCConfigurationList; buildConfigurations = (3CF6A4F2E05B3AAE7E2CBFEE /* Debug */, 23FB2CAEB38545C3793097DD /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 		33E08C34DC1AD8F911ECD1A6 /* TestHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TestHelpers.swift"; sourceTree = "<group>"; };
@@ -192,6 +193,7 @@
 		3CF6A4F2E05B3AAE7E2CBFEE /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -222,7 +224,6 @@
 			sourceTree = "<group>";
 		};
 		3D9D60B6F0549CCF561AB78B /* CalendarEventDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20D221DFFAF316DC17C28FDB /* CalendarEventDetailView.swift */; };
-		3F560E83BAEE4FEC06969812 /* AppIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = 82A2ED86FA22647744FC6BB5 /* AppIcon.png */; };
 		4064EDD10A8A2773B26B6F55 /* ChatTranscriptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD09270AB2999BC5EE4FE103 /* ChatTranscriptView.swift */; };
 		40C868C28E9C988079C2E501 /* AssistantServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AssistantServiceTests.swift"; sourceTree = "<group>"; };
 		41A2D69FC1096483049B1699 /* SessionSnapshotBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SessionSnapshotBuilder.swift"; sourceTree = "<group>"; };
@@ -278,7 +279,7 @@
 		66B73CF50E0214DCDF1177CE /* MemoryStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MemoryStoreTests.swift"; sourceTree = "<group>"; };
 		6730B58F654710AD022ADA5E /* EventKitCalendarStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "EventKitCalendarStore.swift"; sourceTree = "<group>"; };
 		6A207515C4FF7572127B214A /* CalendarInvitationStatusPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CalendarInvitationStatusPresentation.swift"; sourceTree = "<group>"; };
-		6B4F3D537CCD0D51CD1644B2 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = "AppIcon.icns"; sourceTree = "<group>"; };
+		6B4F3D537CCD0D51CD1644B2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Assets.xcassets"; sourceTree = "<group>"; };
 		706E14E164332D17F015A7D3 /* WeekHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02468D40F83CE707610BD8DB /* WeekHeaderView.swift */; };
 		70CB24ABBD1E79453FDB7253 /* ComposerReturnKeyActionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ComposerReturnKeyActionTests.swift"; sourceTree = "<group>"; };
 		710195D037BBD853C261D48A /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3451E7F7480A2496F2D89E12 /* ContentView.swift */; };
@@ -307,7 +308,6 @@
 			path = "ICalMacUITests";
 			sourceTree = "<group>";
 		};
-		82A2ED86FA22647744FC6BB5 /* AppIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AppIcon.png"; sourceTree = "<group>"; };
 		84C5881D73117FB7C3C180B4 /* PromptStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PromptStore.swift"; sourceTree = "<group>"; };
 		84E912FFCAB4D74E810234A9 /* TestHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33E08C34DC1AD8F911ECD1A6 /* TestHelpers.swift */; };
 		8562A133F874AF6A19294311 /* ical-macTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ical-macTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -550,8 +550,7 @@
 		A024F06580C79B7582C3806A /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				6B4F3D537CCD0D51CD1644B2 /* AppIcon.icns */,
-				82A2ED86FA22647744FC6BB5 /* AppIcon.png */,
+				6B4F3D537CCD0D51CD1644B2 /* Assets.xcassets */,
 				F2C5B33075AEB8DD4A529EF8 /* Info.plist */,
 			);
 			path = "Resources";
@@ -687,8 +686,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				2E6AEA2A393A6D685764B005 /* AppIcon.icns in Resources */,
-				3F560E83BAEE4FEC06969812 /* AppIcon.png in Resources */,
+				2E6AEA2A393A6D685764B005 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
