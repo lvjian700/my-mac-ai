@@ -666,7 +666,8 @@ extension AppModel {
         isSending: Bool = false,
         assistantLoadingState: AssistantLoadingState = .thinking,
         apiKeyStatus: APIKeyStatus = .unknown,
-        apiKeyDraft: String = "preview-key"
+        apiKeyDraft: String = "preview-key",
+        showWeekends: Bool = false
     ) -> AppModel {
         let conversationStore = PreviewConversationStore()
         let model = AppModel(
@@ -687,6 +688,7 @@ extension AppModel {
         model.assistantLoadingState = assistantLoadingState
         model.apiKeyDraft = apiKeyDraft
         model.apiKeyStatus = apiKeyStatus
+        model.showWeekends = showWeekends
         model.conversationSummaries = PreviewData.conversations
             .map(\.summary)
             .sorted { $0.updatedAt > $1.updatedAt }

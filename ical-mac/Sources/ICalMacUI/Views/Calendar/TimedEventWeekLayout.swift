@@ -16,6 +16,7 @@ enum TimedEventWeekLayout {
     static func frames(
         for events: [CalendarEvent],
         weekStartDate: Date,
+        dayCount: Int = 7,
         calendar: Calendar,
         dayWidth: CGFloat,
         timeColumnWidth: CGFloat,
@@ -27,6 +28,7 @@ enum TimedEventWeekLayout {
         let inputs = layoutInputs(
             for: events,
             weekStart: weekStart,
+            dayCount: dayCount,
             calendar: calendar,
             hourHeight: hourHeight
         )
@@ -50,6 +52,7 @@ enum TimedEventWeekLayout {
     private static func layoutInputs(
         for events: [CalendarEvent],
         weekStart: Date,
+        dayCount: Int,
         calendar: Calendar,
         hourHeight: CGFloat
     ) -> [TimedEventLayoutInput] {
@@ -57,7 +60,7 @@ enum TimedEventWeekLayout {
         let minimumEventHeight = minuteHeight * 5
 
         return events.flatMap { event in
-            (0..<7).compactMap { dayIndex -> TimedEventLayoutInput? in
+            (0..<dayCount).compactMap { dayIndex -> TimedEventLayoutInput? in
                 let dayStart = calendar.date(byAdding: .day, value: dayIndex, to: weekStart) ?? weekStart
                 let nextDay = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart
                 let visibleStart = max(event.startDate, dayStart)

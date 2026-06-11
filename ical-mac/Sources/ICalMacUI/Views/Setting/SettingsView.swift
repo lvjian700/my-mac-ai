@@ -30,6 +30,12 @@ import SwiftUI
         .environmentObject(AppModel.preview(apiKeyStatus: .failed("Invalid API key — check your key and try again.")))
         .frame(width: 550, height: 380)
 }
+
+#Preview("Show weekends on") {
+    SettingsView()
+        .environmentObject(AppModel.preview(apiKeyStatus: .connected, showWeekends: true))
+        .frame(width: 550, height: 380)
+}
 #endif
 
 public struct SettingsView: View {
@@ -91,6 +97,16 @@ public struct SettingsView: View {
                     }
                 } label: {
                     Label("Default calendar", systemImage: "calendar")
+                }
+
+                LabeledContent {
+                    Toggle("", isOn: $model.showWeekends)
+                        .labelsHidden()
+                        .onChange(of: model.showWeekends) { _, _ in
+                            model.saveShowWeekendsSetting()
+                        }
+                } label: {
+                    Label("Show weekends", systemImage: "calendar.badge.plus")
                 }
 
                 LabeledContent {

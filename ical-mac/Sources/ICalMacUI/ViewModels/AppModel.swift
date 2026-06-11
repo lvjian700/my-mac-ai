@@ -33,6 +33,7 @@ public final class AppModel: ObservableObject {
     @Published public var apiKeyDraft = ""
     @Published public var modelName: String
     @Published public var defaultCalendarTitle = UserDefaults.standard.string(forKey: "icalMac.defaultCalendarTitle") ?? ""
+    @Published public var showWeekends: Bool = UserDefaults.standard.bool(forKey: "icalMac.showWeekends")
     @Published public var isShowingCachedSnapshot = false
     @Published public var selectedCalendarIDs: Set<String> = []
     @Published public var displayedWeekStartDate = AppModel.startOfWeek(containing: Date())
@@ -343,6 +344,10 @@ public final class AppModel: ObservableObject {
     public func saveDefaultCalendarSetting() {
         persistDefaultCalendarTitle()
         rebuildAssistant()
+    }
+
+    public func saveShowWeekendsSetting() {
+        UserDefaults.standard.set(showWeekends, forKey: "icalMac.showWeekends")
     }
 
     public func saveAPIKeySetting() {

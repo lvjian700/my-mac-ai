@@ -1,9 +1,15 @@
 import SwiftUI
 
 #if DEBUG
-#Preview {
+#Preview("Mon–Fri") {
     WeekGridView()
         .environmentObject(AppModel.preview())
+        .frame(width: 900, height: 620)
+}
+
+#Preview("With weekends") {
+    WeekGridView()
+        .environmentObject(AppModel.preview(showWeekends: true))
         .frame(width: 900, height: 620)
 }
 #endif
@@ -37,7 +43,7 @@ struct WeekGridView: View {
     private var dayColumnCount: CGFloat { CGFloat(days.count) }
 
     private var days: [Date] {
-        (0..<7).compactMap {
+        (0..<(model.showWeekends ? 7 : 5)).compactMap {
             calendar.date(byAdding: .day, value: $0, to: model.displayedWeekStartDate)
         }
     }
@@ -217,6 +223,7 @@ struct WeekGridView: View {
         let frames = TimedEventWeekLayout.frames(
             for: model.visibleTimedEvents,
             weekStartDate: model.displayedWeekStartDate,
+            dayCount: days.count,
             calendar: calendar,
             dayWidth: dayWidth,
             timeColumnWidth: timeColumnWidth,
@@ -267,7 +274,7 @@ struct WeekGridView: View {
         let currentDayStart = calendar.startOfDay(for: date)
         guard let dayIndex = calendar.dateComponents([.day], from: weekStart, to: currentDayStart).day,
               dayIndex >= 0,
-              dayIndex < 7 else {
+              dayIndex < days.count else {
             return nil
         }
         return dayIndex
