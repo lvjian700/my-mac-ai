@@ -11,6 +11,7 @@ BUILT_APP="$DERIVED_DATA_PATH/Build/Products/$CONFIGURATION/ical-mac.app"
 CODESIGN_IDENTITY="${CODESIGN_IDENTITY:--}"
 CODESIGN_OPTIONS="${CODESIGN_OPTIONS:-runtime}"
 CODESIGN_TIMESTAMP="${CODESIGN_TIMESTAMP:-0}"
+ENTITLEMENTS="$ROOT/Resources/ical-mac.entitlements"
 
 xcodebuild \
   -project "$PROJECT" \
@@ -23,6 +24,9 @@ xcodebuild \
 rm -rf "$APP"
 /usr/bin/ditto "$BUILT_APP" "$APP"
 codesign_args=(--force --sign "$CODESIGN_IDENTITY")
+if [[ -f "$ENTITLEMENTS" ]]; then
+  codesign_args+=(--entitlements "$ENTITLEMENTS")
+fi
 if [[ -n "$CODESIGN_OPTIONS" ]]; then
   codesign_args+=(--options "$CODESIGN_OPTIONS")
 fi
